@@ -231,7 +231,7 @@ function PlayerChip({
               st === 'ready' && styles.statusReady,
               st === 'failed' && styles.statusFailed,
             ]}>
-            {isGuest(player) ? 'Hall of Fame guest' : STATUS[st]}
+            {isGuest(player) ? 'Hall of Famer' : STATUS[st]}
           </Text>
         </View>
       </View>

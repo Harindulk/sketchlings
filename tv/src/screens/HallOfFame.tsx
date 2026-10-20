@@ -103,7 +103,7 @@ export function HallOfFame({
                 </Text>
                 {picked && (
                   <View style={styles.ribbon}>
-                    <Text style={styles.ribbonText}>Racing next!</Text>
+                    <Text style={styles.ribbonText}>Next race!</Text>
                   </View>
                 )}
               </FocusButton>
@@ -157,7 +157,7 @@ function Details({
       />
       <View style={[styles.again, picked && styles.againOn]}>
         <Text style={styles.againText}>
-          {picked ? '✓ In your next party' : 'OK: Race again!'}
+          {picked ? 'In your next party!' : 'OK: Race again!'}
         </Text>
       </View>
       <Text style={styles.againHint} numberOfLines={1}>
@@ -231,18 +231,19 @@ const styles = StyleSheet.create({
   },
   detailTitle: {fontFamily: F.semi, fontSize: 21, color: C.ink, marginTop: -4},
   artist: {fontFamily: F.semi, fontSize: 18, color: C.inkSoft, marginBottom: 6},
+  // straight and clear of the card's rounded corners: a rotated child clipped by them stalled the VVD's renderer
   ribbon: {
     position: 'absolute',
     top: 6,
-    right: 4,
+    left: 24,
+    right: 24,
+    alignItems: 'center',
     backgroundColor: '#3ddc84',
     borderWidth: 2,
     borderColor: C.ink,
     borderRadius: 8,
-    paddingHorizontal: 6,
-    transform: [{rotate: '6deg'}],
   },
-  ribbonText: {fontFamily: F.bold, fontSize: 16, lineHeight: 22, color: C.ink},
+  ribbonText: {fontFamily: F.bold, fontSize: 15, lineHeight: 21, color: C.ink},
   again: {
     marginTop: 8,
     alignSelf: 'flex-start',
