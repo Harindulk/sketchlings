@@ -702,7 +702,7 @@ const RunnerView = React.memo(
             {
               left: box.w * 0.62, // ahead of the feet, under the ROAR! pill, clear of "Doodle Boost!" behind
               top: box.h - 22,
-              width: 44 + ABILITY[kind].pop.length * 12, // absolute children don't shrink-wrap on Vega
+              width: 44 + ABILITY[kind].pop.length * 10, // absolute children don't shrink-wrap on Vega
               opacity: v.pop,
               transform: [{scale: v.pop}, {rotate: '4deg'}],
             },

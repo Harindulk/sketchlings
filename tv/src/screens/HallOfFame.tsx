@@ -96,7 +96,9 @@ export function HallOfFame({
                 }}
                 style={styles.card}>
                 <Sprite s={s} size={104} still />
-                <Text style={styles.cardName} numberOfLines={1}>
+                <Text
+                  style={[styles.cardName, {fontSize: fitFont(s.name, 124, 19)}]}
+                  numberOfLines={1}>
                   {s.name}
                 </Text>
                 {picked && (
@@ -135,7 +137,7 @@ function Details({
     <View style={styles.details}>
       <View style={styles.detailSprite}>
         <MoveIdle move={s.move}>
-          <Sprite s={s} size={116} />
+          <Sprite s={s} size={100} />
         </MoveIdle>
       </View>
       <View style={styles.tape} />
@@ -215,7 +217,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     padding: 16,
   },
-  detailSprite: {alignItems: 'center', height: 124, justifyContent: 'center'},
+  detailSprite: {alignItems: 'center', height: 106, justifyContent: 'center'},
   detailName: {fontFamily: F.bold, fontSize: 34, lineHeight: 42, color: C.ink},
   tape: {
     position: 'absolute',

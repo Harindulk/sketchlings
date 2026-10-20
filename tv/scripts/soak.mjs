@@ -120,7 +120,7 @@ async function session(s) {
   let phones = null, players = 4;
   if (live) {
     key('ok'); // Start party (preferred focus)
-    const f = room ? null : await waitFor(/\b[BCDFGHJKMNPRSTVWXZ]{4}\b/, 20, `s${s}-lobby`);
+    const f = await waitFor(room ? /Join the party/i : /\b[BCDFGHJKMNPRSTVWXZ]{4}\b/, 20, `s${s}-lobby`); // room exists
     const code = room || (f && ocr(f).match(/\b([BCDFGHJKMNPRSTVWXZ]{4})\b/)?.[1]);
     if (!code) throw new Error('no room code on screen');
     log(`room ${code}, ${live} fake phones`);
