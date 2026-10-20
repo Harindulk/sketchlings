@@ -6,3 +6,9 @@ buildinfo.json
 server/data/
 *.log
 .DS_Store
+
+# local working files
+reports/
+research/
+research_notes/
+docs/drafts/
