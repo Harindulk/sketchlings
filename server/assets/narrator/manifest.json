@@ -1,0 +1,72 @@
+{
+  "voice": "Kokoro-82M af_heart",
+  "mimeType": "audio/mp4; codecs=\"mp4a.40.2\"",
+  "clips": [
+    {
+      "id": "three",
+      "text": "Three!",
+      "file": "three.m4a",
+      "durationMs": 609
+    },
+    {
+      "id": "two",
+      "text": "Two!",
+      "file": "two.m4a",
+      "durationMs": 587
+    },
+    {
+      "id": "one",
+      "text": "One!",
+      "file": "one.m4a",
+      "durationMs": 555
+    },
+    {
+      "id": "go",
+      "text": "Go!",
+      "file": "go.m4a",
+      "durationMs": 578
+    },
+    {
+      "id": "doodle-boost",
+      "text": "Doodle Boost!",
+      "file": "doodle-boost.m4a",
+      "durationMs": 924
+    },
+    {
+      "id": "roar",
+      "text": "ROAR!",
+      "file": "roar.m4a",
+      "durationMs": 586
+    },
+    {
+      "id": "photo-finish",
+      "text": "Photo finish!",
+      "file": "photo-finish.m4a",
+      "durationMs": 918
+    },
+    {
+      "id": "winner-is",
+      "text": "And the winner is...",
+      "file": "winner-is.m4a",
+      "durationMs": 926
+    },
+    {
+      "id": "meet-sketchlings",
+      "text": "Let's meet our Sketchlings!",
+      "file": "meet-sketchlings.m4a",
+      "durationMs": 1383
+    },
+    {
+      "id": "scan-drawing",
+      "text": "Scan your drawing!",
+      "file": "scan-drawing.m4a",
+      "durationMs": 1037
+    },
+    {
+      "id": "everybody-ready",
+      "text": "Everybody ready?",
+      "file": "everybody-ready.m4a",
+      "durationMs": 1047
+    }
+  ]
+}
