@@ -24,25 +24,42 @@ export interface Sketchling {
   move: MoveStyle;
   colors: string[]; // dominant ink colours, '#rrggbb'
   spriteUrl: string; // absolute path on the server, e.g. '/sprites/<id>.png'
+  // Where the drawing's eyes are, normalised to the sprite (x,y in 0..1 of width/height; r = radius as a fraction of width).
+  // Empty array = no eyes found: the TV adds a default pair in the upper part. Used for animated googly eyes.
+  eyes: {x: number; y: number; r: number}[];
   width: number; // sprite pixel size
   height: number;
   source: 'claude' | 'offline';
+  artist?: string; // first name of the player who drew it (Hall of Fame credit)
+  // Spoken lines in the creature's own voice: server-relative URLs to AAC audio in fragmented MP4 (.m4a), e.g. '/voice/<id>/intro.m4a'.
+  // Absent while audio is still generating or if TTS failed; a later `sketchling` frame for the same id adds it.
+  voice?: {intro?: string; catchphrase?: string; winLine?: string};
 }
+
+export type AgeGroup = 'little' | 'big' | 'grownup'; // little <= 7, big 8-12, grownup 13+
+
+// Visible fairness: speed multiplier applied in races, shown on screen as a badge (e.g. "+40% boost").
+export const AGE_BOOST: Record<AgeGroup, number> = {little: 1.4, big: 1.2, grownup: 1.0};
 
 export interface Player {
   id: string;
   name: string;
+  ageGroup: AgeGroup;
   color: string; // player colour '#rrggbb'
   connected: boolean;
   sketchling?: Sketchling;
 }
 
-export type InputKind = 'tap' | 'jump' | 'hold' | 'release';
+export type InputKind = 'tap' | 'jump' | 'hold' | 'release' | 'shout'; // shout = phone mic loudness spike or the ROAR button
 
 // ---------- client -> server ----------
 export type HelloTv = {t: 'hello'; role: 'tv'; room?: string}; // room: rejoin an existing room after reconnect
-export type HelloPhone = {t: 'hello'; role: 'phone'; room: string; name: string; playerId?: string};
+export type HelloPhone = {t: 'hello'; role: 'phone'; room: string; name: string; ageGroup: AgeGroup; playerId?: string};
 export type PhaseMsg = {t: 'phase'; phase: Phase; data?: Record<string, unknown>}; // tv -> server -> phones
+// `data` for phase 'results' (place 1 = winner).
+export interface ResultsData {
+  placements: {playerId: string; place: number}[];
+}
 export type InputMsg = {t: 'input'; kind: InputKind; at: number}; // phone -> server -> tv; `at` = phone ms timestamp
 export type ClientMsg = HelloTv | HelloPhone | PhaseMsg | InputMsg | {t: 'ping'};
 
