@@ -20,11 +20,20 @@ Behaviour other apps should know (all within the protocol):
   kept on reconnect like the name) is stored on `Player` and shows up in every `players` frame; input `kind: 'shout'`
   is relayed like the others; `Sketchling.artist` = uploader's first name; `Sketchling.eyes` from Claude (validated:
   up to 4, x/y in 0..1, r in 0.01..0.25, pixel-looking values dropped, `[]` trusted) or from the offline finder.
-- Offline eyes (`src/eyes.ts`): dark (luma < 90) 8-connected blobs that are round (aspect <= 2), filled (>= 50% of
-  bbox), 1.2-15% of the body size, in the upper 55% of the body, and surrounded by >= 90% opaque, <= 15% other-dark
-  pixels. Only a matching PAIR is returned (similar size, side by side); 0, 1 or > 4 candidates give `[]`.
-  r = 1.5x the dot radius so the googly eye covers the drawn pupil. Hollow-ring eyes and dots on a dark body are
-  missed on purpose (the TV then uses its default pair).
+- Offline eyes (`src/eyes.ts`, reworked 2026-10-20 after the phone's sample monster got `[]`): pupils are dark
+  (luma < 90) blobs clearly thicker than the typical pen stroke (chamfer distance transform; stroke width = 2x the
+  median ink distance), so a pupil touching its eye's rim still counts; tiny enclosed paper specks (highlights) are
+  filled first. A blob must be round, 1.2-15% of the body size, in the upper 60% of the body, with no transparency or
+  outline-connected paper just around it, and almost no other ink around it (a pupil inside a drawn eye may lean on
+  its rim). If the pupil sits in a small, round, enclosed white (a drawn googly eye), the eye is that white circle
+  (r = its radius + half a stroke) so the TV's eye covers the drawing; otherwise r = 1.5x the dot radius. Only a
+  matching PAIR is returned (similar pupil size, side by side); 0, 1 or > 4 candidates, or two dots inside one small
+  shape (nostrils), give `[]`. Hollow-ring eyes, single eyes and dots on a dark body are missed on purpose.
+  Measured on a labelled set (8 real sprites: the TV demo art with its hand-placed eyes, the phone sample monster,
+  the crayon blob; 8 rescaled copies; 30 synthetic kid styles and traps): precision 1.00 -> 1.00, recall 9/28 -> 27/28
+  (the miss is the cloud shrunk to 256 px). Random fuzz: 400 eye drawings recall 0.58 -> 0.99 with no wrong pairs;
+  1000 eye-free scribbles 20 -> 7 false pairs (the rest are thick rings with a pinhole, which do read as eyes).
+  About 20-60 ms for a 1024 px sprite.
 - `scan` frames go to the TV and the owning phone only; other phones learn about the sketchling via `players`.
 - Static: `/j/:room` and `/` serve `phone/dist/index.html`; `/assets/*` (and `/j/assets/*`, in case Vite uses a
   relative base) serve from `phone/dist`.
