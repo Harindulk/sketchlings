@@ -1,6 +1,6 @@
 // Creature voices + narrator through Vega's W3C media stack (notes/audio.md): AAC-LC in fragmented MP4, appended
 // whole to an AudioPlayer through MSE. Creature lines come from the server (/voice/<id>/<line>.m4a), narrator clips
-// are bundled. One clip at a time: a newer call interrupts the current one. Never throws, never blocks the UI.
+// are bundled. One clip at a time, never interrupted (see below). Never throws, never blocks the UI. The race is silent.
 import {HTTP_BASE, SOUND} from './config';
 
 const MIME = 'audio/mp4; codecs="mp4a.40.2"';

@@ -1,4 +1,4 @@
-import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
+import React, {useEffect, useMemo, useRef, useState} from 'react';
 import {Animated, Easing, Image, StyleSheet, Text, View} from 'react-native';
 import {useTVEventHandler} from '@amazon-devices/react-native-kepler';
 import type {Player} from '../../../shared/protocol';
@@ -16,7 +16,7 @@ import {
   TRACK,
 } from '../game/race';
 import {C, F, W} from '../theme';
-import {audioStatus, narrator, say} from '../audio';
+import {audioStatus, hush} from '../audio';
 
 interface Props {
   racers: Player[];
@@ -52,20 +52,13 @@ interface Viz {
   roar: Animated.Value;
 }
 
-/** Values the game loop writes every frame. They're switched to the native driver once, then setValue goes
- *  straight to the native animated graph: no React renders and no JS-side style diffing in the race loop. */
 // eslint-disable-next-line no-undef
 const perf = (globalThis as {performance?: {now(): number}}).performance;
 const nowMs = () => (perf ? perf.now() : Date.now());
 
-// Calls `done` once every value is attached to the native driver. The loop must not setValue before that:
-// on the VVD, setValue racing these zero-length animations sometimes froze the JS thread at race start.
-const makeNative = (vals: [Animated.Value, number][], done: () => void) =>
-  Animated.parallel(
-    vals.map(([v, toValue]) =>
-      Animated.timing(v, {toValue, duration: 0, useNativeDriver: true}),
-    ),
-  ).start(() => done());
+/** Values the game loop writes every frame. Native from birth, so setValue goes straight to the native animated
+ *  graph (no React render, no JS style diffing) and no attach animations or completion callbacks are needed. */
+const nativeValue = (v: number) => new Animated.Value(v, {useNativeDriver: true});
 
 export function Race({racers, bots, onInput, onFinish}: Props) {
   const n = racers.length;
@@ -84,20 +77,20 @@ export function Race({racers, bots, onInput, onFinish}: Props) {
   const viz = useMemo<Viz[]>(
     () =>
       racers.map(() => ({
-        x: new Animated.Value(START_X),
-        y: new Animated.Value(0),
-        rot: new Animated.Value(0),
-        shadow: new Animated.Value(1),
-        px: new Animated.Value(0),
-        py: new Animated.Value(0.3),
-        boost: new Animated.Value(0),
-        stun: new Animated.Value(0),
-        roar: new Animated.Value(0),
+        x: nativeValue(START_X),
+        y: nativeValue(0),
+        rot: nativeValue(0),
+        shadow: nativeValue(1),
+        px: nativeValue(0),
+        py: nativeValue(0.3),
+        boost: nativeValue(0),
+        stun: nativeValue(0),
+        roar: nativeValue(0),
       })),
     [racers],
   );
-  const cam = useRef(new Animated.Value(0)).current;
-  const shake = useRef(new Animated.Value(0)).current;
+  const cam = useRef(nativeValue(0)).current;
+  const shake = useRef(nativeValue(0)).current;
   const [count, setCount] = useState<number | 'GO!' | null>(3);
   const [places, setPlaces] = useState<Record<string, number>>({});
   const [over, setOver] = useState(false);
@@ -105,23 +98,11 @@ export function Race({racers, bots, onInput, onFinish}: Props) {
   const running = useRef(false);
   const remoteAt = useRef(-99);
   const placesRef = useRef<Record<string, number>>({});
-  // Commit fence: every React update in this tree pauses the loop's native setValue()s for a few frames.
-  // On the VVD a commit landing while the loop streamed native-animated updates sometimes parked the JS
-  // thread for good (watchdog ACR: AppNotResponding, "No JavaScript code is currently being executed").
-  const quietUntil = useRef(nowMs() + 120); // also keeps the first frames off the native-attach animations
-  // Re-arms the loop if no frame ran for 500 ms (see notes/tv.md: on the VVD, timers + rAF sometimes stop
-  // firing right at race mount while key/WebSocket events still arrive).
-  const kick = useRef(() => {});
-  const fenced = useCallback((update: () => void) => {
-    quietUntil.current = nowMs() + 90;
-    update();
-  }, []);
 
   // phones -> sim (no React state involved)
   useEffect(
     () =>
       onInput((id, kind, at, recv) => {
-        kick.current();
         if (!running.current) return;
         input(race, id, kind);
         if (at && recv) lat.add(recv - at, recv);
@@ -131,16 +112,15 @@ export function Race({racers, bots, onInput, onFinish}: Props) {
 
   // demo party: the remote can play for player 1 (OK = run, Up = jump, Play/Pause = ROAR)
   useTVEventHandler((e) => {
-    kick.current();
     if (e.eventType === 'menu' && e.eventKeyAction === 0)
-      fenced(() => setShowFps((f) => !f)); // Menu: perf overlay
+      setShowFps((f) => !f); // Menu: perf overlay
     if (!bots || !running.current || e.eventKeyAction !== 0) return;
     const kind =
       e.eventType === 'select'
         ? 'tap'
         : e.eventType === 'up'
         ? 'jump'
-        : e.eventType === 'playpause'
+        : e.eventType === 'playpause' || e.eventType === 'play' // the VVD's KEY_PLAYPAUSE arrives as 'play'
         ? 'shout'
         : null;
     if (!kind) return;
@@ -151,29 +131,7 @@ export function Race({racers, bots, onInput, onFinish}: Props) {
   // the game loop
   useEffect(() => {
     let alive = true;
-    makeNative(
-      [
-        [cam, 0],
-        ...viz.flatMap((v): [Animated.Value, number][] => [
-          [v.x, START_X],
-          [v.y, 0],
-          [v.rot, 0],
-          [v.shadow, 1],
-          [v.px, 0],
-          [v.py, 0.3],
-        ]),
-      ],
-      () => attached(),
-    );
-    // First frame only after every value is attached to the native driver: starting the frame chain while the
-    // attach animations were in flight is when the VVD stalled most (notes/tv.md). Never call setValue from
-    // inside an Animated callback/listener either: that re-entry blocked the JS thread outright.
-    let attachedOk = false;
-    const attached = () => {
-      if (attachedOk || !alive) return;
-      attachedOk = true;
-      setTimeout(startChain, 0); // leave the Animated callback before touching native values
-    };
+    hush(); // the race is silent: drop a Reveal line still queued (one already playing ends on its own)
     const eyes = racers.map(() => ({
       ox: 0,
       oy: 0.3,
@@ -192,7 +150,6 @@ export function Race({racers, bots, onInput, onFinish}: Props) {
       Math.max(8, laneH - 16 - spriteBox(p.sketchling!, size).h),
     );
     let last = 0;
-    let raf = 0;
     let clock = 0;
     let overAt = 0; // results follow 2.2 s after the finish, timed by the frame loop
     const pulse = (v: Animated.Value, on: boolean) =>
@@ -206,54 +163,19 @@ export function Race({racers, bots, onInput, onFinish}: Props) {
     let dbgAt = nowMs();
     let dbgFrames = 0;
     let work = 0;
-    let pace: ReturnType<typeof setTimeout> | undefined;
-    let stalls = 0; // loop restarts by kick(); shown in the perf overlay
-    dbg.stalls = () => stalls;
-    // One frame chain at a time: `token` changes when the chain is (re)started, older chains stop themselves.
-    let token = 0;
-    let lastTickAt = nowMs();
-    const tick = (t: number) => {
-      if (!alive || t !== token) return;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    // Exactly one JS task per frame. Vega's JS-thread watchdog sends IPC messages for every JS task, and a
+    // backlog of them deadlocks the JS thread (notes/tv.md F4), so: no requestAnimationFrame (it free-runs
+    // at ~7.6 kHz on the headless VVD anyway), no extra setTimeout(0) yields, no side timers.
+    const tick = () => {
+      if (!alive) return;
       const now = nowMs();
-      lastTickAt = now;
-      const elapsed = now - last;
-      if (last && elapsed < 13) {
-        // rAF on the headless Vega Virtual Device fires ~1250x/s instead of once per vsync (notes/tv.md),
-        // which ran the race 10x fast and starved JS timers. Pace frames ourselves to ~60 Hz.
-        pace = setTimeout(() => tick(t), 15 - elapsed);
-        return;
-      }
       frame(now);
-      work += nowMs() - now;
-      // always yield to timers/WebSocket events before asking for the next vsync
-      pace = setTimeout(() => (raf = requestAnimationFrame(() => tick(t))), 0);
+      const spent = nowMs() - now;
+      work += spent;
+      timer = setTimeout(tick, Math.max(1, 16 - spent));
     };
-    const startChain = () => {
-      const t = ++token;
-      lastTickAt = nowMs();
-      let fired = false;
-      const once = () => {
-        if (!fired) {
-          fired = true;
-          tick(t);
-        }
-      };
-      raf = requestAnimationFrame(once);
-      setTimeout(once, 16); // whichever fires first runs the chain
-    };
-    kick.current = () => {
-      if (alive && nowMs() - lastTickAt > 500) {
-        stalls++;
-        startChain();
-      }
-    };
-    // 3-2-1-GO runs off the frame clock (no separate timers that could stall independently)
-    const WORDS: Record<string, string> = {
-      3: 'three',
-      2: 'two',
-      1: 'one',
-      'GO!': 'go',
-    };
+    // 3-2-1-GO runs off the frame clock
     let startedAt = 0;
     let goFired = false;
     let shownCount: number | 'GO!' | null | undefined;
@@ -269,13 +191,11 @@ export function Race({racers, bots, onInput, onFinish}: Props) {
       }
       if (c === shownCount) return;
       shownCount = c;
-      if (c !== null) narrator(WORDS[String(c)]);
-      fenced(() => setCount(c));
+      setCount(c); // no narration: the race is silent (audio work on the VVD slowed JS, notes/tv.md F7)
     };
     // only cross to native when a value really moved (idle runners, countdown, finished racers cost nothing)
     const sent = new Map<Animated.Value, number>();
     const put = (v: Animated.Value, x: number) => {
-      if (nowMs() < quietUntil.current) return; // commit fence (see above); resent on the next open frame
       const prev = sent.get(v);
       if (prev === undefined || Math.abs(prev - x) > 0.01) {
         sent.set(v, x);
@@ -381,7 +301,6 @@ export function Race({racers, bots, onInput, onFinish}: Props) {
         if (stunned !== f.stun) pulse(v.stun, (f.stun = stunned));
         const roaring = r.roarT > 0;
         if (roaring && !f.roar) {
-          narrator('roar');
           v.roar.setValue(0);
           Animated.sequence([
             Animated.spring(v.roar, {
@@ -414,20 +333,18 @@ export function Race({racers, bots, onInput, onFinish}: Props) {
         const next: Record<string, number> = {};
         race.finishOrder.forEach((id, k) => (next[id] = k + 1));
         placesRef.current = next;
-        fenced(() => setPlaces(next));
+        setPlaces(next);
       }
       if (race.over && running.current) {
         running.current = false;
-        fenced(() => setOver(true));
-        const w = racers.find((p) => p.id === placements(race)[0])?.sketchling;
-        say(w?.voice?.catchphrase);
+        setOver(true); // the winner's catchphrase is a caption here; Results plays its voice
         overAt = now;
       }
     };
+    timer = setTimeout(tick, 0);
     return () => {
       alive = false;
-      cancelAnimationFrame(raf);
-      if (pace) clearTimeout(pace);
+      if (timer) clearTimeout(timer);
     };
     // the loop owns its own state; it runs once per mounted race
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -556,7 +473,6 @@ export function Race({racers, bots, onInput, onFinish}: Props) {
         <Timer
           race={race}
           showFps={showFps}
-          fenced={fenced}
           hint={
             bots
               ? 'Remote: OK run · Up jump · Play ROAR'
@@ -580,7 +496,7 @@ export function Race({racers, bots, onInput, onFinish}: Props) {
   );
 }
 
-const dbg = {fps: 0, ms: 0, stalls: () => 0}; // game-loop frame rate + JS work per frame, shown with the Menu key
+const dbg = {fps: 0, ms: 0}; // game-loop frame rate + JS work per frame, shown with the Menu key
 
 // Phone -> TV input latency. `at` is the phone's clock, so raw = recv - at includes the clock offset: it is
 // absolute only when clocks agree (simulated phones on the same Mac; NTP-synced phones are usually within
@@ -793,12 +709,10 @@ function Medal({place, color}: {place: number; color: string}) {
 function Timer({
   race,
   showFps,
-  fenced,
   hint,
 }: {
   race: RaceSim;
   showFps: boolean;
-  fenced: (update: () => void) => void;
   hint: string;
 }) {
   const [secs, setSecs] = useState(0);
@@ -807,10 +721,10 @@ function Timer({
     const t = setInterval(() => {
       const n = Math.floor(race.t);
       if (n !== shown.current || showFps)
-        fenced(() => setSecs((shown.current = n)));
+        setSecs((shown.current = n));
     }, 250);
     return () => clearInterval(t);
-  }, [race, fenced, showFps]);
+  }, [race, showFps]);
   const l = lat.summary();
   return (
     <>
@@ -825,7 +739,7 @@ function Timer({
         {showFps
           ? `${dbg.fps}fps ${
               dbg.ms
-            }ms/f · restarts ${dbg.stalls()} · input ${l}\naudio ${
+            }ms/f · input ${l}\naudio ${
               audioStatus.mode
             } ${audioStatus.state} · voices ${audioStatus.voices} of ${
               audioStatus.ended
