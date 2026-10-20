@@ -22,6 +22,14 @@ export interface Sketchling {
   winLine: string; // said when it wins, <= 12 words
   stats: Stats;
   move: MoveStyle;
+  // What you draw changes how you play. The ability comes from a visible feature of the drawing:
+  // fly = wings -> floats over ink blots; roll = wheels/round body -> faster on flat ground;
+  // hop = long legs/springy -> higher, longer jumps; walk = big/chunky -> ROAR knocks back nearby blots.
+  ability: {
+    kind: MoveStyle; // same as `move`
+    feature: string; // the drawn feature it comes from, kid-readable, <= 4 words: "big wings", "round wheels"
+    label: string; // the power, <= 6 words: "Flies over ink blots!"
+  };
   colors: string[]; // dominant ink colours, '#rrggbb'
   spriteUrl: string; // absolute path on the server, e.g. '/sprites/<id>.png'
   // Where the drawing's eyes are, normalised to the sprite (x,y in 0..1 of width/height; r = radius as a fraction of width).
