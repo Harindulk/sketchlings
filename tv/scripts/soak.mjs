@@ -1,6 +1,7 @@
 // Race-start soak test on the headless Vega Virtual Device: drives the remote, reads the screen, flags freezes.
 //   node tv/scripts/soak.mjs [races=20] [--live 3] [--rounds 4] [--out dir]
-// Demo party by default; --live N runs a real party against the server with N fake phones (scripts/fake-phones.mjs).
+// Demo party by default; --live N runs a real party against the server with N fake phones (scripts/fake-phones.mjs);
+// the room code is read off the screen, or given with --room CODE (Vision can't read the tilted code tiles reliably).
 // Each session launches the app, goes Home -> lobby -> reveal -> race, then "Play again" for --rounds races.
 // A race counts as frozen when, 6 s after it mounted, the countdown title is still up or the screen stopped moving.
 // On a freeze it presses Back (the system then kills the hung app and writes an ACR) and copies the ACRs to --out.
@@ -23,6 +24,7 @@ const opt = (k, d) => (args.includes(k) ? args[args.indexOf(k) + 1] : d);
 const races = Number(args.find((a) => /^\d+$/.test(a)) ?? 20);
 const live = Number(opt('--live', 0));
 const rounds = Number(opt('--rounds', 4));
+const room = opt('--room', '');
 const out = opt('--out', join(process.env.TMPDIR || '/tmp', `sketchlings-soak-${Date.now()}`));
 mkdirSync(out, {recursive: true});
 
@@ -118,8 +120,8 @@ async function session(s) {
   let phones = null, players = 4;
   if (live) {
     key('ok'); // Start party (preferred focus)
-    const f = await waitFor(/\b[BCDFGHJKMNPRSTVWXZ]{4}\b/, 20, `s${s}-lobby`);
-    const code = f && ocr(f).match(/\b([BCDFGHJKMNPRSTVWXZ]{4})\b/)?.[1];
+    const f = room ? null : await waitFor(/\b[BCDFGHJKMNPRSTVWXZ]{4}\b/, 20, `s${s}-lobby`);
+    const code = room || (f && ocr(f).match(/\b([BCDFGHJKMNPRSTVWXZ]{4})\b/)?.[1]);
     if (!code) throw new Error('no room code on screen');
     log(`room ${code}, ${live} fake phones`);
     phones = spawn('node', [join(HERE, 'fake-phones.mjs'), code, String(live)], {stdio: 'ignore'});
