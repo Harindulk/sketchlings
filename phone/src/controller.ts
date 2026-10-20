@@ -1,0 +1,214 @@
+// Race controller: giant multi-touch TAP pad, swipe up / JUMP, ROAR button and optional mic shouting.
+import {AGE_BOOST, type AgeGroup, type InputKind} from '../../shared/protocol';
+import {buzz, h, icons, svg} from './ui';
+
+export interface Racer {
+  name: string;
+  color: string;
+  ageGroup: AgeGroup;
+  spriteUrl?: string;
+}
+
+const SWIPE_PX = 45;
+const SWIPE_MS = 450;
+const SHOUT_COOLDOWN_MS = 1500;
+
+export function boostLabel(age: AgeGroup): string {
+  const pct = Math.round((AGE_BOOST[age] - 1) * 100);
+  return pct > 0 ? `+${pct}% boost!` : 'No boost';
+}
+
+const splatSvg = `<svg viewBox="0 0 70 70"><path d="M35 8c5 0 6 9 11 10s9-6 13-2-3 10-1 14 11 4 10 9-10 3-12 7 4 11-1 13-8-6-13-5-6 9-11 7 0-10-4-13-11-1-12-6 8-6 8-11-8-8-5-12 9 1 12-2 1-9 5-9z" fill="currentColor" stroke="#1F2A44" stroke-width="3" stroke-linejoin="round"/></svg>`;
+
+export function raceView(racer: () => Racer, send: (kind: InputKind) => void): {el: HTMLElement; update(): void; destroy(): void} {
+  let taps = 0;
+  const counter = h('span', {class: 'tap-count', 'aria-hidden': 'true'}, '0');
+  const pad = h(
+    'button',
+    {type: 'button', class: 'tap-pad', 'aria-label': 'Tap fast to run. Swipe up to jump.'},
+    h('span', {class: 'tap-label'}, 'TAP!', h('small', null, 'tap fast · swipe up to jump')),
+    counter,
+  );
+
+  const flash = (text: string) => {
+    const f = h('div', {class: 'flash', 'aria-hidden': 'true'}, text);
+    document.body.append(f);
+    f.addEventListener('animationend', () => f.remove());
+  };
+  const tap = (x?: number, y?: number) => {
+    send('tap');
+    taps++;
+    counter.textContent = String(taps);
+    buzz(8);
+    pad.classList.add('pressed');
+    setTimeout(() => pad.classList.remove('pressed'), 70);
+    if (x === undefined || y === undefined || pad.querySelectorAll('.splat').length > 6) return;
+    const s = svg(splatSvg, 'splat');
+    s.style.left = `${x}px`;
+    s.style.top = `${y}px`;
+    s.style.setProperty('--rot', `${Math.random() * 360}deg`);
+    s.addEventListener('animationend', () => s.remove());
+    pad.append(s);
+  };
+  const jump = () => {
+    send('jump');
+    buzz(25);
+    flash('JUMP!');
+  };
+  const roar = () => {
+    send('shout');
+    buzz([30, 40, 30]);
+    flash('ROAR!');
+  };
+
+  // Every finger counts as a tap; a quick upward flick of any finger is a jump.
+  const starts = new Map<number, {y: number; t: number; jumped: boolean}>();
+  pad.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    const r = pad.getBoundingClientRect();
+    tap(e.clientX - r.left, e.clientY - r.top);
+    starts.set(e.pointerId, {y: e.clientY, t: performance.now(), jumped: false});
+  });
+  pad.addEventListener('pointermove', (e) => {
+    const s = starts.get(e.pointerId);
+    if (!s || s.jumped) return;
+    if (s.y - e.clientY > SWIPE_PX && performance.now() - s.t < SWIPE_MS) {
+      s.jumped = true;
+      jump();
+    }
+  });
+  const lift = (e: PointerEvent) => starts.delete(e.pointerId);
+  pad.addEventListener('pointerup', lift);
+  pad.addEventListener('pointercancel', lift);
+  pad.addEventListener('click', (e) => {
+    if (e.detail === 0) tap(); // keyboard activation (Enter/Space) of the focused pad
+  });
+  pad.addEventListener('contextmenu', (e) => e.preventDefault());
+
+  const actionBtn = (cls: string, icon: string, label: string, act: () => void) => {
+    const b = h('button', {type: 'button', class: `btn ${cls}`}, svg(icon), label);
+    b.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      act();
+    });
+    b.addEventListener('click', (e) => {
+      if (e.detail === 0) act();
+    });
+    b.addEventListener('contextmenu', (e) => e.preventDefault());
+    return b;
+  };
+
+  const onKey = (e: KeyboardEvent) => {
+    if (e.repeat || (e.target instanceof HTMLElement && e.target.closest('button'))) return;
+    if (e.key === ' ') tap();
+    else if (e.key === 'ArrowUp') jump();
+    else if (e.key.toLowerCase() === 'r') roar();
+    else return;
+    e.preventDefault();
+  };
+  document.addEventListener('keydown', onKey);
+
+  const mic = micControl(() => {
+    send('shout');
+    buzz([30, 40, 30]);
+    flash('ROAR!');
+  });
+
+  const avatar = h('span', {class: 'avatar'});
+  const who = h('span', {class: 'who'});
+  const boost = h('span', {class: 'boost'});
+  const update = () => {
+    const r = racer();
+    document.documentElement.style.setProperty('--me', r.color);
+    who.textContent = r.name;
+    boost.replaceChildren(svg(icons.bolt), boostLabel(r.ageGroup));
+    avatar.replaceChildren(r.spriteUrl ? h('img', {src: r.spriteUrl, alt: ''}) : h('span', {class: 'swatch'}));
+  };
+  update();
+
+  document.body.classList.add('racing');
+  const el = h(
+    'section',
+    {class: 'screen controller'},
+    h('h1', {class: 'sr-only', tabindex: '-1'}, 'Race! Tap to run'),
+    h('div', {class: 'racer'}, avatar, who, boost),
+    pad,
+    h('div', {class: 'actions'}, actionBtn('jump', icons.up, 'JUMP', jump), actionBtn('roar', icons.roar, 'ROAR', roar)),
+    mic.el,
+  );
+  return {
+    el,
+    update,
+    destroy() {
+      document.removeEventListener('keydown', onKey);
+      document.body.classList.remove('racing');
+      mic.stop();
+    },
+  };
+}
+
+/**
+ * "Enable shouting": mic loudness spikes become shouts. Browsers only allow getUserMedia on
+ * secure pages (HTTPS/localhost), so on a plain-HTTP LAN page this renders nothing and the
+ * ROAR button is the way to shout.
+ */
+function micControl(onShout: () => void): {el: HTMLElement | null; stop(): void} {
+  if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) return {el: null, stop() {}};
+  let stream: MediaStream | null = null;
+  let ac: AudioContext | null = null;
+  let raf = 0;
+  const fill = h('i');
+  const meter = h('span', {class: 'meter', 'aria-hidden': 'true'}, fill);
+  const btn = h('button', {type: 'button', class: 'link-btn'}, 'Enable shouting');
+  const row = h('div', {class: 'mic'}, svg(icons.mic), btn);
+
+  const stop = () => {
+    cancelAnimationFrame(raf);
+    stream?.getTracks().forEach((t) => t.stop());
+    void ac?.close();
+    stream = null;
+    ac = null;
+  };
+
+  btn.addEventListener('click', async () => {
+    if (stream) {
+      stop();
+      meter.remove();
+      btn.textContent = 'Enable shouting';
+      return;
+    }
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({audio: {echoCancellation: false, noiseSuppression: false, autoGainControl: false}});
+    } catch {
+      btn.textContent = 'No mic: use ROAR!';
+      btn.disabled = true;
+      return;
+    }
+    ac = new AudioContext();
+    const analyser = ac.createAnalyser();
+    analyser.fftSize = 1024;
+    ac.createMediaStreamSource(stream).connect(analyser);
+    const buf = new Float32Array(analyser.fftSize);
+    let baseline = 0.02;
+    let last = 0;
+    btn.textContent = 'Shout to ROAR! (tap to stop)';
+    row.append(meter);
+    const tick = () => {
+      analyser.getFloatTimeDomainData(buf);
+      let sum = 0;
+      for (const v of buf) sum += v * v;
+      const rms = Math.sqrt(sum / buf.length);
+      fill.style.width = `${Math.min(100, (rms / 0.3) * 100)}%`;
+      const now = performance.now();
+      // A spike well above the room's own noise level, at most once per cooldown.
+      if (rms > Math.max(0.1, baseline * 3.5) && now - last > SHOUT_COOLDOWN_MS) {
+        last = now;
+        onShout();
+      }
+      baseline = baseline * 0.98 + Math.min(rms, 0.15) * 0.02;
+      raf = requestAnimationFrame(tick);
+    };
+    tick();
+  });
+  return {el: row, stop};
+}
