@@ -77,11 +77,20 @@ const vvdUp = () => {
     return false;
   }
 };
-function revive() {
+async function revive() {
   stats.vvdCrashes++;
   log('VVD is down (host stall, F5): restarting it');
-  vega('virtual-device start --no-gui --timeout 300');
-  vega(`run-app "${join(HERE, '../build/sketchlings_aarch64.vpkg')}" ${APP} -d VirtualDevice`);
+  for (let i = 0; i < 3; i++) {
+    try {
+      if (!vvdUp()) vega('virtual-device start --no-gui --timeout 300');
+      await sleep(10); // "ready" comes before `run-app` can see the device
+      vega(`run-app "${join(HERE, '../build/sketchlings_aarch64.vpkg')}" ${APP} -d VirtualDevice`);
+      return;
+    } catch (e) {
+      log(`restart failed: ${String(e.message).split('\n')[0]}`);
+    }
+  }
+  throw new Error('VVD would not come back');
 }
 async function checkRace(label) {
   await sleep(4.5);
@@ -148,7 +157,7 @@ for (let s = 1; stats.races < races; s++) {
     await session(s);
   } catch (e) {
     if (!vvdUp()) {
-      revive();
+      await revive();
       continue;
     }
     stats.notStarted++;
