@@ -1,11 +1,11 @@
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {BackHandler, Dimensions, StyleSheet, View} from 'react-native';
-import type {Player, ResultsData} from '../../shared/protocol';
+import type {Player, ResultsData, Sketchling} from '../../shared/protocol';
 import {hush, prefetch} from './audio';
 import {ScreenIn} from './components/Bits';
 import {Paper} from './components/Paper';
 import type {PartyMode} from './game/party';
-import {racersOf, useParty} from './game/party';
+import {racersOf, useParty, withGuests} from './game/party';
 import {HallOfFame} from './screens/HallOfFame';
 import {Home, HomeChoice} from './screens/Home';
 import {HowTo} from './screens/HowTo';
@@ -34,8 +34,13 @@ export const App = () => {
   const [racers, setRacers] = useState<Player[]>([]);
   const [order, setOrder] = useState<string[]>([]);
   const [round, setRound] = useState(0);
+  const [guests, setGuests] = useState<Sketchling[]>([]); // Hall of Fame "Race again" picks for the next party
   const party = useParty(mode);
   const {sendPhase} = party;
+  const partyState = useMemo(
+    () => withGuests(party.state, guests),
+    [party.state, guests],
+  );
   const liveRoom =
     mode === 'live' && party.state.conn === 'open' && !!party.state.code;
 
@@ -57,9 +62,10 @@ export const App = () => {
 
   const goHome = useCallback(() => {
     hush();
+    if (mode) setGuests([]); // the guests raced in this party (leaving the Hall of Fame keeps them)
     setMode(null);
     setScreen('home');
-  }, []);
+  }, [mode]);
   const goLobby = useCallback(() => {
     hush();
     setScreen('lobby');
@@ -117,7 +123,7 @@ export const App = () => {
   }, []);
   const again = () => {
     // pick up anyone who finished a drawing meanwhile
-    const now = racersOf(party.state);
+    const now = racersOf(partyState);
     if (now.length >= racers.length) setRacers(now);
     setRound((r) => r + 1);
     setScreen('race');
@@ -129,7 +135,7 @@ export const App = () => {
       body = (
         <Lobby
           mode={mode ?? 'live'}
-          state={party.state}
+          state={partyState}
           onStart={start}
           onDemo={() => {
             setMode('demo');
@@ -162,7 +168,18 @@ export const App = () => {
       );
       break;
     case 'hof':
-      body = <HallOfFame />;
+      body = (
+        <HallOfFame
+          guests={guests.map((g) => g.id)}
+          onToggle={(s) =>
+            setGuests((gs) =>
+              gs.some((g) => g.id === s.id)
+                ? gs.filter((g) => g.id !== s.id)
+                : [...gs, s],
+            )
+          }
+        />
+      );
       break;
     case 'howto':
       body = <HowTo onDone={goHome} />;

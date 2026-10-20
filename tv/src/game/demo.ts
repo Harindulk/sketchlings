@@ -146,14 +146,18 @@ export const SAMPLE_SKETCHLINGS: Sketchling[] = [
 export const DEMO_NAMES = ['Mia', 'Leo', 'Ava', 'Sam'];
 const DEMO_AGES: AgeGroup[] = ['little', 'big', 'grownup', 'little'];
 
-/** The 4 demo players, with their Sketchlings attached. */
-export function demoPlayers(): Player[] {
-  return DEMO_NAMES.map((name, i) => ({
+/** The 4 demo players with their Sketchlings: the newest Hall of Fame creatures (one per name, credited to their
+ *  artists) when the hall has at least two, topped up with our bundled samples. */
+export function demoPlayers(hall: Sketchling[] = []): Player[] {
+  const names = new Set<string>();
+  const saved = hall.filter((s) => !names.has(s.name) && names.add(s.name));
+  const pool = [...(saved.length >= 2 ? saved : []), ...SAMPLE_SKETCHLINGS].slice(0, 4);
+  return pool.map((s, i) => ({
     id: `demo-${i + 1}`,
-    name,
+    name: s.artist || DEMO_NAMES[i],
     ageGroup: DEMO_AGES[i],
     color: PLAYER_COLORS[i],
     connected: true,
-    sketchling: SAMPLE_SKETCHLINGS[i],
+    sketchling: {...s, playerId: `demo-${i + 1}`},
   }));
 }

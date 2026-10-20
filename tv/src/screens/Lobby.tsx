@@ -8,7 +8,7 @@ import {AgeBadge, Title} from '../components/Bits';
 import {FocusButton} from '../components/FocusButton';
 import {Sprite} from '../components/Sprite';
 import type {PartyMode, PartyState, ScanStatus} from '../game/party';
-import {racersOf} from '../game/party';
+import {isGuest, racersOf} from '../game/party';
 import {HOST} from '../config';
 import {C, F} from '../theme';
 
@@ -222,7 +222,7 @@ function PlayerChip({
               st === 'ready' && styles.statusReady,
               st === 'failed' && styles.statusFailed,
             ]}>
-            {STATUS[st]}
+            {isGuest(player) ? 'Hall of Fame guest' : STATUS[st]}
           </Text>
         </View>
       </View>

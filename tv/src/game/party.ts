@@ -9,7 +9,8 @@ import type {
   ServerMsg,
   Sketchling,
 } from '../../../shared/protocol';
-import {WS_URL} from '../config';
+import {MAX_PLAYERS, PLAYER_COLORS} from '../../../shared/protocol';
+import {HTTP_BASE, WS_URL} from '../config';
 import {demoPlayers} from './demo';
 
 export type PartyMode = 'live' | 'demo';
@@ -43,6 +44,42 @@ export const racersOf = (s: PartyState): Player[] =>
   s.players
     .map((p) => ({...p, sketchling: p.sketchling ?? s.sketchlings[p.id]}))
     .filter((p) => p.sketchling);
+
+/** GET /api/hall-of-fame (newest first); rejects when the server is unreachable within `ms`. */
+export function fetchHall(ms = 3000): Promise<Sketchling[]> {
+  const ctrl = new AbortController();
+  const timeout = setTimeout(() => ctrl.abort(), ms);
+  return fetch(`${HTTP_BASE}/api/hall-of-fame`, {signal: ctrl.signal})
+    .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+    .then((list: unknown) => {
+      if (!Array.isArray(list)) throw new Error('bad hall of fame');
+      return list.filter((s) => s && s.id && s.spriteUrl) as Sketchling[];
+    })
+    .finally(() => clearTimeout(timeout));
+}
+
+export const isGuest = (p: Player) => p.id.startsWith('guest-');
+
+/** Hall of Fame creatures picked for "Race again" join the party as bot-run guest racers (up to MAX_PLAYERS). */
+export function withGuests(s: PartyState, guests: Sketchling[]): PartyState {
+  if (!guests.length) return s;
+  const players = [...s.players];
+  const racing = new Set(racersOf(s).map((p) => p.sketchling!.id));
+  for (const g of guests) {
+    if (players.length >= MAX_PLAYERS || racing.has(g.id)) continue;
+    const used = new Set(players.map((p) => p.color));
+    const id = `guest-${g.id}`;
+    players.push({
+      id,
+      name: g.artist || g.name,
+      ageGroup: 'grownup',
+      color: PLAYER_COLORS.find((c) => !used.has(c)) ?? PLAYER_COLORS[0],
+      connected: true,
+      sketchling: {...g, playerId: id},
+    });
+  }
+  return {...s, players};
+}
 
 export function useParty(mode: PartyMode | null) {
   const [state, setState] = useState<PartyState>(EMPTY);
@@ -167,9 +204,26 @@ function reduce(s: PartyState, msg: ServerMsg): PartyState {
   }
 }
 
-/** Scripted lobby: four players join, draw, and come alive one after another. */
+/** Scripted lobby: four players join, draw, and come alive one after another. Uses this house's Hall of Fame
+ *  creatures when it has at least two (the server is optional: offline it uses our bundled samples). */
 function runDemoLobby(setState: (f: (s: PartyState) => PartyState) => void) {
-  const players = demoPlayers();
+  let stopped = false;
+  let stop = () => {};
+  fetchHall(1500)
+    .catch(() => [])
+    .then((hall) => {
+      if (!stopped) stop = scriptDemo(setState, demoPlayers(hall));
+    });
+  return () => {
+    stopped = true;
+    stop();
+  };
+}
+
+function scriptDemo(
+  setState: (f: (s: PartyState) => PartyState) => void,
+  players: Player[],
+) {
   const timers: ReturnType<typeof setTimeout>[] = [];
   const at = (ms: number, f: (s: PartyState) => PartyState) =>
     timers.push(setTimeout(() => setState(f), ms));

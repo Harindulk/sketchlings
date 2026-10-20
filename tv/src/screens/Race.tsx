@@ -5,6 +5,7 @@ import type {Player} from '../../../shared/protocol';
 import {AgeBadge, Bubble} from '../components/Bits';
 import {Sprite, spriteBox} from '../components/Sprite';
 import type {InputListener} from '../game/party';
+import {isGuest} from '../game/party';
 import {
   createRace,
   input,
@@ -70,7 +71,7 @@ export function Race({racers, bots, onInput, onFinish}: Props) {
         id: p.id,
         stats: p.sketchling!.stats,
         ageGroup: p.ageGroup,
-        bot: bots,
+        bot: bots || isGuest(p), // Hall of Fame guests run themselves
       })),
     ),
   ).current;
