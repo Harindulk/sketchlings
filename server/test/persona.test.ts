@@ -1,5 +1,6 @@
 import {describe, expect, test} from 'bun:test';
 import type {Sketchling} from '../../shared/protocol';
+import {ABILITY_LABEL, GENERIC_FEATURE} from '../src/ability';
 import {analyze, balanceStats, generatePersona, offlinePersona, sanitizePersona, type Claude, type Persona} from '../src/persona';
 import {readPngSize} from '../src/png';
 import {drawBlob, encodePng} from './helpers';
@@ -24,6 +25,10 @@ function expectValid(p: Persona) {
   expect(speed + jump + power).toBeGreaterThanOrEqual(7);
   expect(speed + jump + power).toBeLessThanOrEqual(11);
   expect(['walk', 'hop', 'fly', 'roll']).toContain(p.move);
+  expect(p.ability.kind).toBe(p.move);
+  expect(p.ability.label).toBe(ABILITY_LABEL[p.move]);
+  expect(words(p.ability.feature)).toBeGreaterThan(0);
+  expect(words(p.ability.feature)).toBeLessThanOrEqual(4);
   expect(p.colors.length).toBeGreaterThan(0);
   for (const c of p.colors) expect(c).toMatch(/^#[0-9a-f]{6}$/);
   expect(p.eyes.length).toBeLessThanOrEqual(4);
@@ -70,7 +75,7 @@ describe('offline persona', () => {
 
   test('stays within limits for thousands of random features', () => {
     for (let seed = 1; seed < 3000; seed++) {
-      const p = offlinePersona({seed, colors: ['#123456'], family: 'blue', aspect: (seed % 40) / 10 + 0.1, ink: (seed % 100) / 100, eyes: []});
+      const p = offlinePersona({seed, colors: ['#123456'], family: 'blue', aspect: (seed % 40) / 10 + 0.1, ink: (seed % 100) / 100, eyes: [], kind: (['walk', 'hop', 'fly', 'roll'] as const)[seed % 4]!});
       expectValid(p);
     }
   });
@@ -172,7 +177,35 @@ describe('generatePersona', () => {
     expect(p.name).toBe('Captain Squiggle');
     expect(p.stats.speed + p.stats.jump + p.stats.power).toBe(11);
     expect(p.colors).toEqual(['#3366ff']);
+    expect(p.ability).toEqual({kind: 'fly', feature: GENERIC_FEATURE.fly, label: ABILITY_LABEL.fly}); // no feature given
     const s: Omit<Sketchling, 'id' | 'playerId' | 'spriteUrl' | 'width' | 'height'> = p; // type matches the protocol
     expect(s).toBeTruthy();
+  });
+
+  test('asks the model for a move earned by a visible feature', async () => {
+    let params: any;
+    await generatePersona(b, size, fake(async (p?: unknown) => ((params = p), {stop_reason: 'end_turn', content: [{type: 'text', text: '{}'}]})) as never);
+    expect(params.output_config.format.schema.required).toContain('ability');
+    expect(params.output_config.format.schema.properties.ability.properties.feature.type).toBe('string');
+    expect(params.system).toMatch(/FEATURE YOU CAN SEE/);
+    expect(params.system).toMatch(/fly: wings/);
+  });
+
+  test('ability follows the model move: feature clamped, kind = move, label fixed', async () => {
+    const ask = async (o: object) => generatePersona(b, size, fake(reply(JSON.stringify(o))));
+    const offline = await generatePersona(b, size, null);
+
+    const a = await ask({move: 'fly', ability: {kind: 'roll', feature: '  Big sparkly 🦋 wings that flap a lot ', label: 'Can do anything!'}});
+    expect(a.move).toBe('fly');
+    expect(a.ability).toEqual({kind: 'fly', feature: 'Big sparkly wings that', label: ABILITY_LABEL.fly});
+    expectValid(a);
+
+    const h = await ask({move: 'hop', ability: {feature: 42}});
+    expect(h.ability).toEqual({kind: 'hop', feature: GENERIC_FEATURE.hop, label: ABILITY_LABEL.hop});
+
+    // no valid move from the model: move and ability both come from the offline guess, never a mismatched pair
+    const c = await ask({move: 'teleport', ability: {feature: 'rocket boots'}});
+    expect(c.move).toBe(offline.move);
+    expect(c.ability).toEqual(offline.ability);
   });
 });

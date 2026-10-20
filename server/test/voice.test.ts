@@ -17,6 +17,7 @@ const persona = (o: Partial<Sketchling>): Sketchling => ({
   winLine: 'High fives for everyone!',
   stats: {speed: 3, jump: 3, power: 3},
   move: 'walk',
+  ability: {kind: 'walk', feature: 'big strong body', label: 'ROAR knocks back ink blots!'},
   colors: ['#2bb3ff'],
   spriteUrl: '/sprites/x.png',
   eyes: [],

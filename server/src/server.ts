@@ -3,6 +3,7 @@ import {existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync, unlin
 import {networkInterfaces} from 'node:os';
 import {join, resolve, sep} from 'node:path';
 import type {Sketchling} from '../../shared/protocol';
+import {withAbility} from './ability';
 import {generatePersona, type Claude} from './persona';
 import {MAX_SIDE, readPngSize, type PngInfo} from './png';
 import {createHub, type Room, type Slot, type WsData} from './rooms';
@@ -52,7 +53,7 @@ export function createServer(cfg: ServerConfig) {
     try {
       const parsed = JSON.parse(readFileSync(hallPath, 'utf8'));
       if (!Array.isArray(parsed)) throw new Error('not an array');
-      hall = parsed;
+      hall = parsed.filter(s => s && typeof s === 'object').map(withAbility);
     } catch (e) {
       const bad = `${hallPath}.bad-${Date.now()}`;
       console.error(`[hall] unreadable ${hallPath}, moved to ${bad}:`, e);

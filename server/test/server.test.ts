@@ -33,6 +33,9 @@ describe('upload end-to-end (offline persona)', () => {
     expect((await mia.next('sketchling')).sketchling).toEqual(sk);
     expect(sk).toMatchObject({id, playerId, spriteUrl: `/sprites/${id}.png`, width: 120, height: 90, source: 'offline', artist: 'Mia'});
     expect(Array.isArray(sk.eyes)).toBe(true);
+    expect(sk.ability.kind).toBe(sk.move);
+    expect(typeof sk.ability.feature).toBe('string');
+    expect(typeof sk.ability.label).toBe('string');
     expect(sk.name.length).toBeGreaterThan(0);
     for (const c of [tv, mia]) expect(await c.next('scan')).toEqual({t: 'scan', playerId, status: 'ready'});
 
@@ -97,6 +100,18 @@ describe('upload end-to-end (offline persona)', () => {
     cors(pre);
     expect((await fetch(`${app.http}/sprites/00000000-0000-0000-0000-000000000000.png`)).status).toBe(404);
     expect((await fetch(`${app.http}/sprites/..%2Fhall.json`)).status).toBe(404);
+  });
+});
+
+describe('hall of fame from older builds', () => {
+  test('entries saved before abilities get one on load; junk entries are dropped', async () => {
+    const dataDir = mkdtempSync(join(tmpdir(), 'sketchlings-hall-'));
+    writeFileSync(join(dataDir, 'hall.json'), JSON.stringify([{id: 'a', name: 'Pip', move: 'roll'}, null, 'junk']));
+    const app = startTestServer({dataDir});
+    const hall = (await (await fetch(`${app.http}/api/hall-of-fame`)).json()) as Sketchling[];
+    expect(hall).toHaveLength(1);
+    expect(hall[0]!.ability).toEqual({kind: 'roll', feature: 'round body', label: 'Zooms fast on flat ground!'});
+    app.stop();
   });
 });
 

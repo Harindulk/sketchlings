@@ -67,6 +67,22 @@ Each Sketchling also carries `artist` (the uploader's first name) and `eyes` (`{
 for the TV's googly eyes). Claude is asked to locate the eyes and to return `[]` when unsure; offline, `src/eyes.ts`
 only reports a convincing pair of small round dark dots inside the upper half of the body, otherwise `[]`.
 
+**Abilities** (`src/ability.ts`): what you draw changes how you play. `ability.kind` always equals `move`;
+`ability.label` is fixed per kind so the TV can rely on it:
+
+| kind | drawn feature | label |
+|---|---|---|
+| `fly` | wings | Flies over ink blots! |
+| `roll` | wheels / round body | Zooms fast on flat ground! |
+| `hop` | long legs / springy | Jumps extra high and far! |
+| `walk` | big, chunky body | ROAR knocks back ink blots! |
+
+Claude picks `move` from a feature it can see and names it in `ability.feature` (1-4 kid words, clamped; a generic
+feature if unusable; an invalid `move` falls back to the offline move *and* ability). Offline, the cut-out silhouette
+decides: tall with two thin lower protrusions = hop ("long legs"), wide with a few rows sticking far out sideways =
+fly ("wide wings"), near-circular = roll ("round body"), else walk ("big strong body"). Hall-of-fame entries saved
+before abilities existed get one from their `move` when the server loads them.
+
 Data lives in `server/data/` (git-ignored): `sprites/<id>.png` and `hall.json`. Sprites that drop out of the
 hall of fame are deleted.
 

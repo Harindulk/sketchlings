@@ -20,6 +20,11 @@ Behaviour other apps should know (all within the protocol):
   kept on reconnect like the name) is stored on `Player` and shows up in every `players` frame; input `kind: 'shout'`
   is relayed like the others; `Sketchling.artist` = uploader's first name; `Sketchling.eyes` from Claude (validated:
   up to 4, x/y in 0..1, r in 0.01..0.25, pixel-looking values dropped, `[]` trusted) or from the offline finder.
+- Protocol update 2026-10-20 (abilities) implemented: `Sketchling.ability` with `kind === move`, a fixed label per
+  kind (see the table in `server/README.md`; the TV can match on it), and `feature` from Claude (clamped to 4 words)
+  or a generic offline one. The offline move is now deterministic from the silhouette (`shapeKind` in
+  `src/ability.ts`) instead of a seeded random pick. Old `hall.json` entries are backfilled on load; non-object
+  entries are dropped instead of making the whole file unreadable.
 - Offline eyes (`src/eyes.ts`, reworked 2026-10-20 after the phone's sample monster got `[]`): pupils are dark
   (luma < 90) blobs clearly thicker than the typical pen stroke (chamfer distance transform; stroke width = 2x the
   median ink distance), so a pupil touching its eye's rim still counts; tiny enclosed paper specks (highlights) are
@@ -59,7 +64,7 @@ The first request after a schema change pays a one-time schema compile (cached 2
 - Layout: `src/png.ts` (IHDR + 8-bit RGB/RGBA non-interlaced decode with node:zlib, all five filters),
   `src/persona.ts` (features, offline generator, clamping, Claude call), `src/rooms.ts` (rooms, frame validation, relay),
   `src/server.ts` (HTTP + WS wiring, hall of fame), `src/index.ts` (env + start).
-- Tests: 36 tests over real HTTP + WS on port 0 with temp data dirs and `claude: null`, so `bun test` never calls the
+- Tests: 54 tests over real HTTP + WS on port 0 with temp data dirs and `claude: null`, so `bun test` never calls the
   API even when `server/.env` has a key. The Claude request shape (headers, `?beta=true`, body, no `Authorization`
   header, explicit base URL) and the 12 s timeout were checked once against a local mock API.
 - Room codes use `BCDFGHJKMNPRSTVWXZ`: no vowels so codes never spell words, no I/L/O/Q.
