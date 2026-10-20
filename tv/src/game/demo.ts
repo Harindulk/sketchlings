@@ -33,6 +33,7 @@ export const SAMPLE_SKETCHLINGS: Sketchling[] = [
     winLine: 'Mash-ter of the race, at your service!',
     stats: {speed: 3, jump: 2, power: 5},
     move: 'walk',
+    ability: {kind: 'walk', feature: 'big brave potato body', label: 'ROAR knocks back ink blots!'},
     colors: ['#d9a066', '#ff5a5f'],
     spriteUrl: 'demo:potato',
     eyes: [
@@ -54,6 +55,7 @@ export const SAMPLE_SKETCHLINGS: Sketchling[] = [
     winLine: 'Hop, hop, hooray for me!',
     stats: {speed: 3, jump: 5, power: 2},
     move: 'hop',
+    ability: {kind: 'hop', feature: 'springy frog legs', label: 'Jumps extra high and far!'},
     colors: ['#57c26b', '#ffc531'],
     spriteUrl: 'demo:frog',
     eyes: [
@@ -75,6 +77,7 @@ export const SAMPLE_SKETCHLINGS: Sketchling[] = [
     winLine: 'Cloud nine? More like cloud number ONE!',
     stats: {speed: 4, jump: 3, power: 2},
     move: 'fly',
+    ability: {kind: 'fly', feature: 'puffy cloud wings', label: 'Flies over ink blots!'},
     colors: ['#c9b5ff', '#ff8a3d'],
     spriteUrl: 'demo:cloud',
     eyes: [
@@ -96,6 +99,7 @@ export const SAMPLE_SKETCHLINGS: Sketchling[] = [
     winLine: 'I rolled all the way to the top!',
     stats: {speed: 5, jump: 1, power: 3},
     move: 'roll',
+    ability: {kind: 'roll', feature: 'round spiky body', label: 'Zooms fast on flat ground!'},
     colors: ['#ff8a3d', '#ffd8a8'],
     spriteUrl: 'demo:hedgehog',
     eyes: [
@@ -116,6 +120,7 @@ export const SAMPLE_SKETCHLINGS: Sketchling[] = [
     winLine: 'Rawr means thank you in dinosaur!',
     stats: {speed: 2, jump: 3, power: 4},
     move: 'walk',
+    ability: {kind: 'walk', feature: 'big stompy feet', label: 'ROAR knocks back ink blots!'},
     colors: ['#2bb3ff', '#ffc531'],
     spriteUrl: 'demo:dino',
     eyes: [{x: 0.777, y: 0.203, r: 0.043}],
@@ -133,6 +138,7 @@ export const SAMPLE_SKETCHLINGS: Sketchling[] = [
     winLine: 'Wish granted: first place!',
     stats: {speed: 4, jump: 4, power: 1},
     move: 'fly',
+    ability: {kind: 'fly', feature: 'shooting-star tail', label: 'Flies over ink blots!'},
     colors: ['#ffe066', '#ff5a5f'],
     spriteUrl: 'demo:star',
     eyes: [

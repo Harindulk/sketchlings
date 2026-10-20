@@ -56,6 +56,86 @@ describe('Doodle Dash sim', () => {
   });
 });
 
+describe('abilities (what you draw changes how you play)', () => {
+  const blotAhead = (race: ReturnType<typeof createRace>, i: number) => {
+    race.runners[i].x = race.blots[i][0] - 5;
+    race.runners[i].nextBlot = 0;
+  };
+
+  it('fly floats over ink blots, hop springs over them, walk gets stunned', () => {
+    const race = createRace(
+      [
+        {id: 'f', stats, ability: 'fly'},
+        {id: 'h', stats, ability: 'hop'},
+        {id: 'w', stats, ability: 'walk'},
+      ],
+      5,
+    );
+    [0, 1, 2].forEach((i) => blotAhead(race, i));
+    input(race, 'h', 'jump');
+    step(race, 0.2);
+    const [f, h, w] = race.runners;
+    expect(f.stunT).toBe(0);
+    expect(f.saves).toBe(1);
+    expect(h.stunT).toBe(0);
+    expect(h.saves).toBe(1);
+    expect(w.stunT).toBeGreaterThan(0);
+  });
+
+  it('hop jumps are higher and longer', () => {
+    const race = createRace([{id: 'h', stats, ability: 'hop'}, {id: 'w', stats}], 6);
+    race.blots = [[], []];
+    input(race, 'h', 'jump');
+    input(race, 'w', 'jump');
+    step(race, 0.8); // a plain jump (0.75 s) has landed, the hop is still up
+    expect(jumpY(race.runners[0])).toBeGreaterThan(20);
+    expect(jumpY(race.runners[1])).toBe(0);
+  });
+
+  it('walk ROAR knocks the ink blots just ahead out of its lane', () => {
+    const race = createRace([{id: 'w', stats, ability: 'walk'}, {id: 'r', stats, ability: 'roll'}], 7);
+    const first = race.blots[0][0];
+    race.runners[0].x = first - 100;
+    const before = race.blots[0].length;
+    input(race, 'w', 'shout');
+    expect(race.blots[0]).not.toContain(first);
+    expect(race.blots[0].length).toBeLessThan(before);
+    expect(race.runners[0].saves).toBe(1);
+  });
+
+  it('roll zooms after a stretch of flat ground', () => {
+    const race = createRace([{id: 'r', stats, ability: 'roll'}, {id: 'w', stats}], 8);
+    race.blots = [[], []];
+    step(race, 1);
+    const [r, w] = race.runners;
+    expect(r.v).toBeCloseTo(w.v, 5);
+    step(race, 1);
+    expect(r.v).toBeGreaterThan(w.v * 1.05);
+    expect(r.saves).toBe(1);
+  });
+
+  it('is balanced: every kind wins a fair share of equal bot races', () => {
+    const kinds = ['fly', 'roll', 'hop', 'walk'] as const;
+    const wins: Record<string, number> = {fly: 0, roll: 0, hop: 0, walk: 0};
+    const N = 200;
+    for (let seed = 1; seed <= N; seed++) {
+      const race = createRace(
+        kinds.map((_, i) => {
+          const k = kinds[(i + seed) % 4]; // rotate lanes so one lane's blots don't favour a kind
+          return {id: k, stats, bot: true, ability: k};
+        }),
+        seed,
+      );
+      run(race, 120);
+      wins[placements(race)[0]]++;
+    }
+    for (const k of kinds) {
+      expect(wins[k] / N).toBeGreaterThan(0.15);
+      expect(wins[k] / N).toBeLessThan(0.36);
+    }
+  });
+});
+
 import {decode64} from '../src/audio';
 import {NARRATOR} from '../src/assets/narrator';
 

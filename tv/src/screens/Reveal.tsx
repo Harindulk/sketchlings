@@ -1,8 +1,9 @@
 import React, {useEffect, useMemo, useRef, useState} from 'react';
-import {Animated, Easing, StyleSheet, Text, View} from 'react-native';
-import type {Player} from '../../../shared/protocol';
-import {Bubble, MoveIdle, StatBars, Title} from '../components/Bits';
+import {Animated, Easing, Image, StyleSheet, Text, View} from 'react-native';
+import type {Player, Sketchling} from '../../../shared/protocol';
+import {Bubble, fitFont, MoveIdle, StatBars, Title} from '../components/Bits';
 import {FocusButton} from '../components/FocusButton';
+import {ABILITY, abilityOf} from '../game/ability';
 import {Sprite} from '../components/Sprite';
 import {C, F} from '../theme';
 import {narrator, say} from '../audio';
@@ -198,6 +199,8 @@ function RevealCard({p}: {p: Player}) {
     };
   }, [tear, paper, pop, spin, text]);
 
+  const fs = fitFont(s.name, 412, 60);
+  const nameSize = {fontSize: fs, lineHeight: fs * 1.23};
   return (
     <>
       <View style={styles.stage}>
@@ -226,15 +229,13 @@ function RevealCard({p}: {p: Player}) {
         </View>
         <View>
           <Text
-            style={[styles.name, styles.nameShadow]}
-            numberOfLines={1}
-            adjustsFontSizeToFit>
+            style={[styles.name, styles.nameShadow, nameSize]}
+            numberOfLines={1}>
             {s.name}
           </Text>
           <Text
-            style={[styles.name, {color: p.color}]}
-            numberOfLines={1}
-            adjustsFontSizeToFit>
+            style={[styles.name, {color: p.color}, nameSize]}
+            numberOfLines={1}>
             {s.name}
           </Text>
         </View>
@@ -242,6 +243,8 @@ function RevealCard({p}: {p: Player}) {
         <Text style={styles.catch}>“{s.catchphrase}”</Text>
         <StatBars stats={s.stats} delay={900} width={380} />
       </Animated.View>
+
+      <AbilityBadge s={s} color={p.color} v={bubble} />
 
       <Animated.View
         style={[
@@ -254,8 +257,69 @@ function RevealCard({p}: {p: Player}) {
   );
 }
 
+/** "Big wings → Flies over ink blots!": what the drawing does in the race, as a sticker under the creature. */
+function AbilityBadge({
+  s,
+  color,
+  v,
+}: {
+  s: Sketchling;
+  color: string;
+  v: Animated.Value;
+}) {
+  const a = abilityOf(s);
+  const feature = a.feature.charAt(0).toUpperCase() + a.feature.slice(1);
+  return (
+    <Animated.View
+      style={[
+        styles.ability,
+        {opacity: v, transform: [{scale: v}, {rotate: '-2deg'}]},
+      ]}>
+      <View style={[styles.abilityIcon, {backgroundColor: color}]}>
+        <Image source={ABILITY[a.kind].icon} style={styles.abilityImg} />
+      </View>
+      <View style={styles.abilityText}>
+        <Text style={styles.abilityFeature} numberOfLines={1}>
+          {feature} →
+        </Text>
+        <Text
+          style={[styles.abilityLabel, {fontSize: fitFont(a.label, 316, 26)}]}
+          numberOfLines={1}>
+          {a.label}
+        </Text>
+      </View>
+    </Animated.View>
+  );
+}
+
 const styles = StyleSheet.create({
   root: {flex: 1},
+  ability: {
+    position: 'absolute',
+    left: 64,
+    top: 438,
+    width: 410,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: C.white,
+    borderWidth: 4,
+    borderColor: C.ink,
+    borderRadius: 20,
+    padding: 6,
+  },
+  abilityIcon: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    borderWidth: 3,
+    borderColor: C.ink,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  abilityImg: {width: 50, height: 50},
+  abilityText: {flex: 1, marginLeft: 10},
+  abilityFeature: {fontFamily: F.semi, fontSize: 20, lineHeight: 24, color: C.inkSoft},
+  abilityLabel: {fontFamily: F.bold, fontSize: 26, lineHeight: 32, color: C.ink},
   header: {position: 'absolute', left: 92, top: 18},
   dots: {position: 'absolute', left: 96, top: 62, flexDirection: 'row'},
   dot: {
@@ -309,7 +373,7 @@ const styles = StyleSheet.create({
     color: C.inkSoft,
     marginVertical: 8,
   },
-  bubbleWrap: {position: 'absolute', left: 476, top: 372, width: 330},
+  bubbleWrap: {position: 'absolute', left: 476, top: 372, width: 300}, // clear of the Next button
   next: {position: 'absolute', right: 48, bottom: 30, width: 128, height: 54},
   nextText: {fontFamily: F.bold, fontSize: 24, color: C.ink},
 });

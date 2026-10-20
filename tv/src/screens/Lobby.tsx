@@ -1,6 +1,6 @@
 import 'fast-text-encoding'; // qrcode-svg needs TextEncoder on Vega (documented known issue)
 import React, {useEffect, useMemo, useRef} from 'react';
-import {Animated, Easing, StyleSheet, Text, View} from 'react-native';
+import {Animated, Easing, Image, StyleSheet, Text, View} from 'react-native';
 import QRCode from '@amazon-devices/react-native-qrcode-svg';
 import type {Player} from '../../../shared/protocol';
 import {MAX_PLAYERS} from '../../../shared/protocol';
@@ -8,6 +8,7 @@ import {AgeBadge, Title} from '../components/Bits';
 import {FocusButton} from '../components/FocusButton';
 import {Sprite} from '../components/Sprite';
 import type {PartyMode, PartyState, ScanStatus} from '../game/party';
+import {ABILITY, abilityOf} from '../game/ability';
 import {isGuest, racersOf} from '../game/party';
 import {HOST} from '../config';
 import {C, F} from '../theme';
@@ -44,9 +45,11 @@ export function Lobby({mode, state, onStart, onDemo}: Props) {
               />
             </View>
             <Text style={styles.scan}>
-              {mode === 'demo'
-                ? 'Demo players are joining…'
-                : 'Scan with a phone camera'}
+              {mode !== 'demo'
+                ? 'Scan with a phone camera'
+                : ready && racers.length === state.players.length
+                ? 'Everyone is ready!'
+                : 'Demo players are joining…'}
             </Text>
             <Text style={styles.codeLabel}>Room code</Text>
             <View style={styles.codeRow}>
@@ -195,6 +198,12 @@ function PlayerChip({
             {player.name.slice(0, 1).toUpperCase()}
           </Text>
         )}
+        {racer?.sketchling && (
+          <Image
+            source={ABILITY[abilityOf(racer.sketchling).kind].icon}
+            style={styles.ability}
+          />
+        )}
       </View>
       <View style={styles.chipText}>
         <Text style={styles.name} numberOfLines={1}>
@@ -323,6 +332,7 @@ const styles = StyleSheet.create({
   statusReady: {color: '#1E9E57', fontFamily: F.bold},
   statusFailed: {color: '#D9363E'},
   chipBadge: {position: 'absolute', bottom: -13, right: 8},
+  ability: {position: 'absolute', right: -12, bottom: -10, width: 34, height: 34},
   actions: {position: 'absolute', right: 0, bottom: 4, flexDirection: 'row'},
   startBtn: {width: 300, height: 66},
   demoBtn: {width: 190, height: 66, marginRight: 24},

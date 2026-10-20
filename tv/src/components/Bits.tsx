@@ -13,6 +13,11 @@ import type {AgeGroup, MoveStyle, Stats} from '../../../shared/protocol';
 import {AGE_BOOST, PLAYER_COLORS} from '../../../shared/protocol';
 import {C, F, STAT_COLORS, W} from '../theme';
 
+/** Font size that fits `text` on one line in `width` dp. adjustsFontSizeToFit does nothing on Vega, so we
+ *  estimate: Baloo 2 bold averages ~0.54 em per character. */
+export const fitFont = (text: string, width: number, max: number) =>
+  Math.min(max, Math.floor(width / 0.54 / Math.max(1, text.length)));
+
 export function Bubble({
   text,
   style,

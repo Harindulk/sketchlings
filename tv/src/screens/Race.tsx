@@ -3,6 +3,7 @@ import {Animated, Easing, Image, StyleSheet, Text, View} from 'react-native';
 import {useTVEventHandler} from '@amazon-devices/react-native-kepler';
 import type {Player} from '../../../shared/protocol';
 import {AgeBadge, Bubble} from '../components/Bits';
+import {ABILITY, abilityOf} from '../game/ability';
 import {Sprite, spriteBox} from '../components/Sprite';
 import type {InputListener} from '../game/party';
 import {isGuest} from '../game/party';
@@ -51,6 +52,7 @@ interface Viz {
   boost: Animated.Value;
   stun: Animated.Value;
   roar: Animated.Value;
+  pop: Animated.Value; // the ability's "WINGS!" / "WHEELS!" moment
 }
 
 // eslint-disable-next-line no-undef
@@ -70,6 +72,7 @@ export function Race({racers, bots, onInput, onFinish}: Props) {
       racers.map((p) => ({
         id: p.id,
         stats: p.sketchling!.stats,
+        ability: abilityOf(p.sketchling!).kind,
         ageGroup: p.ageGroup,
         bot: bots || isGuest(p), // Hall of Fame guests run themselves
       })),
@@ -87,6 +90,7 @@ export function Race({racers, bots, onInput, onFinish}: Props) {
         boost: nativeValue(0),
         stun: nativeValue(0),
         roar: nativeValue(0),
+        pop: nativeValue(0),
       })),
     [racers],
   );
@@ -95,6 +99,7 @@ export function Race({racers, bots, onInput, onFinish}: Props) {
   const [count, setCount] = useState<number | 'GO!' | null>(3);
   const [places, setPlaces] = useState<Record<string, number>>({});
   const [over, setOver] = useState(false);
+  const [, setKnocked] = useState(0); // a walker's ROAR removed ink blots: re-render the world layer
   const [showFps, setShowFps] = useState(false);
   const running = useRef(false);
   const remoteAt = useRef(-99);
@@ -143,7 +148,26 @@ export function Race({racers, bots, onInput, onFinish}: Props) {
       bvx: 0,
       bvy: 0,
     }));
-    const flags = racers.map(() => ({boost: false, stun: false, roar: false}));
+    const flags = racers.map(() => ({
+      boost: false,
+      stun: false,
+      roar: false,
+      saves: 0,
+    }));
+    // spring in, hold, fade: the ROAR! pill and the ability pop
+    const flash = (v: Animated.Value, hold: number, friction = 3) => {
+      v.setValue(0);
+      Animated.sequence([
+        Animated.spring(v, {
+          toValue: 1,
+          friction,
+          tension: 160,
+          useNativeDriver: true,
+        }),
+        Animated.delay(hold),
+        Animated.timing(v, {toValue: 0, duration: 250, useNativeDriver: true}),
+      ]).start();
+    };
     let camX = 0;
     lat.raw.length = lat.apply.length = lat.pending.length = 0; // stats are per race
     // headroom above each sprite inside its lane band: jumps, hops and flying are clamped to it
@@ -262,6 +286,9 @@ export function Race({racers, bots, onInput, onFinish}: Props) {
           }
         }
         if (r.stunT > 0) rot += Math.sin(clock * 28) * 12;
+        const flap = race.t - r.savedAt; // fly: a little wing-flap lift over the blot it just floated over
+        if (r.ability === 'fly' && flap < 0.45)
+          bob -= 16 * Math.sin((Math.PI * flap) / 0.45);
         const room = rooms[i];
         const jy = jumpY(r) * Math.min(1, room / jumpHeight(r));
         const y = Math.max(bob * Math.min(1, room / 30) - jy, -room);
@@ -302,21 +329,7 @@ export function Race({racers, bots, onInput, onFinish}: Props) {
         if (stunned !== f.stun) pulse(v.stun, (f.stun = stunned));
         const roaring = r.roarT > 0;
         if (roaring && !f.roar) {
-          v.roar.setValue(0);
-          Animated.sequence([
-            Animated.spring(v.roar, {
-              toValue: 1,
-              friction: 3,
-              tension: 160,
-              useNativeDriver: true,
-            }),
-            Animated.delay(600),
-            Animated.timing(v.roar, {
-              toValue: 0,
-              duration: 250,
-              useNativeDriver: true,
-            }),
-          ]).start();
+          flash(v.roar, 600);
           Animated.sequence(
             [10, -9, 7, -5, 3, 0].map((toValue) =>
               Animated.timing(shake, {
@@ -328,6 +341,11 @@ export function Race({racers, bots, onInput, onFinish}: Props) {
           ).start();
         }
         f.roar = roaring;
+        if (r.saves !== f.saves) {
+          f.saves = r.saves;
+          flash(v.pop, 600, 6);
+          if (r.ability === 'walk') setKnocked((k) => k + 1);
+        }
       });
 
       if (race.finishOrder.length !== Object.keys(placesRef.current).length) {
@@ -548,6 +566,7 @@ const RunnerView = React.memo(
     place?: number;
   }) => {
     const s = p.sketchling!;
+    const kind = abilityOf(s).kind;
     const box = spriteBox(s, size);
     const ground = top + laneH - 12;
     const spin = useRef(new Animated.Value(0)).current;
@@ -676,6 +695,22 @@ const RunnerView = React.memo(
             },
           ]}>
           <Text style={styles.roarText}>ROAR!</Text>
+        </Animated.View>
+        <Animated.View
+          style={[
+            styles.pop,
+            {
+              left: box.w * 0.62, // ahead of the feet, under the ROAR! pill, clear of "Doodle Boost!" behind
+              top: box.h - 22,
+              width: 44 + ABILITY[kind].pop.length * 12, // absolute children don't shrink-wrap on Vega
+              opacity: v.pop,
+              transform: [{scale: v.pop}, {rotate: '4deg'}],
+            },
+          ]}>
+          <Image source={ABILITY[kind].icon} style={styles.popIcon} />
+          <Text style={styles.popText} numberOfLines={1}>
+            {ABILITY[kind].pop}
+          </Text>
         </Animated.View>
         {place ? <Medal place={place} color={p.color} /> : null}
       </Animated.View>
@@ -905,6 +940,19 @@ const styles = StyleSheet.create({
     borderColor: C.ink,
   },
   roarText: {fontFamily: F.bold, fontSize: 30, lineHeight: 38, color: C.ink},
+  pop: {
+    position: 'absolute',
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: C.white,
+    borderRadius: 14,
+    borderWidth: 3,
+    borderColor: C.ink,
+    paddingLeft: 2,
+    paddingRight: 10,
+  },
+  popIcon: {width: 28, height: 28, marginRight: 2},
+  popText: {fontFamily: F.bold, fontSize: 19, lineHeight: 28, color: C.ink},
   medal: {
     position: 'absolute',
     top: -16,

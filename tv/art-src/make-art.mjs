@@ -223,6 +223,40 @@ art.icon_dice = icon(
   `<path d="M46 196 l6 13 l14 1 l-11 9 l4 14 l-13 -8 l-13 8 l4 -14 l-11 -9 l14 -1 z" fill="#3DDC84" stroke="${INK}" stroke-width="5" stroke-linejoin="round"/>`,
 );
 
+// Ability icons ("what you draw changes how you play"): wings, wheel, spring, roar burst
+art.ab_fly = icon(
+  shape('M122 134 Q70 50 18 84 Q38 104 26 124 Q56 136 44 158 Q86 172 122 150 Z', '#C9B5FF') +
+  shape('M134 134 Q186 50 238 84 Q218 104 230 124 Q200 136 212 158 Q170 172 134 150 Z', '#C9B5FF') +
+  line('M44 104 Q80 112 112 136 M50 140 Q84 144 112 146 M212 104 Q176 112 144 136 M206 140 Q172 144 144 146', 6) +
+  blob(128, 144, 18, 30, '#FFC531', 8),
+);
+art.ab_roll = icon(
+  line('M20 96 L58 96 M10 128 L50 128 M20 160 L58 160', 10, '#2BB3FF') +
+  shape('M150 40 a88 88 0 1 0 0.1 0 Z', '#5A6480') +
+  `<circle cx="150" cy="128" r="46" fill="#FFC531" stroke="${INK}" stroke-width="8"/>` +
+  line('M150 82 L150 174 M104 128 L196 128 M118 96 L182 160 M182 96 L118 160', 7) +
+  `<circle cx="150" cy="128" r="12" fill="#fff" stroke="${INK}" stroke-width="6"/>`,
+);
+art.ab_hop = icon(
+  shape('M70 206 L186 206 L186 230 L70 230 Z', '#FF8A3D', {sw: 8}) +
+  line('M92 196 L164 176 L92 156 L164 136 L92 116 L164 96 L92 76', 24) +
+  line('M92 196 L164 176 L92 156 L164 136 L92 116 L164 96 L92 76', 12, '#3DDC84') +
+  shape('M70 44 L186 44 L186 68 L70 68 Z', '#FF8A3D', {sw: 8}) +
+  line('M206 60 Q226 40 216 18 M40 60 Q24 40 36 18', 8, '#2BB3FF'),
+);
+{
+  const pts = [];
+  for (let i = 0; i < 24; i++) {
+    const a = (i * Math.PI) / 12 - Math.PI / 2, r = i % 2 ? 72 : 112;
+    pts.push(`${r1(128 + Math.cos(a) * r)} ${r1(128 + Math.sin(a) * r)}`);
+  }
+  art.ab_walk = icon(
+    shape(`M${pts.join(' L')} Z`, '#FF5A5F') +
+    shape('M116 66 L140 66 L134 150 L122 150 Z', '#FFFFFF', {sw: 7, dx: 0, dy: 0}) +
+    `<circle cx="128" cy="180" r="15" fill="#fff" stroke="${INK}" stroke-width="7"/>`,
+  );
+}
+
 // Background doodles: faint blue ballpoint on a wide transparent tile (repeats horizontally)
 seed = 1234;
 {

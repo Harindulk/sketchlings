@@ -1,6 +1,6 @@
 // Doodle Dash rules as a pure simulation (no React): the Race screen steps it once per frame and copies
 // positions into Animated values. Units: dp and seconds.
-import type {AgeGroup, InputKind, Stats} from '../../../shared/protocol';
+import type {AgeGroup, InputKind, MoveStyle, Stats} from '../../../shared/protocol';
 import {AGE_BOOST} from '../../../shared/protocol';
 
 export const TRACK = 8600; // start line at x=0, finish at x=TRACK
@@ -11,12 +11,21 @@ const ROAR_SPEED = 140;
 const TIME_LIMIT = 75;
 const AFTER_FIRST = 10; // seconds the others get after the winner crosses
 const DOODLE_BOOST_GAP = 150; // trailing by more than this (dp) starts the Doodle Boost
+// Abilities (what you draw changes how you play), balanced in test/race.spec.ts so every kind can win:
+const FLY_SPEED = 1.03; // fly: floats over ink blots (never stunned), light and quick
+const ROLL_AFTER = 1.5; // roll: after this long on flat ground (no jump, no stun)...
+const ROLL_SPEED = 1.1; // ...it zooms
+const HOP_HEIGHT = 1.3; // hop: higher...
+const HOP_TIME = 1.45; // ...and longer jumps, so a badly timed jump still clears a blot...
+const HOP_SPEED = 1.07; // ...and covers more ground while in the air
+const KNOCK_RANGE = 420; // walk: ROAR knocks the ink blots this far ahead out of its lane
 
 export interface RunnerInit {
   id: string;
   stats: Stats;
   ageGroup?: AgeGroup;
   bot?: boolean;
+  ability?: MoveStyle; // Sketchling.ability.kind; none = walk
 }
 
 export interface Runner {
@@ -36,6 +45,10 @@ export interface Runner {
   boost: number; // Doodle Boost multiplier (1 = none)
   nextBlot: number;
   finishedAt: number; // race time, -1 while running
+  ability: MoveStyle;
+  flatT: number; // roll: seconds on flat ground
+  saves: number; // times the ability saved or boosted this runner (the TV pops "WINGS!" etc.)
+  savedAt: number; // race time of the last one
   // bot brain
   botRate: number;
   botDecided: number; // index of the blot the bot already decided about
@@ -84,6 +97,10 @@ export function createRace(inits: RunnerInit[], seed = Date.now()): Race {
       boost: 1,
       nextBlot: 0,
       finishedAt: -1,
+      ability: r.ability ?? 'walk',
+      flatT: 0,
+      saves: 0,
+      savedAt: -9,
       botRate: 3.6 + rnd() * 1.6,
       botDecided: -1,
     })),
@@ -92,11 +109,18 @@ export function createRace(inits: RunnerInit[], seed = Date.now()): Race {
 
 const clampStat = (n: number) => Math.max(1, Math.min(5, Math.round(n || 3)));
 const tapPower = (r: Runner) => 19 + 2 * clampStat(r.stats.power);
-export const jumpHeight = (r: Runner) => 62 + 9 * clampStat(r.stats.jump);
+const hop = (r: Runner) => r.ability === 'hop';
+export const jumpHeight = (r: Runner) =>
+  (62 + 9 * clampStat(r.stats.jump)) * (hop(r) ? HOP_HEIGHT : 1);
+const jumpTime = (r: Runner) => JUMP_TIME * (hop(r) ? HOP_TIME : 1);
 export const jumpY = (r: Runner) => {
   if (r.jumpT < 0) return 0;
-  const p = r.jumpT / JUMP_TIME;
+  const p = r.jumpT / jumpTime(r);
   return 4 * jumpHeight(r) * p * (1 - p);
+};
+const saved = (race: Race, r: Runner) => {
+  r.saves++;
+  r.savedAt = race.t;
 };
 
 export function input(race: Race, id: string, kind: InputKind) {
@@ -119,6 +143,16 @@ export function input(race: Race, id: string, kind: InputKind) {
       if (r.roarCd <= 0 && r.stunT <= 0) {
         r.roarT = ROAR_TIME;
         r.roarCd = ROAR_COOLDOWN;
+        if (r.ability === 'walk') {
+          const lane = race.blots[r.lane];
+          const near = lane.filter((x) => x >= r.x && x < r.x + KNOCK_RANGE);
+          if (near.length) {
+            race.blots[r.lane] = lane.filter((x) => !near.includes(x));
+            r.nextBlot = race.blots[r.lane].findIndex((x) => x >= r.x);
+            if (r.nextBlot < 0) r.nextBlot = race.blots[r.lane].length;
+            saved(race, r);
+          }
+        }
       }
       break;
   }
@@ -147,22 +181,41 @@ export function step(race: Race, dt: number) {
       r.v *= Math.exp(-2.5 * dt); // coast after the line
     } else {
       const base = 40 + 8 * clampStat(r.stats.speed);
+      const flat = r.jumpT < 0 ? (r.flatT += dt) : (r.flatT = 0);
+      if (r.ability === 'roll' && flat >= ROLL_AFTER && flat - dt < ROLL_AFTER)
+        saved(race, r); // the wheels kick in
+      const kind =
+        r.ability === 'fly'
+          ? FLY_SPEED
+          : r.ability === 'roll' && flat >= ROLL_AFTER
+          ? ROLL_SPEED
+          : hop(r) && r.jumpT >= 0
+          ? HOP_SPEED
+          : 1;
       r.v =
-        (base + r.energy) * r.age * r.boost + (r.roarT > 0 ? ROAR_SPEED : 0);
+        (base + r.energy) * kind * r.age * r.boost +
+        (r.roarT > 0 ? ROAR_SPEED : 0);
     }
     r.x += r.v * dt;
 
     if (r.jumpT >= 0) {
       r.jumpT += dt;
-      if (r.jumpT >= JUMP_TIME) r.jumpT = -1;
+      if (r.jumpT >= jumpTime(r)) r.jumpT = -1;
     }
 
     const blots = race.blots[r.lane];
     while (r.nextBlot < blots.length && r.x >= blots[r.nextBlot]) {
-      if (jumpY(r) < 20 && r.finishedAt < 0) {
+      if (r.finishedAt >= 0) {
+        // past the line: blots don't matter
+      } else if (jumpY(r) >= 20) {
+        if (hop(r)) saved(race, r); // sprang over it
+      } else if (r.ability === 'fly') {
+        saved(race, r); // floats over it
+      } else {
         r.stunT = 1.1 - 0.12 * clampStat(r.stats.power);
         r.energy *= 0.4;
         r.roarT = 0;
+        r.flatT = 0;
       }
       r.nextBlot++;
     }
@@ -188,11 +241,15 @@ function botThink(race: Race, r: Runner, dt: number) {
     const dist = next - r.x;
     if (dist > 0 && dist < 30 + r.v * 0.28) {
       r.botDecided = r.nextBlot;
-      if (rnd() < 0.78) input(race, r.id, 'jump');
+      if (rnd() < (hop(r) ? 0.95 : 0.78)) input(race, r.id, 'jump'); // springy legs: easy to time
     }
   }
-  if (r.roarCd <= 0 && race.t > 6 && rnd() < 0.05 * dt)
-    input(race, r.id, 'shout');
+  // ROAR now and then; walkers save theirs for when an ink blot is close (about as often overall)
+  if (r.roarCd <= 0 && race.t > 3) {
+    const near = next !== undefined && next - r.x < KNOCK_RANGE * 0.6;
+    const rate = r.ability !== 'walk' ? 0.12 : near ? 1 : 0;
+    if (rnd() < rate * dt) input(race, r.id, 'shout');
+  }
 }
 
 /** Finish order first, then everyone else by distance. */

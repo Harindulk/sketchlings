@@ -2,7 +2,7 @@ import React, {useEffect, useRef, useState} from 'react';
 import {Animated, Image, StyleSheet, Text, View} from 'react-native';
 import type {Sketchling} from '../../../shared/protocol';
 import {PLAYER_COLORS} from '../../../shared/protocol';
-import {Bubble, MoveIdle, StatBars, Title} from '../components/Bits';
+import {Bubble, fitFont, MoveIdle, StatBars, Title} from '../components/Bits';
 import {FocusButton} from '../components/FocusButton';
 import {Sprite} from '../components/Sprite';
 import {SAMPLE_SKETCHLINGS} from '../game/demo';
@@ -139,7 +139,9 @@ function Details({
         </MoveIdle>
       </View>
       <View style={styles.tape} />
-      <Text style={styles.detailName} numberOfLines={1} adjustsFontSizeToFit>
+      <Text
+        style={[styles.detailName, {fontSize: fitFont(s.name, 308, 34)}]}
+        numberOfLines={1}>
         {s.name}
       </Text>
       <Text style={styles.detailTitle}>{s.title}</Text>
