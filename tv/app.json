@@ -1,5 +1,5 @@
 {
   "//": "The declared app name must follow this pattern to be KRL-compatible",
   "name": "com.starfungames.sketchlings.main",
-  "displayName": "sketchlings"
+  "displayName": "Sketchlings"
 }

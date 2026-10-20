@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256"><defs>
+  <filter id="hand" x="-15%" y="-15%" width="130%" height="130%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.03" numOctaves="2" seed="11" result="n"/>
+    <feDisplacementMap in="SourceGraphic" in2="n" scale="5" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+  <filter id="crayon" x="0" y="0" width="100%" height="100%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.75 0.12" numOctaves="2" seed="3" result="g"/>
+    <feColorMatrix in="g" type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  2.2 0 0 0 -1.15" result="speck"/>
+    <feComposite in="speck" in2="SourceAlpha" operator="in" result="s"/>
+    <feMerge><feMergeNode in="SourceGraphic"/><feMergeNode in="s"/></feMerge>
+  </filter>
+  <filter id="sticker" x="-20%" y="-20%" width="140%" height="140%">
+    <feMorphology in="SourceAlpha" operator="dilate" radius="9" result="d"/>
+    <feFlood flood-color="#ffffff"/>
+    <feComposite in2="d" operator="in" result="w"/>
+    <feMerge><feMergeNode in="w"/><feMergeNode in="SourceGraphic"/></feMerge>
+  </filter>
+</defs><g filter="url(#sticker)"><g filter="url(#hand)"><path d="M70 40 L186 40 Q190 130 128 150 Q66 130 70 40 Z" fill="#FFC531" stroke="none" transform="translate(5 4)" filter="url(#crayon)"/><path d="M70 40 L186 40 Q190 130 128 150 Q66 130 70 40 Z" fill="none" stroke="#2B2B3A" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><path d="M70 60 Q30 60 36 96 Q42 124 82 122" fill="none" stroke="#2B2B3A" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><path d="M186 60 Q226 60 220 96 Q214 124 174 122" fill="none" stroke="#2B2B3A" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><path d="M112 150 L144 150 L148 190 L108 190 Z" fill="#FFC531" stroke="none" transform="translate(5 4)" filter="url(#crayon)"/><path d="M112 150 L144 150 L148 190 L108 190 Z" fill="none" stroke="#2B2B3A" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/><path d="M76 190 L180 190 L186 226 L70 226 Z" fill="#B06CFF" stroke="none" transform="translate(5 4)" filter="url(#crayon)"/><path d="M76 190 L180 190 L186 226 L70 226 Z" fill="none" stroke="#2B2B3A" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><path d="M128 66 l9 20 l22 2 l-17 14 l6 22 l-20 -12 l-20 12 l6 -22 l-17 -14 l22 -2 z" fill="#fff" stroke="#2B2B3A" stroke-width="5" stroke-linejoin="round"/></g></g></svg>

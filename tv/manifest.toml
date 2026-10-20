@@ -1,7 +1,7 @@
 schema-version = 1
 
 [package]
-title = "Basic UI React Native Application for project sketchlings"
+title = "Sketchlings"
 version = "0.1.0"
 id = "com.starfungames.sketchlings"
 
@@ -13,9 +13,29 @@ target = "1.2"
 [[needs.module]]
 id = "/com.amazon.vega.os@IVega_1_2"
 
+# Audio playback (creature voices, narrator) through @amazon-devices/react-native-w3cmedia, per the Vega media player setup docs
+[wants]
+[[wants.service]]
+id = "com.amazon.mediametrics.service"
+[[wants.service]]
+id = "com.amazon.mediabuffer.service"
+[[wants.service]]
+id = "com.amazon.mediatransform.service"
+[[wants.service]]
+id = "com.amazon.audio.stream"
+[[wants.service]]
+id = "com.amazon.audio.control"
+[[wants.service]]
+id = "com.amazon.audio.system" # without it the log shows "Unable connect to 'com.amazon.audio.system'. Missing the permissions"
+[[wants.service]]
+id = "com.amazon.media.server"
+[[wants.service]]
+id = "com.amazon.media.playersession.service"
+
 [components]
 [[components.interactive]]
 id = "com.starfungames.sketchlings.main"
 runtime-module = "/com.amazon.kepler.runtime.react_native_kepler_4@IReactNativeKepler_0"
 launch-type = "singleton"
-categories = ["com.amazon.category.main"]
+# kva = Alexa on-screen voice navigation ("Alexa, select Demo party") using each element's aria-label
+categories = ["com.amazon.category.main", "com.amazon.category.kva"]

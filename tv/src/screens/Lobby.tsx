@@ -1,0 +1,330 @@
+import 'fast-text-encoding'; // qrcode-svg needs TextEncoder on Vega (documented known issue)
+import React, {useEffect, useMemo, useRef} from 'react';
+import {Animated, Easing, StyleSheet, Text, View} from 'react-native';
+import QRCode from '@amazon-devices/react-native-qrcode-svg';
+import type {Player} from '../../../shared/protocol';
+import {MAX_PLAYERS} from '../../../shared/protocol';
+import {AgeBadge, Title} from '../components/Bits';
+import {FocusButton} from '../components/FocusButton';
+import {Sprite} from '../components/Sprite';
+import type {PartyMode, PartyState, ScanStatus} from '../game/party';
+import {racersOf} from '../game/party';
+import {HOST} from '../config';
+import {C, F} from '../theme';
+
+interface Props {
+  mode: PartyMode;
+  state: PartyState;
+  onStart: (racers: Player[]) => void;
+  onDemo: () => void;
+}
+
+export function Lobby({mode, state, onStart, onDemo}: Props) {
+  const racers = racersOf(state);
+  const ready = racers.length > 0;
+  const offline = mode === 'live' && state.conn === 'offline';
+  const slots = Array.from({length: MAX_PLAYERS}, (_, i) => state.players[i]);
+
+  return (
+    <View style={styles.root}>
+      <Title size={44} style={styles.heading}>
+        {mode === 'demo' ? 'Demo party!' : 'Join the party!'}
+      </Title>
+
+      <View style={styles.qrCard}>
+        {state.joinUrl && !offline ? (
+          <>
+            <View style={styles.qrBox}>
+              <QRCode
+                value={state.joinUrl}
+                size={200}
+                color={C.ink}
+                backgroundColor={C.white}
+                ecl="M"
+              />
+            </View>
+            <Text style={styles.scan}>
+              {mode === 'demo'
+                ? 'Demo players are joining…'
+                : 'Scan with a phone camera'}
+            </Text>
+            <Text style={styles.codeLabel}>Room code</Text>
+            <View style={styles.codeRow}>
+              {(state.code ?? '').split('').map((ch, i) => (
+                <View
+                  key={i}
+                  style={[
+                    styles.codeBox,
+                    {transform: [{rotate: `${i % 2 ? 3 : -3}deg`}]},
+                  ]}>
+                  <Text style={styles.codeChar}>{ch}</Text>
+                </View>
+              ))}
+            </View>
+          </>
+        ) : (
+          <View style={styles.waiting}>
+            <Text style={styles.waitTitle}>
+              {offline ? 'Server not found' : 'Connecting…'}
+            </Text>
+            <Text style={styles.waitText}>
+              {offline
+                ? `Can't reach the party server at ${HOST}. Start it on your computer, or play a Demo party.`
+                : `Opening a room on ${HOST}`}
+            </Text>
+          </View>
+        )}
+      </View>
+
+      <View style={styles.right}>
+        <Text style={styles.playersTitle}>
+          Players{' '}
+          <Text style={styles.count}>
+            {state.players.length}/{MAX_PLAYERS}
+          </Text>
+        </Text>
+        <View style={styles.grid}>
+          {slots.map((p, i) => (
+            <PlayerChip
+              key={p?.id ?? `empty-${i}`}
+              player={p}
+              status={p ? state.scans[p.id] : undefined}
+              racer={p && racers.find((r) => r.id === p.id)}
+            />
+          ))}
+        </View>
+        <View style={styles.actions}>
+          {offline && (
+            <FocusButton
+              label="Demo party"
+              color="#2bb3ff"
+              preferred
+              onPress={onDemo}
+              style={styles.demoBtn}>
+              <Text style={styles.btnText}>Demo party</Text>
+            </FocusButton>
+          )}
+          <FocusButton
+            label="Start the show"
+            color="#3ddc84"
+            preferred={!offline}
+            onPress={() => ready && onStart(racers)}
+            style={styles.startBtn}
+            cardStyle={{backgroundColor: ready ? '#3ddc84' : '#E6E1D6'}}>
+            <Text style={[styles.btnText, !ready && {color: C.inkSoft}]}>
+              {ready
+                ? `Start the show! (${racers.length})`
+                : 'Waiting for a drawing…'}
+            </Text>
+          </FocusButton>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+const STATUS: Record<ScanStatus | 'drawing', string> = {
+  drawing: 'drawing…',
+  processing: 'coming alive…',
+  ready: 'ready!',
+  failed: 'oops, snap again',
+};
+
+function PlayerChip({
+  player,
+  status,
+  racer,
+}: {
+  player?: Player;
+  status?: ScanStatus;
+  racer?: Player;
+}) {
+  const pop = useRef(new Animated.Value(player ? 0 : 1)).current;
+  const spin = useRef(new Animated.Value(0)).current;
+  const spinDeg = useMemo(
+    () =>
+      spin.interpolate({inputRange: [0, 1], outputRange: ['0deg', '360deg']}),
+    [spin],
+  );
+  useEffect(() => {
+    if (player)
+      Animated.spring(pop, {
+        toValue: 1,
+        friction: 4,
+        tension: 120,
+        useNativeDriver: true,
+      }).start();
+  }, [player, pop]);
+  useEffect(() => {
+    if (status !== 'processing') return;
+    const loop = Animated.loop(
+      Animated.timing(spin, {
+        toValue: 1,
+        duration: 900,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      }),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [status, spin]);
+
+  if (!player) {
+    return (
+      <View style={[styles.chip, styles.chipEmpty]}>
+        <Text style={styles.emptyText}>waiting…</Text>
+      </View>
+    );
+  }
+  const st = racer ? 'ready' : status ?? 'drawing';
+  return (
+    <Animated.View
+      style={[
+        styles.chip,
+        {
+          borderColor: C.ink,
+          opacity: player.connected ? 1 : 0.5,
+          transform: [{scale: pop}],
+        },
+      ]}>
+      <View style={[styles.swatch, {backgroundColor: player.color}]}>
+        {racer?.sketchling ? (
+          <Sprite s={racer.sketchling} size={68} still />
+        ) : (
+          <Text style={styles.initial}>
+            {player.name.slice(0, 1).toUpperCase()}
+          </Text>
+        )}
+      </View>
+      <View style={styles.chipText}>
+        <Text style={styles.name} numberOfLines={1}>
+          {player.name}
+        </Text>
+        <View style={styles.statusRow}>
+          {st === 'processing' && (
+            <Animated.Text
+              style={[
+                styles.sparkle,
+                {
+                  transform: [
+                    {
+                      rotate: spinDeg,
+                    },
+                  ],
+                },
+              ]}>
+              ✦
+            </Animated.Text>
+          )}
+          <Text
+            style={[
+              styles.status,
+              st === 'ready' && styles.statusReady,
+              st === 'failed' && styles.statusFailed,
+            ]}>
+            {STATUS[st]}
+          </Text>
+        </View>
+      </View>
+      <AgeBadge age={player.ageGroup} style={styles.chipBadge} />
+    </Animated.View>
+  );
+}
+
+const styles = StyleSheet.create({
+  root: {flex: 1},
+  heading: {position: 'absolute', left: 92, top: 22},
+  qrCard: {
+    position: 'absolute',
+    left: 92,
+    top: 86,
+    width: 300,
+    height: 420,
+    backgroundColor: C.white,
+    borderWidth: 4,
+    borderColor: C.ink,
+    borderRadius: 24,
+    alignItems: 'center',
+    paddingTop: 18,
+    transform: [{rotate: '-2deg'}],
+  },
+  qrBox: {padding: 8, backgroundColor: C.white},
+  scan: {fontFamily: F.semi, fontSize: 18, color: C.inkSoft, marginTop: 6},
+  codeLabel: {fontFamily: F.semi, fontSize: 18, color: C.inkSoft, marginTop: 8},
+  codeRow: {flexDirection: 'row', marginTop: 2},
+  codeBox: {
+    width: 52,
+    height: 60,
+    marginHorizontal: 4,
+    borderRadius: 12,
+    borderWidth: 3,
+    borderColor: C.ink,
+    backgroundColor: '#FFF4C7',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  codeChar: {fontFamily: F.bold, fontSize: 40, lineHeight: 50, color: C.ink},
+  waiting: {flex: 1, justifyContent: 'center', paddingHorizontal: 22},
+  waitTitle: {
+    fontFamily: F.bold,
+    fontSize: 32,
+    color: C.ink,
+    textAlign: 'center',
+  },
+  waitText: {
+    fontFamily: F.semi,
+    fontSize: 20,
+    color: C.inkSoft,
+    textAlign: 'center',
+    marginTop: 10,
+  },
+  right: {position: 'absolute', left: 430, top: 24, right: 48, bottom: 24},
+  playersTitle: {fontFamily: F.bold, fontSize: 32, color: C.ink},
+  count: {fontFamily: F.semi, fontSize: 24, color: C.inkSoft},
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginTop: 6,
+  },
+  chip: {
+    width: 232,
+    height: 92,
+    marginBottom: 18,
+    borderRadius: 18,
+    borderWidth: 3,
+    backgroundColor: C.white,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+  },
+  chipEmpty: {
+    borderStyle: 'dashed',
+    borderColor: '#B9C4D6',
+    backgroundColor: 'rgba(255,255,255,0.5)',
+    justifyContent: 'center',
+  },
+  emptyText: {fontFamily: F.semi, fontSize: 20, color: '#9AA6BC'},
+  swatch: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    borderWidth: 3,
+    borderColor: C.ink,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  initial: {fontFamily: F.bold, fontSize: 36, lineHeight: 44, color: C.white},
+  chipText: {flex: 1, marginLeft: 10},
+  name: {fontFamily: F.bold, fontSize: 26, lineHeight: 32, color: C.ink},
+  statusRow: {flexDirection: 'row', alignItems: 'center'},
+  sparkle: {fontSize: 18, color: '#b06cff', marginRight: 4},
+  status: {fontFamily: F.semi, fontSize: 18, color: C.inkSoft},
+  statusReady: {color: '#1E9E57', fontFamily: F.bold},
+  statusFailed: {color: '#D9363E'},
+  chipBadge: {position: 'absolute', bottom: -13, right: 8},
+  actions: {position: 'absolute', right: 0, bottom: 4, flexDirection: 'row'},
+  startBtn: {width: 300, height: 66},
+  demoBtn: {width: 190, height: 66, marginRight: 24},
+  btnText: {fontFamily: F.bold, fontSize: 26, color: C.ink},
+});

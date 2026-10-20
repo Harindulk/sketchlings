@@ -1,118 +1,193 @@
-import React, {useState} from 'react';
-import {StyleSheet, Text, ImageBackground, View, Image} from 'react-native';
-import {TVFocusGuideView} from '@amazon-devices/react-native-kepler';
-import {Tile} from './components/Tile';
-import {tiles} from './data/tiles';
+import React, {useCallback, useEffect, useMemo, useState} from 'react';
+import {BackHandler, Dimensions, StyleSheet, View} from 'react-native';
+import type {Player, ResultsData} from '../../shared/protocol';
+import {hush, prefetch} from './audio';
+import {ScreenIn} from './components/Bits';
+import {Paper} from './components/Paper';
+import type {PartyMode} from './game/party';
+import {racersOf, useParty} from './game/party';
+import {HallOfFame} from './screens/HallOfFame';
+import {Home, HomeChoice} from './screens/Home';
+import {HowTo} from './screens/HowTo';
+import {Lobby} from './screens/Lobby';
+import {Race} from './screens/Race';
+import {Results} from './screens/Results';
+import {Reveal} from './screens/Reveal';
+import {C, H, W} from './theme';
+
+type Screen =
+  | 'home'
+  | 'lobby'
+  | 'reveal'
+  | 'race'
+  | 'results'
+  | 'hof'
+  | 'howto';
+
+// Layout is authored for Vega's 960x540 dp canvas; scale if a device reports something else.
+const {width: DW, height: DH} = Dimensions.get('window');
+const K = Math.min(DW / W, DH / H) || 1;
 
 export const App = () => {
-  const [focusedTileId, setFocusedTileId] = useState<string>('home');
+  const [screen, setScreen] = useState<Screen>('home');
+  const [mode, setMode] = useState<PartyMode | null>(null);
+  const [racers, setRacers] = useState<Player[]>([]);
+  const [order, setOrder] = useState<string[]>([]);
+  const [round, setRound] = useState(0);
+  const party = useParty(mode);
+  const {sendPhase} = party;
+  const liveRoom =
+    mode === 'live' && party.state.conn === 'open' && !!party.state.code;
 
-  const focusedTile = tiles.find((t) => t.id === focusedTileId);
+  // Reveal/Results read the newest Sketchling frames (voices arrive in a second frame after the race list is frozen)
+  const sketchlings = party.state.sketchlings;
+  useEffect(() => {
+    Object.values(sketchlings).forEach(
+      (sk) => sk.voice && Object.values(sk.voice).forEach(prefetch),
+    );
+  }, [sketchlings]);
+  const liveRacers = useMemo(
+    () =>
+      racers.map((p) => ({
+        ...p,
+        sketchling: sketchlings[p.id] ?? p.sketchling,
+      })),
+    [racers, sketchlings],
+  );
+
+  const goHome = useCallback(() => {
+    hush();
+    setMode(null);
+    setScreen('home');
+  }, []);
+  const goLobby = useCallback(() => {
+    hush();
+    setScreen('lobby');
+  }, []);
+
+  // Phones follow the TV: tell them which screen we're on (server relays `phase`, see notes/tv.md).
+  useEffect(() => {
+    if (!liveRoom) return;
+    if (screen === 'lobby') sendPhase('draw');
+    if (screen === 'reveal')
+      sendPhase('reveal', {order: racers.map((p) => p.id)});
+    if (screen === 'race')
+      sendPhase('race', {
+        countdownMs: 2700,
+        racers: racers.map((p) => p.id),
+        round,
+      });
+    if (screen === 'results') {
+      const data: ResultsData = {
+        placements: order.map((playerId, i) => ({playerId, place: i + 1})),
+      };
+      sendPhase('results', {...data});
+    }
+  }, [screen, liveRoom, sendPhase, racers, order, round]);
+
+  // Back: up one level; on Home let the system close the app.
+  useEffect(() => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (screen === 'home') return false;
+      if (
+        (screen === 'reveal' || screen === 'race' || screen === 'results') &&
+        mode === 'live'
+      )
+        goLobby();
+      else goHome();
+      return true;
+    });
+    return () => sub.remove();
+  }, [screen, mode, goHome, goLobby]);
+
+  const choose = (c: HomeChoice) => {
+    if (c === 'start' || c === 'demo') {
+      setMode(c === 'start' ? 'live' : 'demo');
+      setScreen('lobby');
+    } else setScreen(c);
+  };
+  const start = (rs: Player[]) => {
+    setRacers(rs);
+    setScreen('reveal');
+  };
+  const toRace = useCallback(() => setScreen('race'), []);
+  const finish = useCallback((o: string[]) => {
+    setOrder(o);
+    setScreen('results');
+  }, []);
+  const again = () => {
+    // pick up anyone who finished a drawing meanwhile
+    const now = racersOf(party.state);
+    if (now.length >= racers.length) setRacers(now);
+    setRound((r) => r + 1);
+    setScreen('race');
+  };
+
+  let body: React.ReactNode;
+  switch (screen) {
+    case 'lobby':
+      body = (
+        <Lobby
+          mode={mode ?? 'live'}
+          state={party.state}
+          onStart={start}
+          onDemo={() => {
+            setMode('demo');
+          }}
+        />
+      );
+      break;
+    case 'reveal':
+      body = <Reveal racers={liveRacers} onDone={toRace} />;
+      break;
+    case 'race':
+      body = (
+        <Race
+          key={round}
+          racers={racers}
+          bots={mode === 'demo'}
+          onInput={party.onInput}
+          onFinish={finish}
+        />
+      );
+      break;
+    case 'results':
+      body = (
+        <Results
+          racers={liveRacers}
+          order={order}
+          onAgain={again}
+          onHome={goHome}
+        />
+      );
+      break;
+    case 'hof':
+      body = <HallOfFame />;
+      break;
+    case 'howto':
+      body = <HowTo onDone={goHome} />;
+      break;
+    default:
+      body = <Home onChoose={choose} />;
+  }
 
   return (
-    <ImageBackground
-      source={require('./assets/background.png')}
-      style={styles.background}>
-      <View style={styles.headerArea}>
-        {focusedTileId === 'home' ? (
-          <>
-            <View style={styles.headerTextContainer}>
-              <Text style={styles.headerTitle}>Hello Vega,</Text>
-              <Text style={styles.headerSubtitle}>
-                Use your remote to explore and start your Vega journey 🚀
-              </Text>
-            </View>
-            <Image
-              source={require('./assets/vega.png')}
-              style={styles.vegaLogo}
-              resizeMode="contain"
-              testID="vega-logo"
-            />
-          </>
-        ) : (
-          <>
-            <View style={styles.headerTextContainer}>
-              <Text style={styles.focusedTitle}>{focusedTile?.label}</Text>
-            </View>
-            {focusedTile?.description && (
-              <Text style={styles.focusedDescription}>
-                {focusedTile.description}
-              </Text>
-            )}
-          </>
-        )}
+    <View style={styles.root}>
+      <View style={[styles.canvas, K !== 1 && {transform: [{scale: K}]}]}>
+        <Paper />
+        <ScreenIn key={`${screen}-${mode}-${round}`}>{body}</ScreenIn>
       </View>
-
-      <TVFocusGuideView style={styles.tileRowContent}>
-        {tiles.map((tile) => (
-          <Tile
-            key={tile.id}
-            label={tile.label}
-            icon={tile.icon}
-            isFocused={focusedTileId === tile.id}
-            onFocus={() => setFocusedTileId(tile.id)}
-            onBlur={() => {}}
-            testID={`tile-${tile.id}`}
-            accessibilityLabel={tile.accessibilityLabel}
-            hasTVPreferredFocus={tile.id === 'home'}
-          />
-        ))}
-      </TVFocusGuideView>
-    </ImageBackground>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  background: {
+  root: {
     flex: 1,
-    paddingHorizontal: 64,
-    paddingVertical: 32,
-  },
-  headerArea: {
-    flex: 2,
-    flexDirection: 'row',
+    backgroundColor: C.paper,
     alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
   },
-  headerTextContainer: {
-    flex: 1,
-    flexShrink: 1,
-  },
-  headerTitle: {
-    color: '#FFFFFF',
-    fontSize: 64,
-    lineHeight: 72,
-    fontWeight: '600',
-    flexShrink: 1,
-  },
-  headerSubtitle: {
-    color: '#FFFFFF',
-    fontSize: 24,
-    flexShrink: 1,
-  },
-  vegaLogo: {
-    width: 280,
-    height: 200,
-    marginLeft: 40,
-  },
-  focusedTitle: {
-    color: '#FFFFFF',
-    fontSize: 64,
-    lineHeight: 72,
-    fontWeight: 'bold',
-    flexShrink: 1,
-  },
-  focusedDescription: {
-    color: '#FFFFFF',
-    fontSize: 24,
-    lineHeight: 32,
-    flex: 1,
-    marginLeft: 20,
-    paddingTop: 10,
-  },
-  tileRowContent: {
-    flex: 2,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
+  canvas: {width: W, height: H, overflow: 'hidden'},
 });

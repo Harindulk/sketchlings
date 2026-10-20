@@ -2,7 +2,9 @@
   "name": "@amazon-devices/sketchlings",
   "version": "0.0.1",
   "private": true,
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "clean": "rm -rf node_modules buildinfo.json dist build",
     "start": "react-native start",
@@ -15,9 +17,14 @@
     "build:app": "npm-run-all build:release",
     "build": "npm-run-all build:release",
     "release": "npm-run-all lint test build:app"
-    },
+  },
   "dependencies": {
+    "@amazon-devices/kepler-performance-api": "^0.1.4",
     "@amazon-devices/react-native-kepler": "~4.0.0",
+    "@amazon-devices/react-native-qrcode-svg": "~3.0.0",
+    "@amazon-devices/react-native-svg": "~3.0.0",
+    "@amazon-devices/react-native-w3cmedia": "~2.3.2",
+    "fast-text-encoding": "~1.0.6",
     "react": "19.2.0",
     "react-native": "0.83.0"
   },
@@ -25,8 +32,8 @@
     "node": ">=20"
   },
   "devDependencies": {
-    "@amazon-devices/kepler-cli-platform": "^0",
     "@amazon-devices/eslint-plugin-kepler": "^0.1.4",
+    "@amazon-devices/kepler-cli-platform": "^0",
     "@react-native-community/cli": "20.0.0",
     "@react-native/babel-preset": "0.83.0",
     "@react-native/eslint-config": "0.83.0",
@@ -51,6 +58,8 @@
   "kepler": {
     "projectType": "application",
     "appName": "sketchlings",
-    "targets": ["tv"]
+    "targets": [
+      "tv"
+    ]
   }
 }
