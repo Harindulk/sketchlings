@@ -4,6 +4,8 @@
 // Each session launches the app, goes Home -> lobby -> reveal -> race, then "Play again" for --rounds races.
 // A race counts as frozen when, 6 s after it mounted, the countdown title is still up or the screen stopped moving.
 // On a freeze it presses Back (the system then kills the hung app and writes an ACR) and copies the ACRs to --out.
+// If the VVD itself died (notes/tv.md F5), it restarts it, reinstalls tv/build/sketchlings_aarch64.vpkg and goes on;
+// those races don't count.
 import {execFileSync, spawn} from 'node:child_process';
 import {existsSync, mkdirSync, readFileSync} from 'node:fs';
 import {createRequire} from 'node:module';
@@ -67,7 +69,20 @@ async function waitFor(re, secs, tag) {
   return null;
 }
 
-const stats = {races: 0, frozen: 0, notStarted: 0};
+const stats = {races: 0, frozen: 0, notStarted: 0, vvdCrashes: 0};
+const vvdUp = () => {
+  try {
+    return /"running":true/.test(vega('virtual-device status'));
+  } catch {
+    return false;
+  }
+};
+function revive() {
+  stats.vvdCrashes++;
+  log('VVD is down (host stall, F5): restarting it');
+  vega('virtual-device start --no-gui --timeout 300');
+  vega(`run-app "${join(HERE, '../build/sketchlings_aarch64.vpkg')}" ${APP} -d VirtualDevice`);
+}
 async function checkRace(label) {
   await sleep(4.5);
   const a = shot(`${label}-a`);
@@ -75,6 +90,7 @@ async function checkRace(label) {
   const b = shot(`${label}-b`);
   const text = ocr(b), m = moved(a, b);
   const countdown = /Doodle Dash/i.test(text);
+  if ((countdown || m < 0.005) && !vvdUp()) throw new Error('VVD died');
   stats.races++;
   if (countdown || m < 0.005) {
     stats.frozen++;
@@ -131,10 +147,14 @@ for (let s = 1; stats.races < races; s++) {
   try {
     await session(s);
   } catch (e) {
+    if (!vvdUp()) {
+      revive();
+      continue;
+    }
     stats.notStarted++;
     log(`session ${s}: ${e.message}`);
     if (stats.notStarted > 3) break;
   }
 }
-log(`DONE: ${stats.races} race starts, ${stats.frozen} frozen, ${stats.notStarted} sessions failed to reach a race. Shots: ${out}`);
+log(`DONE: ${stats.races} race starts, ${stats.frozen} frozen, ${stats.notStarted} sessions failed to reach a race, ${stats.vvdCrashes} VVD restarts. Shots: ${out}`);
 process.exit(stats.frozen ? 1 : 0);

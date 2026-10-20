@@ -191,7 +191,7 @@ export function Race({racers, bots, onInput, onFinish}: Props) {
     let timer: ReturnType<typeof setTimeout> | undefined;
     // Exactly one JS task per frame. Vega's JS-thread watchdog sends IPC messages for every JS task, and a
     // backlog of them deadlocks the JS thread (notes/tv.md F4), so: no requestAnimationFrame (it free-runs
-    // at ~7.6 kHz on the headless VVD anyway), no extra setTimeout(0) yields, no side timers.
+    // at ~7.6 kHz on the headless VVD anyway) and no extra setTimeout(0) yields.
     const tick = () => {
       if (!alive) return;
       const now = nowMs();
