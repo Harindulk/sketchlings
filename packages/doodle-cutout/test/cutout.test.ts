@@ -216,6 +216,37 @@ describe('cutout', () => {
     expectNear(opaqueArea(r), Math.PI * 93 * 73, Math.PI * 93 * 73 * 0.08);
   });
 
+  test('notebook paper (repro): blue lines and the red margin are not ink, even where they cross the drawing', () => {
+    const s = new Scene(768, 1024);
+    for (let y = 40; y < 1024; y += 32) s.stroke([[0, y], [768, y]], 2, [0.55, 0.72, 0.92]);
+    s.stroke([[90, 0], [90, 1024]], 2, [0.92, 0.55, 0.55]);
+    s.strokeEllipse(400, 500, 250, 300, 14).disc(320, 410, 28).disc(480, 410, 28);
+    const r = cutout(s.render({noise: 0.01}));
+    expectNear(r.bbox.x, 143, 4);
+    expectNear(r.bbox.y, 193, 4);
+    expectNear(r.bbox.width, 515, 8);
+    expectNear(r.bbox.height, 615, 8);
+    expectNear(opaqueArea(r), Math.PI * 257 * 307, Math.PI * 257 * 307 * 0.06);
+  });
+
+  test('darker, thicker, tilted grey lines and squared paper are not ink either', () => {
+    for (const grid of [false, true]) {
+      const s = new Scene(W, H);
+      const a = 0.08; // the sheet is a little crooked in the photo
+      const line = (u0: number, v0: number, u1: number, v1: number) =>
+        s.stroke([[200 + u0 * Math.cos(a) - v0 * Math.sin(a), 150 + u0 * Math.sin(a) + v0 * Math.cos(a)], [200 + u1 * Math.cos(a) - v1 * Math.sin(a), 150 + u1 * Math.sin(a) + v1 * Math.cos(a)]], 2, [0.6, 0.6, 0.63]);
+      for (let v = -250; v < 250; v += 13) {
+        line(-260, v, 260, v);
+        if (grid) line(v, -260, v, 260);
+      }
+      const r = cutout(s.strokeEllipse(200, 150, 90, 70, 6).render({shadow: 0.35, noise: 0.02}));
+      expectNear(r.bbox.x, 107, 3);
+      expectNear(r.bbox.width, 186, 6);
+      expectNear(r.bbox.height, 146, 6);
+      expectNear(opaqueArea(r), Math.PI * 93 * 73, Math.PI * 93 * 73 * 0.08);
+    }
+  });
+
   test('blank paper with heavy shadows yields an empty result', () => {
     const photo = new Scene(W, H).render({shadow: 0.6, blobShadow: 0.5, noise: 0.03});
     const r = cutout(photo);

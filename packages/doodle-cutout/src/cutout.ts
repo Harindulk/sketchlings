@@ -4,6 +4,7 @@ import {
   edt,
   fillHoles,
   grayClose,
+  grayOpen,
   hysteresis,
   paraClose,
   invert,
@@ -195,6 +196,32 @@ function repairBackground(bg: Float32Array[], mask: Mask, w: number, h: number, 
   });
 }
 
+/** Median over `tile`-sized tiles of each tile's 99th percentile of `v` (0..1): a level found all over the page. */
+function pageTexture(v: Float32Array, w: number, h: number, tile: number): number {
+  const bins = 256;
+  const tops: number[] = [];
+  const hist = new Uint32Array(bins);
+  for (let ty = 0; ty < h; ty += tile) {
+    for (let tx = 0; tx < w; tx += tile) {
+      hist.fill(0);
+      let count = 0;
+      for (let y = ty; y < Math.min(h, ty + tile); y++) {
+        for (let x = tx; x < Math.min(w, tx + tile); x++) {
+          const t = v[y * w + x];
+          hist[t <= 0 ? 0 : t >= 1 ? bins - 1 : (t * bins) | 0]++;
+          count++;
+        }
+      }
+      let acc = 0;
+      let b = 0;
+      while (b < bins - 1 && (acc += hist[b]) < count * 0.99) b++;
+      tops.push((b + 1) / bins);
+    }
+  }
+  tops.sort((a, b) => a - b);
+  return tops[tops.length >> 1];
+}
+
 /**
  * The ink that belongs to the drawing, without what surrounds the sheet. Thick ink touching the photo
  * edge (a table, a cloth, fingers) is cut away pixel by pixel, with any ink joined to it or to the photo
@@ -356,6 +383,16 @@ export function cutout(img: ImageLike, options: CutoutOptions = {}): CutoutResul
     }
   }
 
+  // 2b. Ruled and squared paper. Printed lines are thin, faint and all over the page, and every one of
+  //     them crosses the drawing, so hysteresis would grow faint ink along all of them. Measure how
+  //     strong the thin structures found everywhere are (median over tiles of each tile's 99th
+  //     percentile) and take that much off thin structures only: lines vanish, thick ink and strokes
+  //     darker than the lines stay.
+  const thin = grayOpen(score, w, h, Math.max(2, Math.round(long * 0.0025)));
+  for (let i = 0; i < n; i++) thin[i] = score[i] - thin[i];
+  const lines = 1.25 * pageTexture(thin, w, h, Math.max(16, Math.round(long / 8)));
+  for (let i = 0; i < n; i++) score[i] -= Math.min(thin[i], lines);
+
   // 3. Threshold. Hysteresis keeps faint crayon that touches confident ink; the paper noise
   //    floor (median + 4 sigma of the score) stops grain from leaking in.
   const [p16, p50] = percentiles(score, [0.16, 0.5]);
@@ -443,7 +480,7 @@ export function cutout(img: ImageLike, options: CutoutOptions = {}): CutoutResul
       let r = Math.min(1, rgb[0][i] / Math.max(paper[0][i], 0.02));
       let g = Math.min(1, rgb[1][i] / Math.max(paper[1][i], 0.02));
       let b = Math.min(1, rgb[2][i] / Math.max(paper[2][i], 0.02));
-      const iw = smoothstep(weak, t, inkScore(r, g, b, o.chromaWeight));
+      const iw = smoothstep(weak, t, inkScore(r, g, b, o.chromaWeight) - Math.min(thin[i], lines)); // ruled lines count as paper
       const wh = o.whiten * (1 - iw);
       r += (1 - r) * wh;
       g += (1 - g) * wh;

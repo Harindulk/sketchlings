@@ -53,6 +53,17 @@ export function grayClose(src: Float32Array, w: number, h: number, r: number): F
   return b;
 }
 
+/** Grayscale morphological opening (min filter, then max filter) with a (2r+1) square. */
+export function grayOpen(src: Float32Array, w: number, h: number, r: number): Float32Array {
+  const a = new Float32Array(src.length);
+  const b = new Float32Array(src.length);
+  slide(src, w, h, r, true, false, a);
+  slide(a, w, h, r, false, false, b);
+  slide(b, w, h, r, true, true, a);
+  slide(a, w, h, r, false, true, b);
+  return b;
+}
+
 function blur1d(src: Float32Array, dst: Float32Array, w: number, h: number, r: number, horizontal: boolean): void {
   const len = horizontal ? w : h;
   const lines = horizontal ? h : w;
