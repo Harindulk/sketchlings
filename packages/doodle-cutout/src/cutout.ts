@@ -195,19 +195,26 @@ function repairBackground(bg: Float32Array[], mask: Mask, w: number, h: number, 
   });
 }
 
-/** Median over `tile`-sized tiles of each tile's 99th percentile of `v` (0..1): a level found all over the page. */
-function pageTexture(v: Float32Array, w: number, h: number, tile: number): number {
+/**
+ * A level of `v` (0..1) found all over the sheet, even in its emptiest parts: the 10th percentile, over
+ * `tile`-sized tiles of the sheet, of each tile's 99th percentile. Sheet tiles are those whose paper
+ * estimate is at least 85% as bright as the brightest tiles' (a wide table is darker and has no lines).
+ */
+function pageTexture(v: Float32Array, paper: Float32Array, w: number, h: number, tile: number): number {
   const bins = 256;
   const tops: number[] = [];
+  const light: number[] = [];
   const hist = new Uint32Array(bins);
   for (let ty = 0; ty < h; ty += tile) {
     for (let tx = 0; tx < w; tx += tile) {
       hist.fill(0);
       let count = 0;
+      let sum = 0;
       for (let y = ty; y < Math.min(h, ty + tile); y++) {
         for (let x = tx; x < Math.min(w, tx + tile); x++) {
           const t = v[y * w + x];
           hist[t <= 0 ? 0 : t >= 1 ? bins - 1 : (t * bins) | 0]++;
+          sum += paper[y * w + x];
           count++;
         }
       }
@@ -215,10 +222,12 @@ function pageTexture(v: Float32Array, w: number, h: number, tile: number): numbe
       let b = 0;
       while (b < bins - 1 && (acc += hist[b]) < count * 0.99) b++;
       tops.push((b + 1) / bins);
+      light.push(sum / count);
     }
   }
-  tops.sort((a, b) => a - b);
-  return tops[tops.length >> 1];
+  const bright = 0.85 * [...light].sort((a, b) => a - b)[Math.floor(light.length * 0.9)];
+  const sheet = tops.filter((_, i) => light[i] >= bright).sort((a, b) => a - b);
+  return sheet[Math.floor(sheet.length * 0.1)];
 }
 
 /**
@@ -400,13 +409,12 @@ export function cutout(img: ImageLike, options: CutoutOptions = {}): CutoutResul
   }
 
   // 2b. Ruled and squared paper. Printed lines are thin, faint and all over the page, and every one of
-  //     them crosses the drawing, so hysteresis would grow faint ink along all of them. Measure how
-  //     strong the thin structures found everywhere are (median over tiles of each tile's 99th
-  //     percentile) and take that much off thin structures only: lines vanish, thick ink and strokes
-  //     darker than the lines stay.
+  //     them crosses the drawing. Thin = what an opening (a 0.5% square) removes. Measure how strong the
+  //     thin structures are that reach even the empty parts of the page (tiles), and take that much
+  //     (at most 0.4, so dark pen survives) off thin structures only: lines vanish, ink stays.
   const thin = grayOpen(score, w, h, Math.max(2, Math.round(long * 0.0025)));
   for (let i = 0; i < n; i++) thin[i] = score[i] - thin[i];
-  const lines = 1.25 * pageTexture(thin, w, h, Math.max(16, Math.round(long / 8)));
+  const lines = Math.min(0.4, 1.25 * pageTexture(thin, bg[1], w, h, Math.max(16, Math.round(long / 8))));
   for (let i = 0; i < n; i++) score[i] -= Math.min(thin[i], lines);
 
   // 3. Threshold. Hysteresis keeps faint crayon that touches confident ink; the paper noise
@@ -470,6 +478,8 @@ export function cutout(img: ImageLike, options: CutoutOptions = {}): CutoutResul
   }
 
   // 8. Compose the sprite in its own canvas (it may extend past the photo for padding/outline).
+  //    On lined paper, what is not ink is paper: its lines are whitened, not boosted like faint ink.
+  const lined = lines > weak / 2;
   const paper = repairBackground(bg, mask, w, h, o.backgroundRadius);
   const m = o.padding + o.outline + 2;
   const sw = x1 - x0 + 1 + 2 * m;
@@ -496,7 +506,7 @@ export function cutout(img: ImageLike, options: CutoutOptions = {}): CutoutResul
       let r = Math.min(1, rgb[0][i] / Math.max(paper[0][i], 0.02));
       let g = Math.min(1, rgb[1][i] / Math.max(paper[1][i], 0.02));
       let b = Math.min(1, rgb[2][i] / Math.max(paper[2][i], 0.02));
-      const iw = smoothstep(weak, t, inkScore(r, g, b, o.chromaWeight));
+      const iw = ink[i] || !lined ? smoothstep(weak, t, inkScore(r, g, b, o.chromaWeight)) : 0;
       const wh = o.whiten * (1 - iw);
       r += (1 - r) * wh;
       g += (1 - g) * wh;

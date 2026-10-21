@@ -288,6 +288,28 @@ describe('cutout', () => {
     expectNear(opaqueArea(r), Math.PI * 93 * 73, Math.PI * 93 * 73 * 0.08);
   });
 
+  test('ruled sheet on a wide dark table: the lines are found on the sheet, not judged by the table', () => {
+    const s = new Scene(W, H);
+    for (let y = 70; y < 236; y += 9) s.stroke([[95, y], [305, y]], 2, [0.5, 0.65, 0.9]);
+    s.table({x: 95, y: 60, w: 210, h: 180}, [0.42, 0.4, 0.38]); // most tiles are table, with no lines
+    const r = cutout(s.strokeEllipse(200, 150, 70, 55, 5).render({shadow: 0.3, noise: 0.015}));
+    expectNear(r.bbox.x, 128, 3);
+    expectNear(r.bbox.width, 146, 6);
+    expectNear(r.bbox.height, 116, 6);
+    expectNear(opaqueArea(r), Math.PI * 73 * 58, Math.PI * 73 * 58 * 0.1);
+  });
+
+  test('a drawing in thin dark pen all over the page is not taken for ruled lines', () => {
+    const s = new Scene(W, H).strokeEllipse(200, 150, 175, 130, 2);
+    for (let y = 35; y < 270; y += 9) {
+      for (let x = 40; x < 350; x += 20) if (((x - 200) / 165) ** 2 + ((y - 150) / 120) ** 2 < 1) s.stroke([[x, y], [x + 7, y + 5], [x + 14, y]], 1.6);
+    }
+    const r = cutout(s.render({shadow: 0.3, noise: 0.015}));
+    expectNear(r.bbox.x, 24, 3);
+    expectNear(r.bbox.width, 352, 6);
+    expectNear(opaqueArea(r), Math.PI * 176 * 131, Math.PI * 176 * 131 * 0.08);
+  });
+
   test('blank paper with heavy shadows yields an empty result', () => {
     const photo = new Scene(W, H).render({shadow: 0.6, blobShadow: 0.5, noise: 0.03});
     const r = cutout(photo);
