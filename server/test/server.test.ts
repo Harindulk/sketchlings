@@ -16,7 +16,7 @@ describe('upload end-to-end (offline persona)', () => {
     tv.send({t: 'hello', role: 'tv'});
     const {code} = await tv.next('room');
     const mia = await connect(app.wsUrl);
-    mia.send({t: 'hello', role: 'phone', room: code, name: 'Mia'});
+    mia.send({t: 'hello', role: 'phone', room: code, name: 'Mia', ageGroup: 'little'});
     const {playerId} = await mia.next('joined');
     const leo = await connect(app.wsUrl);
     leo.send({t: 'hello', role: 'phone', room: code, name: 'Leo'});
@@ -31,7 +31,7 @@ describe('upload end-to-end (offline persona)', () => {
     for (const c of [tv, mia]) expect(await c.next('scan')).toEqual({t: 'scan', playerId, status: 'processing'});
     const sk: Sketchling = (await tv.next('sketchling')).sketchling;
     expect((await mia.next('sketchling')).sketchling).toEqual(sk);
-    expect(sk).toMatchObject({id, playerId, spriteUrl: `/sprites/${id}.png`, width: 120, height: 90, source: 'offline', artist: 'Mia'});
+    expect(sk).toMatchObject({id, playerId, spriteUrl: `/sprites/${id}.png`, width: 120, height: 90, source: 'offline', artist: 'Mia', artistAge: 'little'});
     expect(Array.isArray(sk.eyes)).toBe(true);
     expect(sk.ability.kind).toBe(sk.move);
     expect(typeof sk.ability.feature).toBe('string');
