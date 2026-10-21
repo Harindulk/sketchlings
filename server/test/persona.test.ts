@@ -75,7 +75,7 @@ describe('offline persona', () => {
 
   test('stays within limits for thousands of random features', () => {
     for (let seed = 1; seed < 3000; seed++) {
-      const p = offlinePersona({seed, colors: ['#123456'], family: 'blue', aspect: (seed % 40) / 10 + 0.1, ink: (seed % 100) / 100, eyes: [], kind: (['walk', 'hop', 'fly', 'roll'] as const)[seed % 4]!});
+      const p = offlinePersona({seed, colors: ['#123456'], family: 'blue', aspect: (seed % 40) / 10 + 0.1, ink: (seed % 100) / 100, eyes: [], ownEyes: false, kind: (['walk', 'hop', 'fly', 'roll'] as const)[seed % 4]!});
       expectValid(p);
     }
   });
@@ -139,6 +139,13 @@ describe('persona validation', () => {
     expect(sanitizePersona({eyes: []}, fallback).eyes).toEqual([]); // model says none: trust it
     expect(sanitizePersona({eyes: [{x: 1.02, y: -0.01, r: 0.3}]}, fallback).eyes).toEqual([{x: 1, y: 0, r: 0.25}]);
   });
+
+  test('drewEyes: drawn eyes the model could not place mean no default googly eyes', () => {
+    expect(sanitizePersona({eyes: [], drewEyes: true}, fallback)).toMatchObject({eyes: [], ownEyes: true});
+    expect(sanitizePersona({eyes: [], drewEyes: false}, fallback)).toMatchObject({eyes: [], ownEyes: false});
+    expect(sanitizePersona({eyes: [], drewEyes: 'yes'}, fallback).ownEyes).toBe(true);
+    expect(sanitizePersona({eyes: []}, fallback).ownEyes).toBe(false);
+  });
 });
 
 describe('generatePersona', () => {
@@ -186,6 +193,7 @@ describe('generatePersona', () => {
     let params: any;
     await generatePersona(b, size, fake(async (p?: unknown) => ((params = p), {stop_reason: 'end_turn', content: [{type: 'text', text: '{}'}]})) as never);
     expect(params.output_config.format.schema.required).toContain('ability');
+    expect(params.output_config.format.schema.required).toContain('drewEyes');
     expect(params.output_config.format.schema.properties.ability.properties.feature.type).toBe('string');
     expect(params.system).toMatch(/FEATURE YOU CAN SEE/);
     expect(params.system).toMatch(/fly: wings/);

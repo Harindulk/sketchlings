@@ -11,7 +11,10 @@ const round3 = (v: number) => Math.round(v * 1000) / 1000;
 
 type Comp = {area: number; sx: number; sy: number; x0: number; x1: number; y0: number; y1: number; peak: number; outside: boolean};
 
-export function findEyes(img: Rgba): Eye[] {
+export const findEyes = (img: Rgba): Eye[] => scanEyes(img).eyes;
+
+/** `ownEyes`: the child drew eyes even if none could be placed (2-4 round dark dots in the top half), so the TV adds no default pair. */
+export function scanEyes(img: Rgba): {eyes: Eye[]; ownEyes: boolean} {
   const {width: W, height: H, data: d} = img;
   const n = W * H;
   const dark = new Uint8Array(n);
@@ -25,7 +28,7 @@ export function findEyes(img: Rgba): Eye[] {
     if (x > right) right = x;
     if (0.299 * d[i * 4]! + 0.587 * d[i * 4 + 1]! + 0.114 * d[i * 4 + 2]! < 90) dark[i] = 1;
   }
-  if (bottom < 0) return [];
+  if (bottom < 0) return {eyes: [], ownEyes: false};
   const bodyH = bottom - top + 1;
   const S = Math.max(right - left + 1, bodyH);
 
@@ -87,7 +90,7 @@ export function findEyes(img: Rgba): Eye[] {
   const hist = new Uint32Array(65536);
   let darkN = 0;
   for (let i = 0; i < n; i++) if (dark[i]) hist[dt[i]!]!++, darkN++;
-  if (!darkN) return [];
+  if (!darkN) return {eyes: [], ownEyes: false};
   let med = 0;
   for (let acc = 0; acc * 2 < darkN; ) acc += hist[++med]!;
   const half = Math.max(1, (2 * med) / 3 - 1); // px
@@ -138,7 +141,9 @@ export function findEyes(img: Rgba): Eye[] {
     if (drawn) cands.push({D: 2 * R, cx: ex, cy: ey, r: er + half});
     else cands.push({D: 2 * R, cx, cy, r: 1.5 * R}); // r covers the drawn pupil plus a rim, so the googly eye hides the dot
   }
-  if (cands.length < 2 || cands.length > 4) return []; // one dot could be a nose; many could be spots
+  // Conservative: unpaired dots only count as drawn eyes when 2-4 of them sit in the top half.
+  const ownEyes = cands.length <= 4 && cands.filter(c => c.cy < top + 0.5 * bodyH).length >= 2;
+  if (cands.length < 2 || cands.length > 4) return {eyes: [], ownEyes}; // one dot could be a nose; many could be spots
 
   let best: [number, number] | null = null;
   let bestScore = Infinity;
@@ -157,11 +162,12 @@ export function findEyes(img: Rgba): Eye[] {
       }
     }
   }
-  if (!best) return [];
-  return best
+  if (!best) return {eyes: [], ownEyes};
+  const eyes = best
     .map(k => cands[k]!)
     .sort((a, b) => a.cx - b.cx)
     .map(e => ({x: round3(e.cx / W), y: round3(e.cy / H), r: round3(Math.min(0.25, Math.max(0.015, e.r / W)))}));
+  return {eyes, ownEyes: true};
 }
 
 /** Validate untrusted eyes (model output): 0-4 entries, x/y in 0..1, r in 0.01..0.25. Null if not an array. */

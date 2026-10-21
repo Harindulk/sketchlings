@@ -1,7 +1,7 @@
 import {describe, expect, test} from 'bun:test';
 import {readFileSync} from 'node:fs';
 import {join} from 'node:path';
-import {findEyes, type Eye} from '../src/eyes';
+import {findEyes, scanEyes, type Eye} from '../src/eyes';
 import {analyze, offlinePersona} from '../src/persona';
 import {decodePng, type Rgba} from '../src/png';
 import {encodePng} from './helpers';
@@ -90,6 +90,17 @@ describe('offline eye finder', () => {
       ['big dark patches', [{x: 95, y: 90, r: 45}, {x: 205, y: 90, r: 45}]],
     ];
     for (const [name, dots] of thick) expect({name, eyes: findEyes(creature(300, 260, dots, 6))}).toEqual({name, eyes: []});
+  });
+
+  test('ownEyes: 2-4 round dots in the top half that make no clean pair are still drawn eyes', () => {
+    const own = (dots: Dot[]) => scanEyes(creature(200, 160, dots));
+    expect(own([{x: 70, y: 60, r: 5}, {x: 130, y: 60, r: 10}])).toEqual({eyes: [], ownEyes: true}); // very different sizes
+    expect(own([{x: 70, y: 35, r: 6}, {x: 130, y: 70, r: 6}])).toEqual({eyes: [], ownEyes: true}); // tilted pair
+    expect(own([{x: 100, y: 60, r: 6}]).ownEyes).toBe(false); // one dot: maybe a nose
+    expect(own([{x: 70, y: 120, r: 6}, {x: 130, y: 120, r: 6}]).ownEyes).toBe(false); // buttons
+    expect(own([{x: 60, y: 50, r: 4}, {x: 85, y: 50, r: 4}, {x: 110, y: 50, r: 4}, {x: 135, y: 50, r: 4}, {x: 72, y: 70, r: 4}, {x: 122, y: 70, r: 4}]).ownEyes).toBe(false); // spots
+    expect(own([]).ownEyes).toBe(false);
+    expect(own([{x: 130, y: 55, r: 6}, {x: 70, y: 57, r: 6}]).ownEyes).toBe(true); // placed pair
   });
 
   // Hand-labelled eyes of the TV's demo drawings (tv/src/game/demo.ts) and the phone's sample monster (doodle-cutout output).

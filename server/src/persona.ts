@@ -5,7 +5,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import type {MoveStyle, Sketchling, Stats} from '../../shared/protocol';
 import {PLAYER_COLORS} from '../../shared/protocol';
 import {abilityFor, GENERIC_FEATURE, MOVES, shapeKind} from './ability';
-import {cleanEyes, findEyes, type Eye} from './eyes';
+import {cleanEyes, scanEyes, type Eye} from './eyes';
 import {decodePng, type PngInfo} from './png';
 
 export type Persona = Omit<Sketchling, 'id' | 'playerId' | 'spriteUrl' | 'width' | 'height' | 'artist'>;
@@ -22,6 +22,7 @@ export interface Features {
   aspect: number; // height / width
   ink: number; // 0-1 share of the sprite covered by ink
   eyes: Eye[]; // offline guess, [] unless convincing
+  ownEyes: boolean; // drew eyes the finder couldn't place
   kind: MoveStyle; // move guessed from the silhouette
 }
 
@@ -84,7 +85,8 @@ export function analyze(png: Uint8Array, size: PngInfo): Features {
   if (!colors.length) colors.push(PLAYER_COLORS[seed % PLAYER_COLORS.length]!);
   // Judge the creature by its most colourful ink: a black outline shouldn't hide a green body.
   const family = colors.map(familyOf).find(f => f !== 'ink') ?? 'ink';
-  return {seed, colors, family, aspect, ink, eyes: img ? findEyes(img) : [], kind: shapeKind(img)};
+  const {eyes, ownEyes} = img ? scanEyes(img) : {eyes: [], ownEyes: false};
+  return {seed, colors, family, aspect, ink, eyes, ownEyes, kind: shapeKind(img)};
 }
 
 // ---------- validation shared by both paths ----------
@@ -151,7 +153,8 @@ export function sanitizePersona(raw: unknown, fallback: Persona): Omit<Persona, 
   const colors = Array.isArray(o.colors)
     ? [...new Set(o.colors.filter((c): c is string => typeof c === 'string' && /^#[0-9a-f]{6}$/i.test(c.trim())).map(c => c.trim().toLowerCase()))].slice(0, 3)
     : [];
-  return {...text, stats, move, ability, colors: colors.length ? colors : fallback.colors, eyes: cleanEyes(o.eyes) ?? fallback.eyes};
+  // ownEyes: the child drew eyes, so the TV never adds a default pair, even when `eyes` is empty.
+  return {...text, stats, move, ability, colors: colors.length ? colors : fallback.colors, eyes: cleanEyes(o.eyes) ?? fallback.eyes, ownEyes: !!o.drewEyes};
 }
 
 // ---------- offline generator ----------
@@ -245,7 +248,7 @@ export function offlinePersona(f: Features): Persona {
   ]);
   const base = {name, title, personality, catchphrase, intro, winLine, stats, move, ability: abilityFor(move), colors: f.colors, eyes: f.eyes};
   // Run through the same clamp as model output so both paths obey the protocol limits.
-  return {...sanitizePersona(base, {...base, source: 'offline'}), source: 'offline'};
+  return {...sanitizePersona(base, {...base, source: 'offline'}), ownEyes: f.ownEyes, source: 'offline'};
 }
 
 // ---------- Claude ----------
@@ -300,6 +303,7 @@ Rules:
 - stats: speed, jump and power, each 1 to 5, adding up to between 7 and 11. Match the drawing: long legs mean speed, wings or springy shapes mean jump, big chunky bodies mean power.
 - colors: the 1 to 3 main ink colours as #rrggbb.
 - eyes: where the child drew the eyes, so animated googly eyes can be placed exactly on top of them. For each eye: x and y are its centre as fractions of the image width and height (0,0 = top-left corner, 1,1 = bottom-right), r is its radius as a fraction of the image width. 0 to 4 eyes. If you cannot clearly see drawn eyes, or are not sure where they are, return an empty list: a wrong position looks worse than none.
+- drewEyes: true if the child drew eyes, even if you can't place them precisely; false if the drawing has no eyes.
 - Plain words only, no emoji. Answer directly without deliberating.`;
 
 const str = (description: string) => ({type: 'string', description});
@@ -307,7 +311,7 @@ const stat = {type: 'integer', enum: [1, 2, 3, 4, 5]};
 const SCHEMA = {
   type: 'object',
   additionalProperties: false,
-  required: ['name', 'title', 'personality', 'catchphrase', 'intro', 'winLine', 'stats', 'move', 'ability', 'colors', 'eyes'],
+  required: ['name', 'title', 'personality', 'catchphrase', 'intro', 'winLine', 'stats', 'move', 'ability', 'colors', 'eyes', 'drewEyes'],
   properties: {
     name: str('1-3 easy, silly words'),
     title: str('starts with "the", 2-4 words'),
@@ -339,6 +343,7 @@ const SCHEMA = {
         properties: {x: {type: 'number', description: '0-1 of width'}, y: {type: 'number', description: '0-1 of height'}, r: {type: 'number', description: 'radius, fraction of width'}},
       },
     },
+    drewEyes: {type: 'boolean', description: "true if the child drew eyes, even if you can't place them precisely"},
   },
 };
 
