@@ -292,3 +292,25 @@ heavy load; the VVD itself kept crashing under the same load on 21 Oct (F5).
   (or check the server's shape detection); with the bundled samples the demo has walk, hop, fly and roll.
 - The offline eye finder put a second pair of googly eyes above some fake-phone drawings (server side, seen on the
   star "Little Marshmallow").
+
+## 21 Oct, afternoon: 6-lane live run, the freeze with 6 lanes, F12
+
+**Live run, real Claude personas:** 6 fake phones, lobby → reveals → 2 races → results → Hall of Fame → Race again with 2 picks → demo party with guests, end to end. Fixed: 6-lane finish medals wrapped ("1s/t!"); Doodle Boost text contrast now 5.6:1.
+
+**Measured on VVD (headless, Apple-silicon host under load 10-20 with 11-14 GB swap in use; no Fire TV hardware):**
+
+| Metric | Value |
+|---|---|
+| Race loop, 6 live lanes (31 one-second overlay samples) | 52 / 56 / 61 Hz (min / median / max) |
+| JS time per frame in the race | 0.3 ms median, 0.6 ms max |
+| Phone input received → applied in the sim | 6-9 ms, jitter +2 ms (n = 300) |
+| Cool start (20 Oct) | TTFF 408 ms, TTFD 409 ms |
+| KPI Visualizer warm start, memory, UI fluidity, focus response | not measured yet (custom fluidity scenarios need Appium, not installed) |
+
+**The race-start freeze with 6 lanes.** 6 lanes: 3 of 7 starts froze (stuck on "3", no ACR written, Back did not kill it; terminated by hand). 4 lanes: 0 of 7 today, 49 clean counting earlier soaks. A build without the ink-blot images ran 8/8 six-lane starts, so the likely trigger is ~66 blot images mounting at once at race start (81 image loads in 0.3 ms in the log) feeding the F4 watchdog deadlock on a starved host. Candidate fix under soak: blots mount one lane every 300 ms during 3-2-1, loop at 20 Hz until GO (20 Hz alone did not stop a freeze). Until the soak passes: film with 4-5 players, quit other apps first.
+
+**F12. The VVD renders in software, and an animating app keeps ~7 host cores busy.** Task: soak and film on the headless VVD on a 16 GB Mac. Expected: an idle-ish TV app costs little host CPU. Actual: `hw.gpu.mode = swangle_indirect` in the instance's `hardware-qemu.ini` (ANGLE on SwiftShader, on the host CPU). With Sketchlings in the foreground the `vega-virtual-device` process uses 590-760 % CPU on Home, Results and Hall of Fame (focus wobble, blinking googly eyes) and in a race, 150-320 % on the mostly still How to play screen, and 15-20 % with the app terminated (`ps -o pcpu`, 21 Oct). On a Mac also running other apps that is the host starvation behind F5 and the starved watchdog thread in F4. Severity: medium-high. Workaround: quit other apps before soaks and filming. Suggestion: document the GPU mode, and offer a working host-GPU mode for the headless VVD on Apple silicon.
+
+**Other changes today:** app icon (512 px PNG in the manifest; shows on the VVD "Your apps" tile titled Sketchlings), focus returns to the last Home tile, background/active handling with `useKeplerAppStateManager` (hush audio, close the socket, rejoin the same room; resume after the Home key not yet verified), Lobby Start not focusable until a drawing is ready, `soak.mjs --guests N` for 6-lane demo parties.
+
+**Amazon Devices Builder Tools used:** `read_document` and `search_documentation` (Vega KPI docs and the manifest icon format).
