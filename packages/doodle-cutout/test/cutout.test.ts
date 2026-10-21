@@ -140,6 +140,18 @@ describe('cutout', () => {
     expectNear(opaqueArea(r), Math.PI * 73 * 63, Math.PI * 73 * 63 * 0.1);
   });
 
+  test('a wide dark table all around the sheet does not turn the whole sheet into the cutout', () => {
+    // Table wider than the paper estimate window on every side: the sheet edge is a hard step all the way round.
+    const photo = new Scene(W, H)
+      .table({x: 70, y: 60, w: 260, h: 180}, [0.15, 0.15, 0.16])
+      .strokeEllipse(200, 150, 70, 50, 6)
+      .render({shadow: 0.2, noise: 0.015});
+    const r = cutout(photo);
+    expectNear(r.bbox.x, 127, 3);
+    expectNear(r.bbox.width, 146, 6);
+    expectNear(opaqueArea(r), Math.PI * 73 * 53, Math.PI * 73 * 53 * 0.1);
+  });
+
   test('ruled school paper: the faint lines are not ink', () => {
     const scene = new Scene(W, H);
     for (let y = 20; y < H; y += 22) scene.stroke([[0, y], [W, y]], 1.5, [0.72, 0.84, 0.97]);

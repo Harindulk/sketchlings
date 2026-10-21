@@ -261,22 +261,23 @@ export function cutout(img: ImageLike, options: CutoutOptions = {}): CutoutResul
     paletteSize: options.paletteSize ?? 5,
   };
 
-  // 1. Paper + lighting estimate. A flat closing removes everything darker than the paper that is
-  //    narrower than its window and keeps hard steps (table edges) exact; a paraboloid closing
-  //    follows soft round shadows exactly. Both only ever overestimate, so take the lower one.
+  // 1. Paper + lighting estimate on a lightly denoised copy. A flat closing removes everything darker
+  //    than the paper that is narrower than its window and keeps hard steps (table edges) exact; a
+  //    paraboloid closing follows soft round shadows exactly. Both only ever overestimate, so take the
+  //    lower one. It must be the same copy that is scored below: a blurrier estimate is too bright on
+  //    the dark side of a step, which draws a 1 px "ink" line round the sheet that fill-holes then fills.
+  const soft = rgb.map((ch) => boxBlur(ch, w, h, 1));
   const k = 0.5 / (o.backgroundRadius * o.backgroundRadius);
-  const bg = rgb.map((ch) => {
-    const smooth = boxBlur(ch, w, h, 2);
-    const flat = grayClose(smooth, w, h, o.backgroundRadius);
-    const para = paraClose(smooth, w, h, k);
+  const bg = soft.map((ch) => {
+    const flat = grayClose(ch, w, h, o.backgroundRadius);
+    const para = paraClose(ch, w, h, k);
     for (let i = 0; i < n; i++) if (para[i] < flat[i]) flat[i] = para[i];
     return flat;
   });
 
-  // 2. Flatten (divide by the paper) and score each pixel's "inkiness" on a lightly denoised copy.
+  // 2. Flatten (divide by the paper) and score each pixel's "inkiness".
   //    Dividing by a dark background amplifies sensor noise, so the score is reduced by the
   //    expected extra noise there (sigma estimated from the green channel's high-pass MAD).
-  const soft = rgb.map((ch) => boxBlur(ch, w, h, 1));
   const resid = new Float32Array(n);
   for (let i = 0; i < n; i++) resid[i] = Math.abs(rgb[1][i] - soft[1][i]);
   const sigmaSoft = (percentiles(resid, [0.5])[0] * 1.57) / 3;
