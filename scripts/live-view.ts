@@ -1,13 +1,27 @@
 // Live view of the headless VVD for playtests: `bun scripts/live-view.ts`, then open http://localhost:8799/ (notes/tv.md).
 // Read-only: streams frames from the emulator's gRPC streamScreenshot (raw RGB888, pushed on every new frame) to the
-// page over a WebSocket; the page draws them with WebGL. Never sends keys. The only thing it may change on the VVD is
-// switching on its token-protected, localhost-only gRPC endpoint (console `grpc 8554`) when that is off; no adb used.
+// page over a WebSocket; the page draws them with WebGL. The page's keyboard is the remote: arrow keys, Enter (OK),
+// Backspace/Esc (Back), Space (Play/Pause = ROAR), M (Menu) are forwarded as `inputd-cli` button presses over adb,
+// like tv/scripts/remote.sh. It may also switch on the VVD's token-protected, localhost-only gRPC endpoint
+// (console `grpc 8554`) when that is off.
 import http2 from "node:http2";
 import { readFileSync, readdirSync } from "node:fs";
 import { homedir } from "node:os";
 import type { ServerWebSocket } from "bun";
 
 const PORT = 8799, CONSOLE = 5554, GRPC = 8554;
+// Unity's adb by default: two adb versions on one Mac kill each other's server (FRICTION_LOG).
+const ADB = process.env.ADB ?? "/Applications/Unity/Hub/Editor/6000.6.0f1/PlaybackEngines/AndroidPlayer/SDK/platform-tools/adb";
+const KEYS: Record<string, string> = { up: "KEY_UP", down: "KEY_DOWN", left: "KEY_LEFT", right: "KEY_RIGHT", select: "KEY_ENTER", back: "KEY_BACK", menu: "KEY_MENU", playpause: "KEY_PLAYPAUSE" };
+let keyChain = Promise.resolve(); // one press at a time, in order
+function press(name: unknown) {
+  const key = typeof name === "string" ? KEYS[name] : undefined;
+  if (!key) return;
+  keyChain = keyChain.then(async () => {
+    const p = Bun.spawn([ADB, "-s", `emulator-${CONSOLE}`, "shell", "inputd-cli", "button_press", key], { stdout: "ignore", stderr: "ignore" });
+    await p.exited;
+  }).catch(() => {});
+}
 const RUNNING = `${homedir()}/Library/Caches/TemporaryItems/avd/running`; // where the emulator advertises its gRPC port
 
 // gRPC port + token of the live emulator on console port 5554 (pid_<pid>.ini appears once gRPC is on).
@@ -133,7 +147,9 @@ Bun.serve({
       else ws.send(JSON.stringify({ status: lastStatus }));
       run();
     },
-    message() {},
+    message(_ws, msg) {
+      try { press(JSON.parse(String(msg)).key); } catch {}
+    },
     close(ws) { clients.delete(ws); if (!clients.size) stop(); },
   },
 });

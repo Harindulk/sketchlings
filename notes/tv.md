@@ -379,3 +379,5 @@ heavy load; the VVD itself kept crashing under the same load on 21 Oct (F5).
   (the dino) it sits over the neck. One more fake-phone creature in the Hall of Fame ("Dippy Doodlesaur" by Noah, from
   the one-player Reveal test), now first in the Demo party; the hall shows 68.
 
+
+**Live view keyboard remote (21 Oct).** The live-view page forwards keys to the VVD as `inputd-cli` button presses over Unity's adb (override with `ADB=`), one at a time and in order: arrows, Enter (OK), Backspace/Esc (Back), Space (Play/Pause = ROAR), M (Menu); any other key is ignored. The server listens on 127.0.0.1 only. Checked with a fake adb that logged the exact presses; not yet driven on the live VVD (the audio debugging soak owned it).

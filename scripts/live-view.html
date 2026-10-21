@@ -15,7 +15,7 @@
   .gone { opacity: 0; }
 </style>
 <canvas id="c" width="1920" height="1080"></canvas>
-<div id="hint" class="note">Click for full screen · F shows fps</div>
+<div id="hint" class="note">Click for full screen · arrows, Enter, Backspace = remote · Space = ROAR · F shows fps</div>
 <div id="msg" class="note">Connecting…</div>
 <div id="fps"></div>
 <script>
@@ -54,8 +54,10 @@ requestAnimationFrame(draw);
 setInterval(() => { $("fps").textContent = `${frames} fps · ${frames ? Math.round(lat / frames) : "-"} ms`; frames = lat = 0; }, 1000);
 
 function show(text) { $("msg").textContent = text; $("msg").classList.toggle("gone", !text); }
+let sock = null; // the current socket, used by the keyboard remote
 function connect() {
   const ws = new WebSocket(`ws://${location.host}/`);
+  sock = ws;
   ws.binaryType = "arraybuffer";
   ws.onmessage = (e) => {
     if (typeof e.data !== "string") { if (meta) pending = { meta, data: e.data }; show(""); return; }
@@ -67,7 +69,15 @@ function connect() {
 connect();
 
 addEventListener("click", () => document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen());
-addEventListener("keydown", (e) => { if (e.key === "f" || e.key === "F") $("fps").style.display = $("fps").style.display === "block" ? "none" : "block"; });
+// The keyboard is the Fire TV remote (the server forwards presses to the VVD).
+const REMOTE = { ArrowUp: "up", ArrowDown: "down", ArrowLeft: "left", ArrowRight: "right", Enter: "select", Backspace: "back", Escape: "back", " ": "playpause", m: "menu", M: "menu" };
+addEventListener("keydown", (e) => {
+  if (e.key === "f" || e.key === "F") { $("fps").style.display = $("fps").style.display === "block" ? "none" : "block"; return; }
+  const key = REMOTE[e.key];
+  if (!key || e.repeat) return;
+  e.preventDefault(); // no page scroll on arrows/space; Esc still leaves full screen first in most browsers
+  if (sock && sock.readyState === 1) sock.send(JSON.stringify({ key }));
+});
 document.addEventListener("fullscreenchange", () => $("hint").classList.add("gone"));
 setTimeout(() => $("hint").classList.add("gone"), 6000);
 </script>

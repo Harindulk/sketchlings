@@ -34,7 +34,7 @@ This session gives the video its opening (a real child's drawing coming alive) a
 
 ### 1.1 The live picture (blocker: the family must see the race on a screen)
 
-The VVD runs headless (`--no-gui`), so its own window never shows the game: `remote.sh shot` and `screenrecord` only write files. **Built 21 Oct: a live view.** Run `bun scripts/live-view.ts`, open http://localhost:8799/ in Chrome on the Mac, click once for full screen and put that screen on the TV (HDMI or AirPlay). It showed every frame the VVD drew (25 to 33 fps, about 50 ms behind) and only reads the screen (details: `notes/tv.md`, "Live view for playtests"). Try it on Wednesday night. The options below are fallbacks if it fails:
+The VVD runs headless (`--no-gui`), so its own window never shows the game: `remote.sh shot` and `screenrecord` only write files. **Built 21 Oct: a live view.** Run `bun scripts/live-view.ts`, open http://localhost:8799/ in Chrome on the Mac, click once for full screen and put that screen on the TV (HDMI or AirPlay). It showed every frame the VVD drew (25 to 33 fps, about 50 ms behind) and the page's keyboard is the Fire TV remote: arrows move, Enter = OK, Backspace or Esc = Back, Space = Play/Pause (ROAR), M = Menu (details: `notes/tv.md`, "Live view for playtests"). Try it on Wednesday night. The options below are fallbacks if it fails:
 
 | Option | How | Status |
 |---|---|---|
