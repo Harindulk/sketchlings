@@ -257,7 +257,7 @@ bash -c 'cd ~/Desktop/Sketchlings; echo "SPACE=run  w=jump  r=ROAR  a/d=left/rig
    ```sh
    curl -s localhost:8787/api/hall-of-fame | python3 -c 'import json,sys; h=json.load(sys.stdin); print(len(h), "creatures"); [print(s.get("artist","?"), "|", s["name"], "|", s["ability"]["feature"], "->", s["ability"]["kind"], "| eyes:", len(s.get("eyes") or [])) for s in h]'
    ```
-5. Type the paper sheet into `results-sheet.md`. Copy the headline numbers into `docs/drafts/IMPACT.md` ("Evidence: family playtest") and the playtest TODOs in `docs/drafts/DEVPOST.md`. "The youngest won X of Y races" goes on the video's Impact card.
+5. Type the paper sheet into `results-sheet.md`. Copy the headline numbers into `docs/IMPACT.md` ("Evidence: family playtest") and the playtest TODOs in `docs/DEVPOST.md`. "The youngest won X of Y races" goes on the video's Impact card.
 6. Make the one design change, commit it, and fill "One change the kids caused".
 7. For the video engineer: a list of the best takes per shot (shot number, file name, clock time).
 8. Before the upload: watch every frame for faces (cut or blur), and check every child against their consent tick (voice muted, or out entirely).

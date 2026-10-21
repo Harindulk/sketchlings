@@ -1,6 +1,6 @@
 # Sketchlings playtest results
 
-Print version for pen on the day: [`results-sheet.html`](results-sheet.html) (A4 landscape, 3 pages). Type the results into this file the same evening, then copy the headline numbers into the "Evidence: family playtest" table in `docs/drafts/IMPACT.md` and the playtest TODOs in `docs/drafts/DEVPOST.md`.
+Print version for pen on the day: [`results-sheet.html`](results-sheet.html) (A4 landscape, 3 pages). Type the results into this file the same evening, then copy the headline numbers into the "Evidence: family playtest" table in `docs/IMPACT.md` and the playtest TODOs in `docs/DEVPOST.md`.
 
 Rules: first names only. Write the exact words for quotes, never tidied up. Write the clock time (HH:MM) next to every race, scan and quote so the footage can be found later. Never round numbers up.
 
