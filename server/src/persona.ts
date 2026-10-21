@@ -261,7 +261,7 @@ export interface Claude {
   model: string;
 }
 
-export function makeClaude(cfg: {apiKey?: string; model?: string; baseURL?: string}): Claude | null {
+export function makeClaude(cfg: {apiKey?: string; model?: string; baseURL?: string; workspaceId?: string}): Claude | null {
   if (!cfg.apiKey?.trim()) return null;
   return {
     model: cfg.model?.trim() || DEFAULT_MODEL,
@@ -272,6 +272,8 @@ export function makeClaude(cfg: {apiKey?: string; model?: string; baseURL?: stri
       baseURL: cfg.baseURL?.trim() || 'https://api.anthropic.com',
       timeout: TIMEOUT_MS,
       maxRetries: 0, // a retry would blow the 12 s budget; the offline persona is the fallback
+      // Keys not scoped to a workspace must name one, or the API answers 400.
+      defaultHeaders: cfg.workspaceId?.trim() ? {'anthropic-workspace-id': cfg.workspaceId.trim()} : undefined,
     }),
   };
 }

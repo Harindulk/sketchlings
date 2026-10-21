@@ -5,7 +5,7 @@ import {kokoro} from './voice';
 
 const env = process.env;
 const tts = kokoro(join(import.meta.dir, '../models'));
-const claude = makeClaude({apiKey: env.ANTHROPIC_API_KEY, model: env.SKETCHLINGS_MODEL, baseURL: env.SKETCHLINGS_ANTHROPIC_BASE_URL});
+const claude = makeClaude({apiKey: env.ANTHROPIC_API_KEY, model: env.SKETCHLINGS_MODEL, baseURL: env.SKETCHLINGS_ANTHROPIC_BASE_URL, workspaceId: env.ANTHROPIC_WORKSPACE_ID});
 const {server, joinBase} = createServer({
   port: Number(env.PORT) || 8787,
   hostname: '0.0.0.0',
