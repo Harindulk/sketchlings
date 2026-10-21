@@ -89,7 +89,7 @@ export function createServer(cfg: ServerConfig) {
   const base = () => (cfg.publicUrl?.trim() || `http://${lanIp()}:${server.port}`).replace(/\/+$/, '');
   const hub = createHub(code => `${base()}/j/${code}`);
 
-  async function processScan(room: Room, slot: Slot, id: string, png: Uint8Array, size: PngInfo) {
+  async function processScan(room: Room, slot: Slot, id: string, png: Uint8Array, size: PngInfo, uploadAt: number) {
     const playerId = slot.player.id;
     hub.toTvAndPlayer(room, playerId, {t: 'scan', playerId, status: 'processing'});
     try {
@@ -98,6 +98,8 @@ export function createServer(cfg: ServerConfig) {
       const sketchling: Sketchling = {id, playerId, ...persona, spriteUrl: `/sprites/${id}.png`, width: size.width, height: size.height, artist: slot.player.name, artistAge: slot.player.ageGroup};
       slot.player.sketchling = sketchling;
       hub.toTvAndPlayer(room, playerId, {t: 'sketchling', sketchling});
+      // Playtest KPI: snap-to-reveal on the server side, one line per scan.
+      console.log(`[scan] ${playerId} upload->sketchling ${Date.now() - uploadAt} ms source=${sketchling.source}`);
       hub.toTvAndPlayer(room, playerId, {t: 'scan', playerId, status: 'ready'});
       hub.broadcastPlayers(room);
       addToHall(sketchling);
@@ -119,6 +121,7 @@ export function createServer(cfg: ServerConfig) {
   }
 
   async function uploadSketch(req: Request, code: string, playerId: string): Promise<Response> {
+    const uploadAt = Date.now();
     const room = hub.rooms.get(code.toUpperCase());
     const slot = room?.slots.get(playerId);
     if (!room || !slot) return json({error: 'unknown room or player'}, 404);
@@ -143,7 +146,7 @@ export function createServer(cfg: ServerConfig) {
       console.error('[scan] could not save sprite:', e);
       return json({error: 'could not save image'}, 500);
     }
-    void processScan(room, slot, id, png, size);
+    void processScan(room, slot, id, png, size, uploadAt);
     return json({id}, 202);
   }
 
