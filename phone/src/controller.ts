@@ -147,6 +147,15 @@ export function raceView(racer: () => Racer, send: (kind: InputKind) => void): {
   };
 }
 
+/** The open mic, kept from one race to the next so the permission prompt comes once. Closed when the page goes away. */
+let mic: {stream: MediaStream; ac: AudioContext; analyser: AnalyserNode} | null = null;
+function closeMic() {
+  mic?.stream.getTracks().forEach((t) => t.stop());
+  void mic?.ac.close();
+  mic = null;
+}
+addEventListener('pagehide', closeMic);
+
 /**
  * "Enable shouting": mic loudness spikes become shouts. Browsers only allow getUserMedia on
  * secure pages (HTTPS/localhost), so on a plain-HTTP LAN page this renders nothing and the
@@ -154,47 +163,27 @@ export function raceView(racer: () => Racer, send: (kind: InputKind) => void): {
  */
 function micControl(onShout: () => void): {el: HTMLElement | null; stop(): void} {
   if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) return {el: null, stop() {}};
-  let stream: MediaStream | null = null;
-  let ac: AudioContext | null = null;
+  if (mic?.stream.getAudioTracks().every((t) => t.readyState === 'ended')) closeMic(); // the OS took it back (lock, call)
   let raf = 0;
   const fill = h('i');
   const meter = h('span', {class: 'meter', 'aria-hidden': 'true'}, fill);
   const btn = h('button', {type: 'button', class: 'link-btn'}, 'Enable shouting');
   const row = h('div', {class: 'mic'}, svg(icons.mic), btn);
 
-  const stop = () => {
+  const listen = (m: NonNullable<typeof mic>) => {
     cancelAnimationFrame(raf);
-    stream?.getTracks().forEach((t) => t.stop());
-    void ac?.close();
-    stream = null;
-    ac = null;
-  };
-
-  btn.addEventListener('click', async () => {
-    if (stream) {
-      stop();
-      meter.remove();
-      btn.textContent = 'Enable shouting';
+    // A suspended context (Safari after the permission alert) reads pure silence: ask for one more tap.
+    if (m.ac.state !== 'running') {
+      btn.textContent = 'Tap to wake the mic';
       return;
     }
-    try {
-      stream = await navigator.mediaDevices.getUserMedia({audio: {echoCancellation: false, noiseSuppression: false, autoGainControl: false}});
-    } catch {
-      btn.textContent = 'No mic: use ROAR!';
-      btn.disabled = true;
-      return;
-    }
-    ac = new AudioContext();
-    const analyser = ac.createAnalyser();
-    analyser.fftSize = 1024;
-    ac.createMediaStreamSource(stream).connect(analyser);
-    const buf = new Float32Array(analyser.fftSize);
+    const buf = new Float32Array(m.analyser.fftSize);
     let baseline = 0.02;
     let last = 0;
     btn.textContent = 'Shout to ROAR! (tap to stop)';
     row.append(meter);
     const tick = () => {
-      analyser.getFloatTimeDomainData(buf);
+      m.analyser.getFloatTimeDomainData(buf);
       let sum = 0;
       for (const v of buf) sum += v * v;
       const rms = Math.sqrt(sum / buf.length);
@@ -209,6 +198,38 @@ function micControl(onShout: () => void): {el: HTMLElement | null; stop(): void}
       raf = requestAnimationFrame(tick);
     };
     tick();
+  };
+
+  btn.addEventListener('click', async () => {
+    if (mic && mic.ac.state !== 'running') {
+      await mic.ac.resume().catch(() => {});
+      return listen(mic);
+    }
+    if (mic) {
+      cancelAnimationFrame(raf);
+      closeMic();
+      meter.remove();
+      btn.textContent = 'Enable shouting';
+      return;
+    }
+    let stream: MediaStream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({audio: {echoCancellation: false, noiseSuppression: false, autoGainControl: false}});
+    } catch (err) {
+      const name = err instanceof Error ? err.name : String(err);
+      console.warn('[sketchlings] mic:', name); // NotAllowedError (denied), NotReadableError (busy), NotFoundError (none)
+      btn.textContent = name === 'NotAllowedError' ? 'Mic blocked: allow it in the browser settings' : 'No mic: use ROAR!';
+      btn.disabled = true;
+      return;
+    }
+    const ac = new AudioContext();
+    await ac.resume().catch(() => {});
+    const analyser = ac.createAnalyser();
+    analyser.fftSize = 1024;
+    ac.createMediaStreamSource(stream).connect(analyser);
+    mic = {stream, ac, analyser};
+    listen(mic);
   });
-  return {el: row, stop};
+  if (mic) listen(mic); // still on from an earlier race
+  return {el: row, stop: () => cancelAnimationFrame(raf)};
 }
