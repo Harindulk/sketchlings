@@ -12,6 +12,7 @@ import {
   otsu,
   percentiles,
   selectComponents,
+  slide,
   type Mask,
 } from './ops.js';
 
@@ -228,9 +229,11 @@ function pageTexture(v: Float32Array, w: number, h: number, tile: number): numbe
  * edge within a 2 * `thick` margin (a thin strip of table, the paper's edge and its shadow), so a stroke
  * that touches it is trimmed rather than lost with it. What is left touching the cut (a margin line, a
  * strip of shadow) is dropped unless it reaches `depth` px into the photo, which strokes joined to a
- * drawing do. Specks go too.
+ * drawing do. A thin part lying mostly just off a sharp step down in the paper estimate `paper` (the
+ * edge and shadow of a sheet on a table too wide to count as ink) loses those pixels; mostly thick
+ * parts are exempt, as big crayon areas make such steps themselves. Specks go too.
  */
-function dropSurroundings(ink: Mask, w: number, h: number, thick: number, depth: number, minArea: number): Mask {
+function dropSurroundings(ink: Mask, paper: Float32Array, w: number, h: number, thick: number, depth: number, minArea: number): Mask {
   const n = w * h;
   const cut = 2 * thick;
   // Thick ink = the part that survives eroding by a disk of radius `thick` (later dilated back).
@@ -255,17 +258,29 @@ function dropSurroundings(ink: Mask, w: number, h: number, thick: number, depth:
   const removed = hysteresis(zone, w, h, 2, 1);
   const kept = new Uint8Array(n);
   for (let i = 0; i < n; i++) kept[i] = ink[i] && !removed[i] ? 1 : 0;
+  // Brightest paper within `cut`: much darker than that means just off the sheet's edge.
+  const tmp = new Float32Array(n);
+  const near = slide(slide(paper, w, h, cut, true, true, tmp), w, h, cut, false, true, new Float32Array(n));
   const parts = label(kept, w, h);
   const reach = new Float32Array(parts.count + 1);
   const touches = new Uint8Array(parts.count + 1);
+  const offSheet = new Uint32Array(parts.count + 1);
+  const solid = new Uint32Array(parts.count + 1);
   for (let i = 0; i < n; i++) {
     const id = parts.labels[i];
     if (!id) continue;
     if (dist[i] > reach[id]) reach[id] = dist[i];
+    if (paper[i] < 0.88 * near[i]) offSheet[id]++;
+    if (core[i]) solid[id]++;
     const x = i % w;
     if ((x > 0 && removed[i - 1]) || (x < w - 1 && removed[i + 1]) || (i >= w && removed[i - w]) || (i < n - w && removed[i + w])) touches[id] = 1;
   }
-  return selectComponents(parts, (id) => parts.area[id] >= minArea && (!touches[id] || reach[id] >= depth));
+  const out = selectComponents(parts, (id) => parts.area[id] >= minArea && (!touches[id] || reach[id] >= depth));
+  for (let i = 0; i < n; i++) {
+    const id = parts.labels[i];
+    if (out[i] && offSheet[id] * 2 > parts.area[id] && solid[id] * 4 < parts.area[id] && paper[i] < 0.88 * near[i]) out[i] = 0;
+  }
+  return out;
 }
 
 function buildPalette(cols: Float32Array, count: number, size: number): string[] {
@@ -404,7 +419,7 @@ export function cutout(img: ImageLike, options: CutoutOptions = {}): CutoutResul
   const ink = hysteresis(score, w, h, t, weak);
 
   // 4. Drop specks and what surrounds the sheet (table, fingers, the paper's edge), unless nothing is left.
-  let cleaned = o.removeBorderBlobs ? dropSurroundings(ink, w, h, Math.max(2, Math.round(long * 0.012)), o.backgroundRadius, o.minSpeckArea) : null;
+  let cleaned = o.removeBorderBlobs ? dropSurroundings(ink, bg[1], w, h, Math.max(2, Math.round(long * 0.012)), o.backgroundRadius, o.minSpeckArea) : null;
   if (!cleaned || !cleaned.includes(1)) {
     const inkParts = label(ink, w, h);
     cleaned = selectComponents(inkParts, (id) => inkParts.area[id] >= o.minSpeckArea);

@@ -152,6 +152,16 @@ describe('cutout', () => {
     expectNear(opaqueArea(r), Math.PI * 73 * 53, Math.PI * 73 * 53 * 0.1);
   });
 
+  test('the shadow a sheet casts on a wide light table is not part of the cutout', () => {
+    const scene = new Scene(W, H).table({x: 70, y: 55, w: 260, h: 190}, [0.8, 0.79, 0.76]);
+    scene.stroke([[334, 62], [334, 249], [78, 249]], 8, [0.45, 0.45, 0.45]); // the sheet's shadow, right and below
+    const r = cutout(scene.strokeEllipse(200, 150, 70, 50, 6).render({shadow: 0.25, noise: 0.015}));
+    expectNear(r.bbox.x, 127, 3);
+    expectNear(r.bbox.width, 146, 6);
+    expectNear(r.bbox.height, 106, 6);
+    expectNear(opaqueArea(r), Math.PI * 73 * 53, Math.PI * 73 * 53 * 0.1);
+  });
+
   // Repro from the phone review (768x1024 portrait, like a downscaled phone photo): a creature with legs.
   const creature = (s: Scene, legEnd: number) =>
     s
