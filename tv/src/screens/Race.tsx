@@ -100,6 +100,9 @@ export function Race({racers, bots, onInput, onFinish}: Props) {
   const [places, setPlaces] = useState<Record<string, number>>({});
   const [over, setOver] = useState(false);
   const [, setKnocked] = useState(0); // a walker's ROAR removed ink blots: re-render the world layer
+  // ink blots mount one lane every 300 ms during 3-2-1, not all at race mount: 6 lanes of blots (~66 images) loading
+  // at once froze 3 of 7 race starts on the VVD (Vega watchdog deadlock, notes/tv.md F4); without them 8 of 8 ran
+  const [blotLanes, setBlotLanes] = useState(0);
   const [showFps, setShowFps] = useState(false);
   const running = useRef(false);
   const remoteAt = useRef(-99);
@@ -198,15 +201,20 @@ export function Race({racers, bots, onInput, onFinish}: Props) {
       frame(now);
       const spent = nowMs() - now;
       work += spent;
-      timer = setTimeout(tick, Math.max(1, 16 - spent));
+      // 20 Hz until GO: nothing JS-driven moves during 3-2-1 (the numbers animate natively), and race mount is
+      // when the watchdog thread is most starved, so feed it a third of the per-task messages (F4)
+      timer = setTimeout(tick, running.current ? Math.max(1, 16 - spent) : 50);
     };
     // 3-2-1-GO runs off the frame clock
     let startedAt = 0;
     let goFired = false;
+    let shownLanes = 0;
     let shownCount: number | 'GO!' | null | undefined;
     const countdown = (now: number) => {
       if (!startedAt) startedAt = now;
       const e = now - startedAt;
+      const lanes = Math.min(racers.length, Math.floor(e / 300));
+      if (lanes > shownLanes) setBlotLanes((shownLanes = lanes));
       const c =
         e < 900 ? 3 : e < 1800 ? 2 : e < 2700 ? 1 : e < 3600 ? 'GO!' : null;
       // by elapsed time, not by the 'GO!' transition: sparse frames can skip the GO window entirely
@@ -437,7 +445,7 @@ export function Race({racers, bots, onInput, onFinish}: Props) {
               {left: START_X - 3, top: TOP, height: BOTTOM - TOP},
             ]}
           />
-          {race.blots.map((xs, lane) =>
+          {race.blots.slice(0, blotLanes).map((xs, lane) =>
             xs.map((bx) => {
               const b = Math.min(64, laneH * 0.55);
               return (
