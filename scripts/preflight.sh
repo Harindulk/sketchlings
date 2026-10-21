@@ -65,7 +65,10 @@ if [ -f "$vpkg" ]; then
 else fail "No $vpkg" "build it: tv/scripts/vbuild.sh release --run"; fi
 
 # 9. HTTPS tunnel (phones need a secure page for "Enable shouting")
-if pgrep -x cloudflared >/dev/null; then pass "cloudflared tunnel running"
+if pgrep -x cloudflared >/dev/null; then
+  URL=$(grep -ohE 'https://[a-z0-9-]+\.trycloudflare\.com' notes/tunnel-run.log 2>/dev/null | tail -1)
+  if [ -n "$URL" ] && curl -fsS -m 10 "$URL/health" >/dev/null 2>&1; then pass "HTTPS tunnel answers: $URL"
+  else fail "cloudflared runs but its URL doesn't answer" "restart scripts/tunnel.sh 2>&1 | tee notes/tunnel-run.log"; fi
 else fail "No HTTPS tunnel" "start the server with scripts/tunnel.sh (not bun run start)"; fi
 
 echo
