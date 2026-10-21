@@ -15,6 +15,7 @@ export function drawPad(onDone: (img: ImageData) => void, onBack: () => void): {
   const canvas = h('canvas', {class: 'pad', width: SIZE, height: SIZE, 'aria-label': 'Drawing area: draw your champion with your finger'});
   const ctx = canvas.getContext('2d', {willReadFrequently: true})!;
   const strokes: Stroke[] = [];
+  let cleared: Stroke[] = []; // the last Clear, so Undo can bring a wiped drawing back
   let color = COLORS[0];
   const live = new Map<number, Stroke>();
 
@@ -38,7 +39,8 @@ export function drawPad(onDone: (img: ImageData) => void, onBack: () => void): {
     ctx.fillStyle = '#fff';
     ctx.fillRect(0, 0, SIZE, SIZE);
     strokes.forEach((s) => paint(s));
-    done.disabled = undo.disabled = strokes.length === 0;
+    done.disabled = strokes.length === 0;
+    undo.disabled = strokes.length === 0 && cleared.length === 0;
   };
   const pos = (e: PointerEvent): [number, number] => {
     const r = canvas.getBoundingClientRect();
@@ -76,8 +78,8 @@ export function drawPad(onDone: (img: ImageData) => void, onBack: () => void): {
     swatches.append(b);
   });
 
-  const undo = h('button', {type: 'button', class: 'btn secondary', onclick: () => (strokes.pop(), redraw())}, 'Undo');
-  const clear = h('button', {type: 'button', class: 'btn secondary', onclick: () => ((strokes.length = 0), redraw())}, 'Clear');
+  const undo = h('button', {type: 'button', class: 'btn secondary', onclick: () => (strokes.length ? strokes.pop() : strokes.push(...cleared.splice(0)), redraw())}, 'Undo');
+  const clear = h('button', {type: 'button', class: 'btn secondary', onclick: () => (strokes.length && (cleared = strokes.splice(0)), redraw())}, 'Clear');
   const done = h(
     'button',
     {type: 'button', class: 'btn go', onclick: () => onDone(ctx.getImageData(0, 0, SIZE, SIZE))},
