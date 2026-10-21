@@ -2,6 +2,7 @@ import {
   boxBlur,
   closeMask,
   edt,
+  enlarge,
   fillHoles,
   grayClose,
   grayOpen,
@@ -12,6 +13,7 @@ import {
   otsu,
   percentiles,
   selectComponents,
+  shrink,
   slide,
   type Mask,
 } from './ops.js';
@@ -159,40 +161,36 @@ function toWorking(src: ImageLike['data'], W: number, H: number, maxSize: number
   return {rgb: [r, g, b], w, h};
 }
 
-/** Paper colour under the drawing, interpolated from the paper around it (normalised convolution). */
+/**
+ * Paper colour under the drawing, interpolated from the paper around it (normalised convolution), on a
+ * 4x smaller grid since it is smooth anyway. Where the drawing is too big for the `radius`-wide window,
+ * a window a third of the photo wide takes over gradually, so a big drawing gets no flat patch inside.
+ */
 function repairBackground(bg: Float32Array[], mask: Mask, w: number, h: number, radius: number): Float32Array[] {
   const n = w * h;
-  let weight: Float32Array = new Float32Array(n);
-  for (let i = 0; i < n; i++) weight[i] = mask[i] ? 0 : 1;
-  const vals = bg.map((ch) => {
+  const f = 4;
+  const free = new Float32Array(n);
+  for (let i = 0; i < n; i++) free[i] = mask[i] ? 0 : 1;
+  const {data: weight, w: cw, h: ch} = shrink(free, w, h, f);
+  const blur3 = (a: Float32Array, r: number) => boxBlur(boxBlur(boxBlur(a, cw, ch, r), cw, ch, r), cw, ch, r);
+  const near = Math.max(1, Math.round(radius / 2 / f));
+  const far = Math.max(near, Math.round(Math.max(cw, ch) / 3));
+  const wNear = blur3(weight, near);
+  const wFar = blur3(weight, far);
+  return bg.map((c) => {
     const v = new Float32Array(n);
-    for (let i = 0; i < n; i++) v[i] = mask[i] ? 0 : ch[i];
-    return v;
-  });
-  const r = Math.max(2, Math.round(radius / 2));
-  let blurredVals: Float32Array[] = vals;
-  for (let k = 0; k < 3; k++) {
-    weight = boxBlur(weight, w, h, r);
-    blurredVals = blurredVals.map((v) => boxBlur(v, w, h, r));
-  }
-  // Fallback when the drawing covers the photo: mean paper colour.
-  const mean = bg.map((ch) => {
-    let s = 0;
-    let c = 0;
-    for (let i = 0; i < n; i++) {
-      if (!mask[i]) {
-        s += ch[i];
-        c++;
-      }
+    for (let i = 0; i < n; i++) v[i] = mask[i] ? 0 : c[i];
+    const vals = shrink(v, w, h, f).data;
+    const vNear = blur3(vals, near);
+    const vFar = blur3(vals, far);
+    const paper = new Float32Array(cw * ch);
+    for (let j = 0; j < paper.length; j++) {
+      const d = wNear[j] + 0.01 * wFar[j];
+      paper[j] = d > 1e-9 ? (vNear[j] + 0.01 * vFar[j]) / d : 1; // 1: the drawing covers the whole photo
     }
-    return c ? s / c : 1;
-  });
-  return bg.map((ch, k) => {
-    const out = ch.slice();
-    for (let i = 0; i < n; i++) {
-      if (!mask[i]) continue;
-      out[i] = weight[i] > 1e-3 ? blurredVals[k][i] / weight[i] : mean[k];
-    }
+    const up = enlarge(paper, cw, ch, f, w, h);
+    const out = c.slice();
+    for (let i = 0; i < n; i++) if (mask[i]) out[i] = up[i];
     return out;
   });
 }
@@ -354,11 +352,14 @@ export function cutout(img: ImageLike, options: CutoutOptions = {}): CutoutResul
   //    paraboloid closing follows soft round shadows exactly. Both only ever overestimate, so take the
   //    lower one. It must be the same copy that is scored below: a blurrier estimate is too bright on
   //    the dark side of a step, which draws a 1 px "ink" line round the sheet that fill-holes then fills.
+  //    The paraboloid only has to follow soft shadows, so it runs at half size (4x faster); being the
+  //    lower one only where it is smooth, it cannot blur the hard steps the flat closing keeps exact.
   const soft = rgb.map((ch) => boxBlur(ch, w, h, 1));
   const k = 0.5 / (o.backgroundRadius * o.backgroundRadius);
   const bg = soft.map((ch) => {
     const flat = grayClose(ch, w, h, o.backgroundRadius);
-    const para = paraClose(ch, w, h, k);
+    const half = shrink(ch, w, h, 2);
+    const para = enlarge(paraClose(half.data, half.w, half.h, 4 * k), half.w, half.h, 2, w, h);
     for (let i = 0; i < n; i++) if (para[i] < flat[i]) flat[i] = para[i];
     return flat;
   });

@@ -64,6 +64,45 @@ export function grayOpen(src: Float32Array, w: number, h: number, r: number): Fl
   return b;
 }
 
+/** Area-average downscale by an integer factor `f`; edge blocks average the pixels they have. */
+export function shrink(src: Float32Array, w: number, h: number, f: number): {data: Float32Array; w: number; h: number} {
+  const sw = Math.ceil(w / f);
+  const sh = Math.ceil(h / f);
+  const sum = new Float32Array(sw * sh);
+  const cnt = new Float32Array(sw * sh);
+  for (let y = 0; y < h; y++) {
+    const row = Math.floor(y / f) * sw;
+    for (let x = 0; x < w; x++) {
+      const c = row + Math.floor(x / f);
+      sum[c] += src[y * w + x];
+      cnt[c]++;
+    }
+  }
+  for (let i = 0; i < sum.length; i++) sum[i] /= cnt[i];
+  return {data: sum, w: sw, h: sh};
+}
+
+/** Bilinear upscale of a `shrink(…, f)` result back to w x h. */
+export function enlarge(src: Float32Array, sw: number, sh: number, f: number, w: number, h: number): Float32Array {
+  const out = new Float32Array(w * h);
+  for (let y = 0; y < h; y++) {
+    const fy = Math.min(sh - 1, Math.max(0, (y + 0.5) / f - 0.5));
+    const r0 = Math.floor(fy) * sw;
+    const r1 = Math.min(sh - 1, Math.floor(fy) + 1) * sw;
+    const ty = fy - Math.floor(fy);
+    for (let x = 0; x < w; x++) {
+      const fx = Math.min(sw - 1, Math.max(0, (x + 0.5) / f - 0.5));
+      const c0 = Math.floor(fx);
+      const c1 = Math.min(sw - 1, c0 + 1);
+      const tx = fx - c0;
+      const a = src[r0 + c0] + (src[r0 + c1] - src[r0 + c0]) * tx;
+      const b = src[r1 + c0] + (src[r1 + c1] - src[r1 + c0]) * tx;
+      out[y * w + x] = a + (b - a) * ty;
+    }
+  }
+  return out;
+}
+
 function blur1d(src: Float32Array, dst: Float32Array, w: number, h: number, r: number, horizontal: boolean): void {
   const len = horizontal ? w : h;
   const lines = horizontal ? h : w;
