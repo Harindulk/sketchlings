@@ -9,13 +9,13 @@ export const ABILITY: Record<
   // label/feature defaults match the server's (server/src/ability.ts) for creatures saved before abilities existed
   fly: {
     label: 'Flies over ink blots!',
-    feature: 'wide wings',
+    feature: 'wide stretchy shape',
     pop: 'WINGS!',
     icon: require('../assets/art/ab_fly.png'),
   },
   roll: {
     label: 'Zooms fast on flat ground!',
-    feature: 'round body',
+    feature: 'round shape',
     pop: 'WHEELS!',
     icon: require('../assets/art/ab_roll.png'),
   },
