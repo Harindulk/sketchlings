@@ -19,25 +19,28 @@
 <body class="paper">
   <div class="page">
     <h1>TV-grade <span class="u" style="--u: var(--green)">on Vega</span></h1>
-    <div class="kicker">Vega KPI Visualizer (cool start) and the in-app perf overlay (race), against Vega's targets.</div>
+    <div class="kicker">Headless, on an Apple-silicon host: KPI Visualizer (cool start), activity monitor (memory) and our race overlay, against Vega's targets.</div>
   </div>
   <div class="pill fill" style="position: absolute; right: 90px; top: 80px; font-size: 38px; --f: var(--blue)"><span class="dot" style="--d: #fff"></span>measured on the Vega Virtual Device</div>
   <div class="grid" id="grid"></div>
   <div class="wide sticker" id="wide"></div>
   <script>
-    // Values from notes/tv.md (read 21 Oct 2026). Unmeasured values are 'TBD': edit here, then cards/render.sh kpi.
-    // The race number is the JS game-loop rate from the perf overlay ("loop Hz", 20 Oct), not compositor fps.
-    // ok: true = meets the Vega target, false = misses it, null = not measured yet.
+    // Values from notes/tv.md "Performance (measured on VVD)", 21 Oct 2026. Edit here, then cards/render.sh kpi.
+    // Cool start: KPI Visualizer, 10 runs, loaded host. Memory: `vega exec perf activity-monitor` (the KPI Visualizer's
+    // memory, UI fluidity and focus KPIs need an Appium server; its warm-start test opens the Fire TV launcher, which
+    // the VVD lacks, so those can't run on the VVD). The race number is the JS game-loop rate from the perf overlay.
+    // ok: true = meets the Vega target, false = misses it, null = not measured.
     const KPI = [
-      {label: 'Time to first frame', value: '0.41', unit: 's', target: 'target < 1.5 s', ok: true, tape: 'var(--red)'},
-      {label: 'Time to fully drawn', value: '0.41', unit: 's', target: 'target < 8 s', ok: true, tape: 'var(--blue)'},
-      {label: 'Race game loop', value: '57-65', unit: 'Hz', target: 'JS 0.1-1.2 ms', ok: true, tape: 'var(--yellow)'},
-      {label: 'UI fluidity', value: 'TBD', unit: '', target: 'target > 99%', ok: null, tape: 'var(--green)'},
-      {label: 'Foreground memory', value: 'TBD', unit: '', target: 'target < 400 MiB', ok: null, tape: 'var(--purple)'},
-      {label: 'Focus response', value: 'TBD', unit: '', target: 'target < 200 ms', ok: null, tape: 'var(--orange)'},
+      {label: 'Time to first frame', value: '0.67', unit: 's', target: 'target < 1.5 s', ok: true, tape: 'var(--red)'},
+      {label: 'Time to fully drawn', value: '0.67', unit: 's', target: 'target < 8 s', ok: true, tape: 'var(--blue)'},
+      {label: 'Race game loop, 6 lanes', value: '55-62', unit: 'Hz', target: 'JS 0.3-0.5 ms', ok: true, tape: 'var(--yellow)'},
+      {label: 'Memory on Home', value: '124', unit: 'MiB', target: 'target < 400 MiB', ok: true, tape: 'var(--green)'},
+      {label: 'Memory after 3 races', value: '233', unit: 'MiB', target: 'target < 400 MiB', ok: true, tape: 'var(--purple)'},
+      {label: 'Race-start freezes', value: '0', unit: 'in 52', target: 'soak, 4-6 lanes', ok: true, tape: 'var(--orange)'},
     ];
-    // Phone -> TV input: receive -> applied 7 ms median; absolute end-to-end not measurable on the VVD (clock offset).
-    const INPUT = {value: '7 ms', text: 'phone input applied on the TV (median, after arrival)', extra: 'end-to-end: TBD'};
+    // Phone -> TV input: receive -> applied 6-9 ms (n = 300, 6 live lanes); absolute end-to-end not measurable on the
+    // VVD (its clock ran 2 h 11 min behind), so the jitter above the best delivery is shown instead.
+    const INPUT = {value: '6-9 ms', text: 'phone input applied on the TV (after arrival)', extra: 'delivery jitter +2 ms'};
 
     const check = '<svg width="26" height="26" viewBox="0 0 26 26"><path d="M4 14 L10 20 L22 6" fill="none" stroke="#1F2A44" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
     const chip = ok => ok === null ? '<span class="chip tbd">pending</span>' : ok ? `<span class="chip">${check}on target</span>` : '<span class="chip" style="background: var(--red)">over target</span>';
