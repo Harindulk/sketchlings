@@ -33,12 +33,15 @@ export interface Sketchling {
   colors: string[]; // dominant ink colours, '#rrggbb'
   spriteUrl: string; // absolute path on the server, e.g. '/sprites/<id>.png'
   // Where the drawing's eyes are, normalised to the sprite (x,y in 0..1 of width/height; r = radius as a fraction of width).
-  // Empty array = no eyes found: the TV adds a default pair in the upper part. Used for animated googly eyes.
+  // Used for animated googly eyes. Empty array = no placeable eyes: the TV adds a default pair in the upper part,
+  // UNLESS `ownEyes` is true (the child drew eyes we couldn't place) — then the TV adds none (no four-eyed creatures).
   eyes: {x: number; y: number; r: number}[];
+  ownEyes?: boolean;
   width: number; // sprite pixel size
   height: number;
   source: 'claude' | 'offline';
   artist?: string; // first name of the player who drew it (Hall of Fame credit)
+  artistAge?: AgeGroup; // the artist's age group, so replays (demo party, race again) keep the right boost
   // Spoken lines in the creature's own voice: server-relative URLs to AAC audio in fragmented MP4 (.m4a), e.g. '/voice/<id>/intro.m4a'.
   // Absent while audio is still generating or if TTS failed; a later `sketchling` frame for the same id adds it.
   voice?: {intro?: string; catchphrase?: string; winLine?: string};
