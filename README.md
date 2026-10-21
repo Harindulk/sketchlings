@@ -130,7 +130,7 @@ The absolute phone-to-TV time can't be measured from the VVD, whose clock ran 2 
 ## Quality of the Idea
 
 - **An unusual chain:** paper, phone camera, open-source computer vision, LLM vision, a generated voice, and a real-time race on the TV.
-- **A gap in the field.** We looked through the 186 public Fire TV entries we found on GitHub on 20 Oct. Movement and fitness games were crowded, and none turned a child's drawing into a playable character, so we switched to this idea ([journey](docs/journey/)).
+- **A gap in the field.** We looked through the 186 public Fire TV entries we found on GitHub on 20 Oct. Movement and fitness games were crowded, and none turned a child's drawing into a character you *play*, so we switched to this idea (one entry found later, Crayon Cinema, turns a drawing into the hero of a read-along story on Fire OS; we know of none where the drawing becomes a racer you control, natively on Vega) ([journey](docs/journey/)).
 - **The AI does work the game needs:** stats that match the body, an ability from what was drawn, eye positions for the googly eyes, lines in character. The game still works without it.
 - **Four of the track's priority areas:** computer vision, AI, multi-modal input (paper, phone, remote) and family entertainment. Real-time racing, not turn-based quiz rounds.
 

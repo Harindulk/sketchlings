@@ -8,7 +8,7 @@ Kids draw a creature on paper. A phone snaps it, and seconds later it walks onto
 and a voice, then races the rest of the family's drawings in a party game. Screen time that starts with crayons.
 
 ## What makes it different
-- **Idea:** no visible rival turns a child's drawing into a playable TV character (186 public Fire TV entries checked on GitHub, 20 Oct). Movement/fitness,
+- **Idea:** no visible rival turns a child's drawing into a character you play (186 public Fire TV entries checked on GitHub, 20 Oct; on 21 Oct we found Crayon Cinema, which makes a drawing the hero of a read-along story on Fire OS — a story to watch, not a racer you control). Movement/fitness,
   QR quiz and coach apps are crowded. Hits 4 priority categories: family entertainment, computer vision, AI, multi-modal UX
   (paper + phone camera/touch + remote D-pad + TV).
 - **Tech:** native React Native for Vega app, smooth animation, solid D-pad focus, `aria-label`s plus the `kva` category for
