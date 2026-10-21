@@ -8,7 +8,7 @@ import {AgeBadge, Title} from '../components/Bits';
 import {FocusButton} from '../components/FocusButton';
 import {Sprite} from '../components/Sprite';
 import type {PartyMode, PartyState, ScanStatus} from '../game/party';
-import {ABILITY, abilityOf} from '../game/ability';
+import {ABILITY, ABILITY_TIP, abilityOf} from '../game/ability';
 import {isGuest, racersOf} from '../game/party';
 import {HOST} from '../config';
 import {C, F} from '../theme';
@@ -38,7 +38,7 @@ export function Lobby({mode, state, onStart, onDemo}: Props) {
             <View style={styles.qrBox}>
               <QRCode
                 value={state.joinUrl}
-                size={200}
+                size={176}
                 color={C.ink}
                 backgroundColor={C.white}
                 ecl="M"
@@ -51,6 +51,7 @@ export function Lobby({mode, state, onStart, onDemo}: Props) {
                 ? 'Everyone is ready!'
                 : 'Demo players are joining…'}
             </Text>
+            <Text style={styles.tip}>{ABILITY_TIP}</Text>
             <Text style={styles.codeLabel}>Room code</Text>
             <View style={styles.codeRow}>
               {(state.code ?? '').split('').map((ch, i) => (
@@ -259,6 +260,15 @@ const styles = StyleSheet.create({
   },
   qrBox: {padding: 8, backgroundColor: C.white},
   scan: {fontFamily: F.semi, fontSize: 18, color: C.inkSoft, marginTop: 6},
+  tip: {
+    fontFamily: F.bold,
+    fontSize: 16,
+    lineHeight: 20,
+    color: C.ink,
+    textAlign: 'center',
+    marginTop: 4,
+    paddingHorizontal: 16,
+  },
   codeLabel: {fontFamily: F.semi, fontSize: 18, color: C.inkSoft, marginTop: 8},
   codeRow: {flexDirection: 'row', marginTop: 2},
   codeBox: {

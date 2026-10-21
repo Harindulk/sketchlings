@@ -5,6 +5,7 @@ import {Title} from '../components/Bits';
 import {FocusButton} from '../components/FocusButton';
 import {Sprite} from '../components/Sprite';
 import {SAMPLE_SKETCHLINGS} from '../game/demo';
+import {ABILITY_TIP} from '../game/ability';
 import {C, F} from '../theme';
 
 const STEPS = [
@@ -57,9 +58,10 @@ export function HowTo({onDone}: {onDone: () => void}) {
           </View>
         ))}
       </View>
+      <Text style={styles.tip}>{ABILITY_TIP}</Text>
       <Text style={styles.fair}>
-        Little kids get a speed boost, and anyone falling behind gets a Doodle
-        Boost. Everyone has a chance!
+        Little kids get a speed boost and anyone behind gets a Doodle Boost:
+        everyone has a chance!
       </Text>
       <FocusButton
         label="Got it"
@@ -117,12 +119,19 @@ const styles = StyleSheet.create({
     color: C.ink,
     textAlign: 'center',
   },
+  tip: {
+    fontFamily: F.bold,
+    fontSize: 20,
+    color: C.ink,
+    marginTop: 18,
+    width: 860,
+    textAlign: 'center',
+  },
   fair: {
     fontFamily: F.semi,
     fontSize: 20,
     color: C.inkSoft,
-    marginTop: 22,
-    width: 760,
+    width: 860,
     textAlign: 'center',
   },
   btn: {width: 200, height: 62, marginTop: 16},

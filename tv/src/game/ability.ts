@@ -40,3 +40,7 @@ export function abilityOf(s: Sketchling): Sketchling['ability'] {
   const kind = ABILITY[s.move] ? s.move : 'walk';
   return {kind, feature: ABILITY[kind].feature, label: ABILITY[kind].label};
 }
+
+/** What drawing does, told before anyone draws (same rules as the server's persona prompt). */
+export const ABILITY_TIP =
+  'Draw wings to fly over ink, wheels to roll, long legs to hop, a big body to ROAR!';
