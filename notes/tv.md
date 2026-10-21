@@ -43,6 +43,31 @@ cd tv && npx jest && npx tsc --noEmit -p . # race sim + abilities balance + gues
 - In a race, **Menu** toggles the perf overlay: fps, JS ms/frame, input latency, audio state.
 - Demo party: the remote plays for player 1 (OK = run, Up = jump, Play/Pause = ROAR); other lanes are bots.
 
+## Live view for playtests
+
+The headless VVD has no window, so this puts its screen in a browser for the TV (HDMI or AirPlay from the Mac):
+
+```sh
+bun scripts/live-view.ts   # then open http://localhost:8799/ in Chrome, click once = full screen, F = fps readout
+```
+
+- How: switches on the emulator's gRPC endpoint through its console if it is off (`grpc 8554`; 127.0.0.1 only,
+  token in `~/Library/Caches/TemporaryItems/avd/running/pid_<pid>.ini`; stays on until the VVD stops, and the script
+  switches it on again after a VVD restart), then reads `EmulatorController/streamScreenshot` as raw RGB888
+  1920x1080 frames and pushes them over a WebSocket to a WebGL page. Read-only: no keys, no adb (so no F6 clash). A
+  slow viewer skips frames instead of falling behind; the page reconnects by itself; the script retries every 2 s.
+- The emulator only sends a frame when the screen changes, so a still screen reads **0 fps**: that is not a freeze.
+- Measured 21 Oct (Mac load ~20, VVD using 4-7 cores for other tests): **25-33 fps drawn, which was every
+  frame the VVD drew; 40-50 ms** from the VVD's frame timestamp to the screen in Chrome (54-59 ms in a
+  WebKit pane). CPU: the script ~6-9 % of one core, Chrome ~36 %.
+- Other routes measured: `adb emu screenrecord screenshot` loop 0.1 s per PNG when the Mac is idle (~10 fps), but
+  0.25-0.58 s under load (2-4 fps); a persistent console socket without adb was no faster (2.9 fps, 321 ms). gRPC
+  `getScreenshot` in a loop 21-66 fps, 12-33 ms. gRPC `streamScreenshot` as PNG: 4.8 fps, 184 ms; as RGB888: 37.5 fps
+  with no dropped frames, 27 ms (the one used). On-device `screenshooter` (weston) failed ("creating a buffer file
+  for 8294400 B failed: Permission denied") after hanging 89 s, and `adb shell` then answered "No running instances
+  of com.amazon.dev.shell.service" for about a minute: don't use it. Recording chunks and replaying them was not built:
+  seconds of lag, and it would need `screenrecord`, which filming uses.
+
 ## What is built (all verified on the VVD with screenshots in notes/shots/)
 
 Home (tiles, focus scale+glow+wobble, `hasTVPreferredFocus`, `TVFocusGuideView`, aria-labels, "Running on Fire TV ·
