@@ -108,7 +108,7 @@ Setup: MacBook (Apple silicon, 16 GB), macOS 27.0.1, Node 26.12, Bun 1.4.3, Vega
 
 **What needs work.**
 - Even a 2-second clip needs eight `[wants]` services in `manifest.toml`. Without `com.amazon.audio.system` the log shows "Unable connect to 'com.amazon.audio.system'. Missing the permissions", and the media docs say missing services fail silently (#9).
-- Replacing a playing clip slowed the game to 0 to 15 frames a second on the VVD, `ended` never fired for the replaced clip, one crash report shows the JS thread blocked on a mutex inside `libW3CMedia.so`, and another a SIGSEGV in `libkepler_media_player.so` (#5). Since then the race plays no audio at all. On 21 Oct, with sound on, three more ACRs show a SIGSEGV in `libW3CMedia.so` at Reveal and Results; that crash is under investigation (#5).
+- Replacing a playing clip slowed the game to 0 to 15 frames a second on the VVD, `ended` never fired for the replaced clip, one crash report shows the JS thread blocked on a mutex inside `libW3CMedia.so`, and another a SIGSEGV in `libkepler_media_player.so` (#5). Since then the race plays no audio at all. On 21 Oct, with sound on, three more ACRs show a SIGSEGV in `libW3CMedia.so` at Reveal and Results; the cause was assigning a new MediaSource for each clip while the previous pipeline was still draining; one long-lived MediaSource for the session fixed it (0 crashes in 193 clips, #5).
 - A short sound-effect API, or a documented recipe for short clips, would help games.
 
 ### 4c. `@amazon-devices/react-native-qrcode-svg` 3.0.0 with `@amazon-devices/react-native-svg`
