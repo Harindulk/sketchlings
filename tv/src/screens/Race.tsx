@@ -515,7 +515,7 @@ export function Race({racers, bots, onInput, onFinish}: Props) {
   );
 }
 
-const dbg = {fps: 0, ms: 0}; // game-loop frame rate + JS work per frame, shown with the Menu key
+const dbg = {fps: 0, ms: 0}; // game-loop rate (JS ticks/s, not compositor fps) + JS work per tick, shown with the Menu key
 
 // Phone -> TV input latency. `at` is the phone's clock, so raw = recv - at includes the clock offset: it is
 // absolute only when clocks agree (simulated phones on the same Mac; NTP-synced phones are usually within
@@ -541,10 +541,10 @@ const lat = {
     if (!this.raw.length) return 'n/a';
     const p50 = median(this.raw);
     const best = Math.min(...this.raw);
-    // phone->TV above the best observed delivery (clock offset cancels out), and receive->applied on the TV
-    return `+${Math.round(p50 - best)}ms jitter, apply ${Math.round(
-      median(this.apply),
-    )}ms (n=${this.raw.length})`;
+    // receive->applied on the TV, and phone->TV above the best observed delivery (clock offset cancels out)
+    return `apply ${Math.round(median(this.apply))} ms · jitter +${Math.round(
+      p50 - best,
+    )} ms (n=${this.raw.length})`;
   },
 };
 const PLACE = ['', '1st!', '2nd!', '3rd!', '4th', '5th', '6th'];
@@ -777,9 +777,7 @@ function Timer({
         style={showFps ? styles.hudStats : styles.hudHint}
         numberOfLines={2}>
         {showFps
-          ? `${dbg.fps}fps ${
-              dbg.ms
-            }ms/f · input ${l}\naudio ${
+          ? `loop ${dbg.fps} Hz · JS ${dbg.ms} ms/frame · input ${l}\naudio ${
               audioStatus.mode
             } ${audioStatus.state} · voices ${audioStatus.voices} of ${
               audioStatus.ended
