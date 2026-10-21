@@ -93,7 +93,7 @@ export function Home({onChoose}: {onChoose: (c: HomeChoice) => void}) {
         <Text style={styles.platformText}>Running on Fire TV · Vega OS</Text>
       </View>
       <Text style={styles.hint}>
-        Use the arrows and OK, or say “Alexa, select Demo party”
+        Use the arrows and OK on the remote · phones join with the QR code
       </Text>
 
       <View style={styles.peekLeft} pointerEvents="none">

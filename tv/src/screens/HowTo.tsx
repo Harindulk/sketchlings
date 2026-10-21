@@ -25,7 +25,7 @@ const STEPS = [
   },
   {
     title: 'Race',
-    text: 'Tap to run, swipe up to jump, shout to ROAR!',
+    text: 'Tap to run, swipe up to jump, press ROAR!',
     icon: require('../assets/art/icon_trophy.png'),
   },
 ];

@@ -495,7 +495,7 @@ export function Race({racers, bots, onInput, onFinish}: Props) {
           hint={
             bots
               ? 'Remote: OK run · Up jump · Play ROAR'
-              : 'Tap to run · Swipe up to jump · Shout to ROAR!'
+              : 'Tap to run · Swipe up to jump · Press ROAR!'
           }
         />
       </View>
