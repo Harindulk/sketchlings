@@ -17,6 +17,7 @@ interface Props {
   color?: string; // glow colour
   tilt?: number; // resting sticker tilt in degrees
   preferred?: boolean;
+  disabled?: boolean; // not focusable (and no glow) until it can do something
   focusScale?: number;
   style?: StyleProp<ViewStyle>; // outer box (size/position)
   cardStyle?: StyleProp<ViewStyle>;
@@ -35,6 +36,7 @@ export function FocusButton({
   color = '#2bb3ff',
   tilt = 0,
   preferred,
+  disabled,
   focusScale = 1.1,
   style,
   cardStyle,
@@ -110,7 +112,9 @@ export function FocusButton({
       onPress={onPress}
       onFocus={focus}
       onBlur={blur}
-      hasTVPreferredFocus={preferred}
+      hasTVPreferredFocus={preferred && !disabled}
+      focusable={!disabled}
+      disabled={disabled}
       aria-label={label}
       accessibilityRole="button"
       testID={testID}>

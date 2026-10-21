@@ -109,8 +109,10 @@ export function Lobby({mode, state, onStart, onDemo}: Props) {
             </FocusButton>
           )}
           <FocusButton
+            key={ready ? 'go' : 'wait'} // remount when ready so the preferred focus lands on it
             label="Start the show"
             color="#3ddc84"
+            disabled={!ready}
             preferred={!offline}
             onPress={() => ready && onStart(racers)}
             style={styles.startBtn}
