@@ -503,15 +503,46 @@ function cuttingView(): View {
   };
 }
 
+/** Rotate the sprite a quarter turn clockwise. A phone held flat over the table often records the wrong way up. */
+async function turnSprite(): Promise<void> {
+  const s = S.sprite;
+  if (!s) return;
+  const img = new Image();
+  await new Promise((resolve, reject) => {
+    img.onload = resolve;
+    img.onerror = reject;
+    img.src = s.url;
+  });
+  const c = document.createElement('canvas');
+  c.width = img.naturalHeight;
+  c.height = img.naturalWidth;
+  const ctx = c.getContext('2d')!;
+  ctx.translate(c.width, 0);
+  ctx.rotate(Math.PI / 2);
+  ctx.drawImage(img, 0, 0);
+  const blob = await new Promise<Blob | null>((res) => c.toBlob(res, 'image/png'));
+  if (!blob || S.sprite !== s) return;
+  URL.revokeObjectURL(s.url);
+  S.sprite = {blob, url: URL.createObjectURL(blob), width: c.width, height: c.height};
+}
+
 function previewView(): View {
-  const s = S.sprite!;
   const again = S.source === 'pad' ? 'Draw again' : 'Retake';
+  const img = h('img', {class: 'sprite wiggle', src: S.sprite!.url, alt: 'Your cut-out drawing'});
+  const turn = h('button', {type: 'button', class: 'link-btn'}, 'Wrong way up? Turn it');
+  turn.addEventListener('click', async () => {
+    turn.disabled = true;
+    await turnSprite().catch((err) => console.error(err));
+    if (S.sprite) img.src = S.sprite.url;
+    turn.disabled = false;
+  });
   return {
     el: h(
       'section',
       {class: 'screen'},
       title('Is this your champion?'),
-      h('div', {class: 'checker'}, h('img', {class: 'sprite wiggle', src: s.url, alt: 'Your cut-out drawing'})),
+      h('div', {class: 'checker'}, img),
+      h('div', {class: 'center stack', style: 'margin-top:-10px'}, turn),
       h('button', {type: 'button', class: 'btn go', onclick: () => void sendSprite()}, svg(icons.sparkle), 'Bring it to life!'),
       h('button', {type: 'button', class: 'btn secondary', onclick: () => ((S.step = S.source === 'pad' ? 'pad' : 'intro'), render())}, again),
     ),
