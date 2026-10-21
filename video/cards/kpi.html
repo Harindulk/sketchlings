@@ -26,11 +26,12 @@
   <div class="wide sticker" id="wide"></div>
   <script>
     // Values from notes/tv.md (read 21 Oct 2026). Unmeasured values are 'TBD': edit here, then cards/render.sh kpi.
+    // The race number is the JS game-loop rate from the perf overlay ("loop Hz", 20 Oct), not compositor fps.
     // ok: true = meets the Vega target, false = misses it, null = not measured yet.
     const KPI = [
       {label: 'Time to first frame', value: '0.41', unit: 's', target: 'target < 1.5 s', ok: true, tape: 'var(--red)'},
       {label: 'Time to fully drawn', value: '0.41', unit: 's', target: 'target < 8 s', ok: true, tape: 'var(--blue)'},
-      {label: 'Race frame rate', value: '57-65', unit: 'fps', target: 'goal 60 fps', ok: true, tape: 'var(--yellow)'},
+      {label: 'Race game loop', value: '57-65', unit: 'Hz', target: 'JS 0.1-1.2 ms / tick', ok: true, tape: 'var(--yellow)'},
       {label: 'UI fluidity', value: 'TBD', unit: '', target: 'target > 99%', ok: null, tape: 'var(--green)'},
       {label: 'Foreground memory', value: 'TBD', unit: '', target: 'target < 400 MiB', ok: null, tape: 'var(--purple)'},
       {label: 'Focus response', value: 'TBD', unit: '', target: 'target < 200 ms', ok: null, tape: 'var(--orange)'},
