@@ -142,6 +142,11 @@ function guardBack() {
   if (!history.state?.sketchlings) history.pushState({sketchlings: 1}, '');
 }
 addEventListener('popstate', () => S.joined && guardBack());
+
+// Android ignores -webkit-touch-callout: a long-press on the creature would open "Download image / Lens".
+document.addEventListener('contextmenu', (e) => {
+  if (!(e.target instanceof HTMLInputElement)) e.preventDefault();
+});
 document.addEventListener(
   'pointerdown',
   () => {
