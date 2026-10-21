@@ -8,11 +8,11 @@ Kids draw a creature on paper. A phone snaps it, and seconds later it walks onto
 and a voice, then races the rest of the family's drawings in a party game. Screen time that starts with crayons.
 
 ## What makes it different
-- **Idea:** no visible rival turns a child's drawing into a playable TV character (116+ Fire TV entries checked). Movement/fitness,
+- **Idea:** no visible rival turns a child's drawing into a playable TV character (186 public Fire TV entries checked on GitHub, 20 Oct). Movement/fitness,
   QR quiz and coach apps are crowded. Hits 4 priority categories: family entertainment, computer vision, AI, multi-modal UX
   (paper + phone camera/touch + remote D-pad + TV).
-- **Tech:** native React Native for Vega app, smooth animation, solid D-pad focus, `aria-label`s for Alexa on-screen voice
-  selection; computer vision cutout (our open-source library); Claude vision gives each drawing a persona.
+- **Tech:** native React Native for Vega app, smooth animation, solid D-pad focus, `aria-label`s plus the `kva` category for
+  Alexa on-screen voice selection (declared; not testable on the VVD); computer vision cutout (our open-source library); Claude vision gives each drawing a persona.
 - **Design:** one QR scan to join, no accounts, remote for menus, phone as camera + controller, big readable TV UI.
 - **Impact:** StarFun Games ships it on the Fire TV Appstore; families, classrooms, kids' parties.
 - **Video:** opens on a real child drawing and their creature walking onto the TV.
@@ -40,7 +40,9 @@ and a voice, then races the rest of the family's drawings in a party game. Scree
 Ports: server `8787`. The VVD reaches the Mac at `10.0.2.2:8787`; phones reach it at the Mac's LAN IP.
 
 ## Rules for every piece
-- Kid-safe: AI text is kind and playful, never mocks a drawing; no personal data beyond a first name; images stay on the host.
+- Kid-safe: AI text is kind and playful, never mocks a drawing; no personal data beyond a first name and an age group. The room
+  photo never leaves the phone. With a Claude key the cut-out drawing goes to Anthropic for the persona; with the HTTPS
+  tunnel phone traffic passes through Cloudflare; in offline mode nothing leaves the home network.
 - The Claude key lives only in `server/.env`. With no key the offline persona generator must still give a fun result.
 - No copyrighted assets: our own art, CC0 audio, fonts with OFL licences. List them in `CREDITS.md`.
 - Mute by default in automated tests.

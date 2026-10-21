@@ -25,6 +25,7 @@ Listens on `0.0.0.0:8787`. The Vega Virtual Device reaches it at `http://10.0.2.
 | Var | Default | Use |
 |---|---|---|
 | `ANTHROPIC_API_KEY` | empty | Claude key. Empty = offline personas only. |
+| `ANTHROPIC_WORKSPACE_ID` | empty | Only for a key not scoped to a workspace (the API answers 400 "must include the anthropic-workspace-id header"). |
 | `SKETCHLINGS_MODEL` | `claude-opus-5-5` | Vision model. Must support structured outputs and `effort`. |
 | `PORT` | `8787` | Listen port (the TV and phones expect 8787). |
 | `PUBLIC_URL` | `http://<first LAN IPv4>:8787` | Base of the `joinUrl` in the QR code. |
@@ -64,8 +65,10 @@ JSON schema; every field is validated and clamped (stats 1-5 with a total of 7-1
 `move` enum, `#rrggbb` colours). With no key or on any error (timeout, refusal, bad JSON) the offline generator answers
 instead: deterministic from the image (dominant ink colours, shape, ink coverage, a hash) plus curated word lists.
 Each Sketchling also carries `artist` (the uploader's first name) and `eyes` (`{x, y, r}` normalised to the sprite,
-for the TV's googly eyes). Claude is asked to locate the eyes and to return `[]` when unsure; offline, `src/eyes.ts`
-only reports a convincing pair of small round dark dots inside the upper half of the body, otherwise `[]`.
+for the TV's googly eyes). Claude is asked to locate the eyes and to return `[]` when unsure, plus `drewEyes`; offline, `src/eyes.ts`
+only reports a convincing pair of small round dark dots inside the upper half of the body, otherwise `[]`. `ownEyes`
+(from `drewEyes`, or offline from 2-4 round dark dots in the top half) tells the TV the child drew eyes, so it adds no
+default googly pair when `eyes` is empty.
 
 **Abilities** (`src/ability.ts`): what you draw changes how you play. `ability.kind` always equals `move`;
 `ability.label` is fixed per kind so the TV can rely on it:
