@@ -1,11 +1,13 @@
 // Race-start soak test on the headless Vega Virtual Device: drives the remote, reads the screen, flags freezes.
-//   node tv/scripts/soak.mjs [races=20] [--live 3] [--rounds 4] [--guests 2] [--out dir]
+//   node tv/scripts/soak.mjs [races=20] [--live 3] [--rounds 4] [--guests 2] [--screens 40] [--out dir]
 // Demo party by default; --live N runs a real party against the server with N fake phones (scripts/fake-phones.mjs);
 // the room code is read off the screen, or given with --room CODE (Vision can't read the tilted code tiles reliably).
 // --guests N first picks N Hall of Fame cards (second row) for "Race again", so a demo party races up to 4 + N lanes.
 // Each session launches the app, goes Home -> lobby -> reveal -> race, then "Play again" for --rounds races.
 // A race counts as frozen when, 6 s after it mounted, the countdown title is still up or the screen stopped moving.
 // On a freeze it presses Back (the system then kills the hung app and writes an ACR) and copies the ACRs to --out.
+// An app that died (a crash: the VVD shows "Your apps") is counted as a crash, never as a freeze, with the screen it
+// died on; Reveal cards and Results screens are counted too (notes/tv.md F13: the w3cmedia crash with sound on).
 // If the VVD itself died (notes/tv.md F5), it restarts it, reinstalls tv/build/sketchlings_aarch64.vpkg and goes on;
 // those races don't count.
 import {execFileSync, spawn} from 'node:child_process';
@@ -22,7 +24,8 @@ const APP = 'com.starfungames.sketchlings.main';
 
 const args = process.argv.slice(2);
 const opt = (k, d) => (args.includes(k) ? args[args.indexOf(k) + 1] : d);
-const races = Number(args.find((a) => /^\d+$/.test(a)) ?? 20);
+const screens = Number(opt('--screens', 0)); // stop after this many Reveal cards + Results screens instead
+const races = screens ? Infinity : Number(args.find((a) => /^\d+$/.test(a)) ?? 20);
 const live = Number(opt('--live', 0));
 const rounds = Number(opt('--rounds', 4));
 const room = opt('--room', '');
@@ -73,7 +76,17 @@ async function waitFor(re, secs, tag) {
   return null;
 }
 
-const stats = {races: 0, frozen: 0, notStarted: 0, vvdCrashes: 0};
+const stats = {races: 0, frozen: 0, notStarted: 0, vvdCrashes: 0, crashes: 0, reveals: 0, results: 0};
+// "not running" twice, 3 s apart: a failed vega/adb call or one odd answer is not a crash
+const notRunning = () => {
+  try {
+    return /not running/i.test(vega(`device is-app-running -a ${APP}`));
+  } catch {
+    return false;
+  }
+};
+const appDied = async () => notRunning() && (await sleep(3), notRunning());
+class Crash extends Error {}
 const vvdUp = () => {
   try {
     return /"running":true/.test(vega('virtual-device status'));
@@ -104,6 +117,7 @@ async function checkRace(label) {
   const text = ocr(b), m = moved(a, b);
   const countdown = /Doodle Dash/i.test(text);
   if ((countdown || m < 0.005) && !vvdUp()) throw new Error('VVD died');
+  if ((countdown || m < 0.005) && (await appDied())) throw new Crash(`app died (race ${label})`);
   stats.races++;
   if (countdown || m < 0.005) {
     stats.frozen++;
@@ -152,7 +166,14 @@ async function session(s) {
   }
   key('ok'); // Start the show
   await sleep(2.5);
-  for (let i = 0; i < players; i++) { key('ok'); await sleep(1.4); } // skip the reveal cards; the last one is "Race!"
+  for (let i = 0; i < players; i++) {
+    // skip the reveal cards (the last one is "Race!"); stop pressing OK once the app is gone, or it opens a launcher tile
+    key('ok');
+    const t = Date.now();
+    if (await appDied()) throw new Crash(`app died on Reveal card ${i + 1}`);
+    stats.reveals++;
+    await sleep(Math.max(0, 1.4 - (Date.now() - t) / 1000));
+  }
   try {
     for (let r = 1; r <= rounds && stats.races < races; r++) {
       if (!(await checkRace(`s${s}r${r}`))) {
@@ -161,7 +182,10 @@ async function session(s) {
         try { vega(`device copy-logs -a SYSTEM_TOMBSTONE/acr --dir "${join(out, 'acr')}"`); } catch {}
         return;
       }
-      if (!(await waitFor(/Play again/i, 100, `s${s}r${r}-wait`))) throw new Error('results never showed');
+      if (!(await waitFor(/Play again/i, 100, `s${s}r${r}-wait`))) throw (await appDied()) ? new Crash('app died before Results showed') : new Error('results never showed');
+      await sleep(6); // let the Results lines play out (narrator, then the winner's voice 1.8 s in)
+      if (await appDied()) throw new Crash('app died on Results');
+      stats.results++;
       if (r < rounds && stats.races < races) key('ok'); // Play again
     }
   } finally {
@@ -170,10 +194,15 @@ async function session(s) {
 }
 
 log(`soak: ${races} race starts, ${live ? `live party with ${live} fake phones` : 'demo party'}, ${rounds} per session -> ${out}`);
-for (let s = 1; stats.races < races; s++) {
+for (let s = 1; screens ? stats.reveals + stats.results < screens : stats.races < races; s++) {
   try {
     await session(s);
   } catch (e) {
+    if (e instanceof Crash) {
+      stats.crashes++;
+      log(`CRASH session ${s}: ${e.message}`);
+      continue;
+    }
     if (!vvdUp()) {
       await revive();
       continue;
@@ -183,5 +212,7 @@ for (let s = 1; stats.races < races; s++) {
     if (stats.notStarted > 3) break;
   }
 }
-log(`DONE: ${stats.races} race starts, ${stats.frozen} frozen, ${stats.notStarted} sessions failed to reach a race, ${stats.vvdCrashes} VVD restarts. Shots: ${out}`);
-process.exit(stats.frozen ? 1 : 0);
+if (stats.crashes) try { vega(`device copy-logs -a SYSTEM_TOMBSTONE/acr --dir "${join(out, 'acr')}"`); } catch {}
+log(`DONE: ${stats.races} race starts, ${stats.frozen} frozen, ${stats.notStarted} sessions failed to reach a race, ${stats.vvdCrashes} VVD restarts; ` +
+  `${stats.crashes} app crashes over ${stats.reveals} Reveal cards + ${stats.results} Results screens. Shots: ${out}`);
+process.exit(stats.frozen || stats.crashes ? 1 : 0);
