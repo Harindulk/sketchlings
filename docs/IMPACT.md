@@ -106,8 +106,6 @@ What that means in detail:
 - [ ] Grown-up consent step and parent gate; Family Pass through Amazon In-App Purchasing.
 - [ ] Privacy policy and a children's-privacy review.
 - [ ] Parent "Clear Hall of Fame" button; long join tokens for cloud rooms.
-- [ ] App icon in `tv/manifest.toml`.
-- [ ] App lifecycle handling: hush audio and close the socket when the app goes to the background, reconnect when it comes back.
 - [ ] "Hold to run" on the phone controller (the race engine already supports it).
 - [ ] Voices in parallel: with six scans at once, the last creature's voice can take 30 to 40 s today.
 - [ ] Creature voices and real mic shouting heard on a real Fire TV and real phones.

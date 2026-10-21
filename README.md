@@ -58,6 +58,7 @@ Demo party tries the relay's Hall of Fame for 3 seconds, then uses the bundled s
 | `hasTVPreferredFocus` | focus starts on the obvious button on every screen | [`FocusButton.tsx`](tv/src/components/FocusButton.tsx) |
 | `useTVEventHandler` | the remote plays a racer in Demo party; Menu toggles the perf overlay | [`Race.tsx`](tv/src/screens/Race.tsx) |
 | `BackHandler` | Back goes up one level; on Home the system closes the app | [`App.tsx`](tv/src/App.tsx) |
+| `useKeplerAppStateManager` | in the background: drop queued voice lines and close the party socket; back in front: rejoin the same room | [`App.tsx`](tv/src/App.tsx), [`party.ts`](tv/src/game/party.ts) |
 | `aria-label` + `com.amazon.category.kva` | targets for Alexa on-screen voice selection, per the Vega docs (declared; not testable on the VVD) | [`FocusButton.tsx`](tv/src/components/FocusButton.tsx), [`manifest.toml`](tv/manifest.toml) |
 | `@amazon-devices/react-native-w3cmedia` 2.3.2 | creature voices and narrator: `AudioPlayer` + Media Source Extensions, URL fallback, eight `[wants]` services | [`audio.ts`](tv/src/audio.ts), [`manifest.toml`](tv/manifest.toml) |
 | `@amazon-devices/react-native-qrcode-svg` + `react-native-svg` | the join QR code | [`Lobby.tsx`](tv/src/screens/Lobby.tsx) |
@@ -108,7 +109,7 @@ The absolute phone-to-TV time can't be measured from the VVD, whose clock ran 2 
 
 ## Design
 
-- **One loop, no dead ends.** Home → Lobby → draw and snap → Reveal → Doodle Dash → Results → Play again, or Home and the Hall of Fame. Back always goes up one level.
+- **One loop, no dead ends.** Home → Lobby → draw and snap → Reveal → Doodle Dash → Results → Play again, or Home and the Hall of Fame. Back always goes up one level, and focus returns to the Home tile you came from.
 - **Each input does what it is best at.** Paper for creating. The phone for snapping and racing: a giant multi-touch tap pad, swipe up to jump, a ROAR button. The remote for menus, and for Demo party.
 - **Joining is one scan.** A QR code plus a 4-letter room code; a first name and an age group, no accounts. Room codes have no vowels, so they never spell words.
 - **Made for ages 4 to 10.** Big buttons, little reading. Fairness you can see: "+40% boost" for little kids and "+20%" for big kids, plus a Doodle Boost for whoever falls behind.
