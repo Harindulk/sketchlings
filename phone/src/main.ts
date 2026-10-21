@@ -64,9 +64,18 @@ function gotSketchling(sk: Sketchling) {
   buzz([20, 60, 20]);
 }
 
+let noRoomSince = 0;
+
 function onMessage(m: ServerMsg) {
   switch (m.t) {
     case 'joined':
+      if (S.playerId && m.playerId !== S.playerId) {
+        // The server forgot us (it restarted), so we're a new player: the old champion isn't ours any more.
+        S.sketchling = null;
+        S.redraw = false;
+        S.step = 'intro';
+      }
+      noRoomSince = 0;
       S.joined = true;
       S.joining = false;
       S.error = null;
@@ -102,6 +111,12 @@ function onMessage(m: ServerMsg) {
     case 'error':
       if (m.code === 'bad_message') {
         console.warn('[sketchlings] server:', m.message);
+        break;
+      }
+      if (m.code === 'no_room' && S.joined && Date.now() - (noRoomSince ||= Date.now()) < 30_000) {
+        // We were in this room: the server restarted and the TV hasn't made the room again yet. Keep trying.
+        link.stop();
+        setTimeout(() => link.connect(), 3000);
         break;
       }
       S.error = {code: m.code, message: m.message};
@@ -200,9 +215,10 @@ async function sendSprite() {
 
 const title = (text: string, cls = '') => h('h1', {tabindex: '-1', class: cls || null}, text);
 
-function homeView(heading = 'Got a room code?', sub = "It's on the TV screen."): View {
+function homeView(heading = 'Got a room code?', sub = "It's on the TV screen.", code = ''): View {
   const input = h('input', {
     class: 'text-input code-input',
+    value: code,
     maxlength: 4,
     autocomplete: 'off',
     autocapitalize: 'characters',
@@ -211,7 +227,7 @@ function homeView(heading = 'Got a room code?', sub = "It's on the TV screen."):
     placeholder: 'ABCD',
     'aria-label': 'Room code',
   });
-  const go = h('button', {class: 'btn', type: 'submit', disabled: true}, "Let's go!");
+  const go = h('button', {class: 'btn', type: 'submit', disabled: !ROOM_RE.test(code)}, "Let's go!");
   input.addEventListener('input', () => {
     input.value = input.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4);
     go.disabled = !ROOM_RE.test(input.value);
@@ -639,7 +655,7 @@ function resultsView(): View {
 }
 
 function errorView(code: string): View {
-  if (code === 'no_room') return homeView(`We can't find room ${S.room}`, 'Check the 4 letters on the TV and type them here.');
+  if (code === 'no_room') return homeView(`We can't find room ${S.room}`, 'Check the 4 letters on the TV and type them here.', S.room);
   const msg = code === 'room_full' ? `Up to ${MAX_PLAYERS} players can join. Ask someone to swap with you!` : S.error?.message ?? 'Something went wrong.';
   return {
     el: h(
