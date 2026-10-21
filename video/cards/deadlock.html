@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Deadlock card</title><link rel="stylesheet" href="style.css">
+<!-- Source: notes/tv.md F4 (root cause from the ACR core dump's thread stacks, tv/scripts/acr-stacks.py) and the soak record. -->
+<style>
+  .threads { position: absolute; left: 210px; top: 262px; width: 1010px; display: flex; flex-direction: column; gap: 28px; }
+  .th { padding: 16px 28px 16px; border-radius: 28px; }
+  .th h3 { margin: 0 0 6px; font-size: 40px; line-height: 1.05; font-weight: 800; }
+  .th h3 span { font-family: 'Patrick Hand'; font-weight: 400; color: var(--ink-soft); }
+  .stk { font-size: 24px; line-height: 34px; white-space: pre; color: var(--ink); }
+  .stk em { font-style: normal; color: #8a93ab; }
+  .stk b { background: color-mix(in srgb, var(--c) 40%, transparent); border-radius: 6px; padding: 0 6px; font-weight: 700; }
+  .abba { position: absolute; left: 1060px; top: 438px; transform: rotate(4deg); font-size: 34px; padding: 4px 22px 0; background: var(--red); color: #fff; }
+  .acr { position: absolute; left: 1290px; top: 268px; width: 540px; padding: 18px 26px; border-radius: 28px; background: var(--ink); color: #e9eefb;
+    font-size: 22px; line-height: 32px; white-space: pre; box-shadow: 8px 10px 0 color-mix(in srgb, var(--ink) 35%, transparent); }
+  .acr .h { font-family: 'Baloo 2'; font-weight: 800; font-size: 34px; color: var(--yellow); }
+  .fix { position: absolute; left: 1290px; top: 560px; width: 540px; padding: 18px 28px 16px; border-radius: 28px; }
+  .fix .tape { --t: var(--green); }
+  .fix h3 { margin: 0 0 6px; font-size: 40px; line-height: 1; font-weight: 800; }
+  .fix li { font-size: 34px; line-height: 1.2; }
+  .fix ul { margin: 0; padding-left: 30px; }
+  .stat { position: absolute; left: 210px; top: 950px; width: 1620px; height: 100px; padding: 0 34px; display: flex; align-items: center; gap: 24px; font-size: 52px; font-weight: 800; line-height: 1; border-radius: 30px; white-space: nowrap; }
+  .stat b { color: var(--green); text-shadow: 3px 4px 0 var(--ink); font-size: 70px; }
+  .stat span { font-family: 'Patrick Hand'; font-size: 38px; font-weight: 400; color: var(--ink-soft); margin-left: auto; }
+</style></head>
+<body class="paper">
+  <div class="page">
+    <h1>The race-start <span class="u" style="--u: var(--red)">freeze</span></h1>
+    <div class="kicker">Read every thread's stack from the crash dump: a deadlock inside Vega's JS-thread watchdog.</div>
+  </div>
+
+  <div class="threads mono">
+    <div class="th sticker" style="--c: var(--red)"><span class="tape" style="--t: var(--red); left: 82%"></span>
+      <h3>JS thread <span>blocked in a blocking send()</span></h3>
+      <div class="stk"><b>send()</b>                  <em>socket buffer full, waits</em>
+aceAsync_deferredRemove  <b>holds the deferred-work mutex</b>
+ThreadMonitor::stopTimer <em>&lt;- sendHeartbeat &lt;- JS task</em></div></div>
+    <div class="th sticker" style="--c: var(--blue)"><span class="tape" style="--t: var(--blue); left: 58%"></span>
+      <h3>Watchdog loop thread <span>the only one that drains it</span></h3>
+      <div class="stk"><b>pthread_mutex_lock</b>      <em>waits for that same mutex</em>
+aceAsync_deferredPoll    <em>&lt;- aceAsyncLoop_run</em></div></div>
+    <div class="th sticker" style="--c: var(--yellow)"><span class="tape" style="--t: var(--yellow); left: 82%"></span>
+      <h3>Main thread <span>Back pressed, app gets killed</span></h3>
+      <div class="stk"><b>pthread_mutex_lock</b>      <em>&lt;- appMovedToBackground</em></div></div>
+  </div>
+  <div class="abba pill">ABBA deadlock</div>
+
+  <div class="acr mono"><span class="h">ACR</span>
+CrashReason: AppNotResponding
+LCM_ANR_REASON: Lifecycle Callback
+"No JavaScript code is
+ currently being executed"</div>
+
+  <div class="fix sticker"><span class="tape"></span>
+    <h3>The fix: starve it</h3>
+    <ul class="hand"><li>One JS task per frame</li><li>Animated values native from birth</li><li>A silent race start</li></ul>
+  </div>
+  <div class="stat sticker"><div><b>42</b> race starts, <b>0</b> freezes since the fix</div><span>soak test on the Vega Virtual Device</span></div>
+</body></html>

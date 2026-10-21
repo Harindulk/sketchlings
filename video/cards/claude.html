@@ -1,57 +1,88 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><title>Claude persona card</title><link rel="stylesheet" href="style.css">
-<!-- Real persona from GET /api/hall-of-fame (id 0c84fa1d..., source "claude", claude-opus-5-5, 21 Oct 2026). Some fields omitted. -->
 <style>
-  .art { position: absolute; left: 200px; top: 280px; padding: 34px; border-radius: 40px; }
+  .art { position: absolute; left: 200px; top: 270px; padding: 34px; border-radius: 40px; }
   .art .tape { --t: var(--purple); }
-  .sp { position: relative; width: 600px; height: 547px; }
-  .sp img { width: 600px; height: 547px; display: block; }
-  .by { position: absolute; left: 650px; top: 316px; font-size: 40px; transform: rotate(-2deg); }
-  .json { position: absolute; left: 930px; top: 250px; width: 900px; padding: 30px 36px; border-radius: 32px; font-size: 29px; line-height: 43px; white-space: pre; }
+  .sp { position: relative; }
+  .sp img { width: 100%; height: 100%; display: block; }
+  .by { position: absolute; right: 30px; top: 22px; font-size: 40px; transform: rotate(-2deg); }
+  .json { position: absolute; left: 930px; top: 236px; width: 900px; padding: 26px 36px; border-radius: 32px; font-size: 27px; line-height: 37px; white-space: pre; }
   .json .tape { --t: var(--blue); left: 75%; }
   .k { color: #7a3fd0; } .s { color: #c2363b; } .n { color: #1a7fc0; font-weight: 700; } .p { color: #8a93ab; }
   .hl { background: color-mix(in srgb, var(--yellow) 45%, transparent); border-radius: 8px; margin: 0 -8px; padding: 0 8px; }
-  .facts { position: absolute; left: 236px; bottom: 58px; display: flex; gap: 22px; font-size: 40px; }
+  .facts { position: absolute; left: 236px; bottom: 34px; display: flex; gap: 22px; font-size: 40px; }
   svg.link { position: absolute; inset: 0; }
 </style></head>
 <body class="paper">
   <div class="page">
     <h1>Claude <span class="u" style="--u: var(--purple)">reads the drawing</span></h1>
-    <div class="kicker">One look at the paper: a name, stats, an ability, a voice line and where the eyes go.</div>
+    <div class="kicker">Claude vision decides how your drawing plays.</div>
   </div>
-
-  <div class="art sticker tilt-l"><span class="tape"></span>
-    <div class="sp"><img src="img/captain-bleep.png" alt="">
-      <!-- eyes like the TV app (Sprite.tsx): centre x*600, y*547, radius r*600*1.18 -->
-      <span class="eye" style="left: 222px; top: 224px; width: 92px; height: 92px"></span>
-      <span class="eye" style="left: 339px; top: 224px; width: 92px; height: 92px"></span>
-    </div>
-  </div>
-  <div class="by hand">Drawn by Leo</div>
-
-  <div class="json sticker mono"><span class="tape"></span><span class="p">{</span>
-  <span class="k">"name"</span><span class="p">:</span> <span class="s">"Captain Bleep"</span><span class="p">,</span>
-  <span class="k">"title"</span><span class="p">:</span> <span class="s">"the Antenna Buddy"</span><span class="p">,</span>
-  <span class="k">"stats"</span><span class="p">: {</span><span class="k">"speed"</span><span class="p">:</span> <span class="n">3</span><span class="p">,</span> <span class="k">"jump"</span><span class="p">:</span> <span class="n">2</span><span class="p">,</span> <span class="k">"power"</span><span class="p">:</span> <span class="n">4</span><span class="p">},</span>
-  <span class="k">"ability"</span><span class="p">: {</span>
-    <span class="k">"feature"</span><span class="p">:</span> <span class="s">"big round tummy"</span><span class="p">,</span>
-    <span class="k">"label"</span><span class="p">:</span> <span class="s">"ROAR knocks back ink blots!"</span>
-  <span class="p">},</span>
-  <span class="k">"catchphrase"</span><span class="p">:</span> <span class="s">"Beep boop, let's go!"</span><span class="p">,</span>
-  <span class="hl"><span class="k">"eyes"</span><span class="p">: [</span></span>
-    <span class="hl"><span class="p">{</span><span class="k">"x"</span><span class="p">:</span> <span class="n">0.37</span><span class="p">,</span>  <span class="k">"y"</span><span class="p">:</span> <span class="n">0.41</span><span class="p">,</span> <span class="k">"r"</span><span class="p">:</span> <span class="n">0.065</span><span class="p">},</span></span>
-    <span class="hl"><span class="p">{</span><span class="k">"x"</span><span class="p">:</span> <span class="n">0.565</span><span class="p">,</span> <span class="k">"y"</span><span class="p">:</span> <span class="n">0.41</span><span class="p">,</span> <span class="k">"r"</span><span class="p">:</span> <span class="n">0.065</span><span class="p">}</span></span>
-  <span class="p">],  …</span>
-<span class="p">}</span></div>
-
-  <svg class="link" width="1920" height="1080" aria-hidden="true">
-    <path d="M922 726 C 820 740, 700 640, 632 556" fill="none" stroke="#1F2A44" stroke-width="5" stroke-dasharray="4 13" stroke-linecap="round"/>
-    <circle cx="632" cy="556" r="9" fill="#1F2A44"/>
-  </svg>
-
+  <div class="art sticker tilt-l"><span class="tape"></span><div class="sp" id="sp"><img id="img" alt=""></div><div class="by hand" id="by"></div></div>
+  <div class="json sticker mono" id="json"><span class="tape"></span></div>
+  <svg class="link" id="link" width="1920" height="1080" aria-hidden="true"></svg>
   <div class="facts">
-    <span class="pill fill" style="--f: var(--purple); color: #fff">claude-opus-5-5 · vision</span>
-    <span class="pill fill" style="--f: var(--yellow)">median ~4.3 s</span>
-    <span class="pill fill" style="--f: var(--green)">~$0.015 per creature</span>
+    <span class="pill fill" style="--f: var(--purple); color: #fff">claude-opus-5-5 vision</span>
+    <span class="pill fill" style="--f: var(--yellow)">median 4.3 s</span>
+    <span class="pill fill" style="--f: var(--green)">offline fallback, no key needed</span>
   </div>
+  <script>
+    // A real persona from GET http://localhost:8787/api/hall-of-fame (source "claude", 21 Oct 2026). To swap in a
+    // better one (e.g. a flyer with "big wings"): paste its JSON here, copy server/data/sprites/<id>.png to img/,
+    // set SPRITE, then cards/render.sh claude. Only the fields in SHOW are printed; "…" marks the rest.
+    const SPRITE = 'img/captain-bleep.png';
+    const P = {
+      "id": "0c84fa1d-36f4-44a4-a2b2-e3cbc8d4f54d", "name": "Captain Bleep", "title": "the Antenna Buddy",
+      "catchphrase": "Beep boop, let's go!", "stats": {"speed": 3, "jump": 2, "power": 4}, "move": "walk",
+      "ability": {"kind": "walk", "feature": "big round tummy", "label": "ROAR knocks back ink blots!"},
+      "eyes": [{"x": 0.37, "y": 0.41, "r": 0.065}, {"x": 0.565, "y": 0.41, "r": 0.065}],
+      "source": "claude", "width": 601, "height": 548, "artist": "Leo"
+    };
+    const SHOW = ['name', 'title', 'move', 'ability', 'stats', 'eyes'];
+
+    // Sprite fitted to 600x560, googly eyes sized like the TV app (tv/src/components/Sprite.tsx: r * width * 1.18).
+    const s = Math.min(600 / P.width, 560 / P.height), w = Math.round(P.width * s), h = Math.round(P.height * s);
+    const sp = document.getElementById('sp');
+    sp.style.width = w + 'px'; sp.style.height = h + 'px';
+    document.getElementById('img').src = SPRITE;
+    document.getElementById('by').textContent = P.artist ? 'Drawn by ' + P.artist : '';
+    for (const e of P.eyes) {
+      const d = 2 * e.r * w * 1.18, el = document.createElement('span');
+      el.className = 'eye';
+      Object.assign(el.style, {left: e.x * w + 'px', top: e.y * h + 'px', width: d + 'px', height: d + 'px', borderWidth: Math.max(3, d * 0.06) + 'px'});
+      sp.appendChild(el);
+    }
+
+    // Pretty JSON with colours; small objects on one line, the eyes highlighted.
+    const esc = t => t.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+    const tok = v => typeof v === 'string' ? `<span class="s">${esc(JSON.stringify(v))}</span>` : `<span class="n">${v}</span>`;
+    const p = t => `<span class="p">${t}</span>`;
+    const inline = o => p('{') + Object.entries(o).map(([k, v]) => `<span class="k">"${k}"</span>${p(':')} ${tok(v)}`).join(p(', ')) + p('}');
+    const lines = [p('{')];
+    SHOW.forEach(k => {
+      const v = P[k], key = `  <span class="k">"${k}"</span>${p(':')} `;
+      if (Array.isArray(v)) {
+        lines.push(`<span class="hl">${key}${p('[')}</span>`);
+        v.forEach((o, i) => lines.push(`    <span class="hl">${inline(o)}${i < v.length - 1 ? p(',') : ''}</span>`));
+        lines.push('  ' + p('],'));
+      } else if (v && typeof v === 'object' && JSON.stringify(v).length > 44) {
+        lines.push(key + p('{'));
+        const es = Object.entries(v);
+        es.forEach(([kk, vv], i) => lines.push(`    <span class="k">"${kk}"</span>${p(':')} ${tok(vv)}${i < es.length - 1 ? p(',') : ''}`));
+        lines.push('  ' + p('},'));
+      } else lines.push(key + (typeof v === 'object' ? inline(v) : tok(v)) + p(','));
+    });
+    lines.push('  ' + p('…'), p('}'));
+    document.getElementById('json').insertAdjacentHTML('beforeend', lines.join('\n'));
+
+    // Dotted link from the highlighted "eyes" line to the last googly eye.
+    requestAnimationFrame(() => {
+      const e = [...document.querySelectorAll('.eye')].pop();
+      if (!e) return;
+      const a = [...document.querySelectorAll('.hl')].pop().getBoundingClientRect(), b = e.getBoundingClientRect();
+      const x1 = a.left - 12, y1 = a.top + a.height / 2, x2 = b.right + 4, y2 = b.top + b.height / 2;
+      document.getElementById('link').innerHTML = `<path d="M${x1} ${y1} C ${x1 - 120} ${y1}, ${x2 + 90} ${y2 + 60}, ${x2} ${y2}" fill="none"
+        stroke="#1F2A44" stroke-width="5" stroke-dasharray="4 13" stroke-linecap="round"/><circle cx="${x2}" cy="${y2}" r="9" fill="#1F2A44"/>`;
+    });
+  </script>
 </body></html>

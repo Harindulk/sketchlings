@@ -27,6 +27,14 @@ names=("$@")
 [ ${#names[@]} -gt 0 ] || for f in *.html; do [ "$f" = placeholder.html ] || names+=("${f%.html}"); done
 for n in "${names[@]}"; do
   size=1920,1080; [ "$n" = clock ] && size=3000,660
-  shot "$n.html" "$size" "$n.png"
+  # Headless Chrome now and then paints a shorter viewport (bottom ~64 px cut off), so render until two shots agree.
+  shot "$n.html" "$size" "$PROFILE/a.png"
+  for try in 1 2 3; do
+    shot "$n.html" "$size" "$PROFILE/b.png"
+    cmp -s "$PROFILE/a.png" "$PROFILE/b.png" && break
+    mv "$PROFILE/b.png" "$PROFILE/a.png"
+    [ "$try" = 3 ] && { echo "render unstable: $n.html" >&2; exit 1; }
+  done
+  mv "$PROFILE/a.png" "$n.png"
   echo "cards/$n.png"
 done
