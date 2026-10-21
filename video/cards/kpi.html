@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>KPI card</title><link rel="stylesheet" href="style.css">
+<style>
+  .grid { position: absolute; left: 220px; top: 296px; width: 1610px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 46px 44px; }
+  .tile { height: 262px; padding: 22px 30px 0; border-radius: 30px; }
+  .tile .tape { width: 120px; height: 36px; top: -18px; }
+  .lbl { font-size: 38px; font-weight: 700; line-height: 1; color: var(--ink-soft); }
+  .val { font-size: 92px; font-weight: 800; line-height: 1.05; margin-top: 8px; white-space: nowrap; }
+  .val small { font-size: 46px; font-weight: 700; margin-left: 6px; }
+  .val.tbd { color: #9aa2b8; }
+  .tgt { position: absolute; left: 30px; bottom: 22px; right: 22px; display: flex; justify-content: space-between; align-items: center; font-size: 36px; white-space: nowrap; }
+  .chip { display: inline-flex; align-items: center; gap: 8px; border: 4px solid var(--ink); border-radius: 99px; padding: 0 18px 0 12px; font-family: 'Baloo 2';
+    font-size: 28px; font-weight: 800; background: var(--green); white-space: nowrap; }
+  .chip.tbd { background: #E6E1D3; padding-left: 18px; }
+  .wide { position: absolute; left: 220px; top: 918px; width: 1610px; height: 112px; padding: 0 34px; border-radius: 30px; display: flex; align-items: center; gap: 24px; font-size: 38px; white-space: nowrap; }
+  .wide b { font-weight: 800; font-size: 60px; }
+  .wide .hand { color: var(--ink-soft); font-size: 38px; }
+</style></head>
+<body class="paper">
+  <div class="page">
+    <h1>TV-grade <span class="u" style="--u: var(--green)">on Vega</span></h1>
+    <div class="kicker">Measured on the Vega Virtual Device: Vega KPI Visualizer and the in-app perf overlay.</div>
+  </div>
+  <div class="grid" id="grid"></div>
+  <div class="wide sticker" id="wide"></div>
+  <script>
+    // Values from notes/tv.md (read 21 Oct 2026). Unmeasured values are 'TBD': edit here, then cards/render.sh kpi.
+    // ok: true = meets the Vega target, false = misses it, null = not measured yet.
+    const KPI = [
+      {label: 'Time to first frame', value: '0.41', unit: 's', target: 'target < 1.5 s', ok: true, tape: 'var(--red)'},
+      {label: 'Time to fully drawn', value: '0.41', unit: 's', target: 'target < 8 s', ok: true, tape: 'var(--blue)'},
+      {label: 'Race frame rate', value: '57-65', unit: 'fps', target: 'goal 60 fps', ok: true, tape: 'var(--yellow)'},
+      {label: 'UI fluidity', value: 'TBD', unit: '', target: 'target > 99%', ok: null, tape: 'var(--green)'},
+      {label: 'Foreground memory', value: 'TBD', unit: '', target: 'target < 400 MiB', ok: null, tape: 'var(--purple)'},
+      {label: 'Focus response', value: 'TBD', unit: '', target: 'target < 200 ms', ok: null, tape: 'var(--orange)'},
+    ];
+    // Phone -> TV input: receive -> applied 7 ms median; absolute end-to-end not measurable on the VVD (clock offset).
+    const INPUT = {value: '7 ms', text: 'phone input applied on the TV (median, after arrival)', extra: 'end-to-end: TBD'};
+
+    const check = '<svg width="26" height="26" viewBox="0 0 26 26"><path d="M4 14 L10 20 L22 6" fill="none" stroke="#1F2A44" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    const chip = ok => ok === null ? '<span class="chip tbd">pending</span>' : ok ? `<span class="chip">${check}on target</span>` : '<span class="chip" style="background: var(--red)">over target</span>';
+    document.getElementById('grid').innerHTML = KPI.map(k => `
+      <div class="tile sticker"><span class="tape" style="--t: ${k.tape}"></span>
+        <div class="lbl">${k.label}</div>
+        <div class="val${k.value === 'TBD' ? ' tbd' : ''}">${k.value}${k.unit ? `<small>${k.unit}</small>` : ''}</div>
+        <div class="tgt hand"><span>${k.target}</span>${chip(k.ok)}</div>
+      </div>`).join('');
+    document.getElementById('wide').innerHTML = `<div class="dot" style="--d: var(--blue); width: 40px; height: 40px"></div>
+      <b>${INPUT.value}</b><span>${INPUT.text}</span><span class="hand" style="margin-left: auto">${INPUT.extra}</span>`;
+  </script>
+</body></html>

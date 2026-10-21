@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Take clock sprite sheet (transparent)</title><link rel="stylesheet" href="style.css">
+<!-- Sprite sheet: 10 columns x 6 rows of 300x110 tiles, tile n shows 0:nn. Render at 3000x660.
+     build.mjs crops tile floor(t) with crop=300:110:mod(floor(t),10)*300:floor(t/10)*110. -->
+<style>
+  html, body { width: 3000px; height: 660px; }
+  #g { display: grid; grid-template-columns: repeat(10, 300px); grid-auto-rows: 110px; }
+  .t { display: flex; align-items: center; justify-content: center; }
+  .p { display: flex; align-items: center; gap: 14px; height: 92px; padding: 0 26px 0 18px; background: #fff; border: 6px solid var(--ink);
+    border-radius: 999px; font-size: 64px; font-weight: 800; font-variant-numeric: tabular-nums; }
+</style></head>
+<body>
+  <div id="g"></div>
+  <script>
+    const watch = '<svg width="58" height="64" viewBox="0 0 58 64"><rect x="21" y="2" width="16" height="9" rx="3" fill="#1F2A44"/>' +
+      '<circle cx="29" cy="37" r="23" fill="#ff5a5f" stroke="#1F2A44" stroke-width="6"/><path d="M29 37 L29 24 M29 37 L38 42" stroke="#fff" stroke-width="6" stroke-linecap="round"/></svg>';
+    let html = '';
+    for (let n = 0; n < 60; n++) html += `<div class="t"><div class="p">${watch}0:${String(n).padStart(2, '0')}</div></div>`;
+    document.getElementById('g').innerHTML = html;
+  </script>
+</body></html>

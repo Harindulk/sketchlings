@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Architecture card</title><link rel="stylesheet" href="style.css">
+<style>
+  .box { position: absolute; top: 300px; height: 410px; padding: 40px 22px 0; text-align: center; }
+  .box .icon { height: 130px; display: block; margin: 0 auto 10px; }
+  .box h2 { margin: 0; font-size: 54px; line-height: 1; font-weight: 800; white-space: nowrap; }
+  .box .sub { margin-top: 12px; font-size: 36px; line-height: 1.15; color: var(--ink-soft); }
+  .box .sub b { color: var(--ink); font-weight: 400; }
+  .sat { position: absolute; top: 810px; height: 190px; padding: 26px 30px 0 28px; display: flex; gap: 22px; align-items: flex-start; border-radius: 30px; }
+  .sat h3 { margin: 0; font-size: 46px; line-height: 1; font-weight: 800; }
+  .sat .sub { margin-top: 8px; font-size: 34px; line-height: 1.12; color: var(--ink-soft); }
+  .wire { position: absolute; font-size: 36px; text-align: center; color: var(--ink); }
+  svg.lines { position: absolute; inset: 0; }
+</style></head>
+<body class="paper">
+  <div class="page">
+    <h1>How it <span class="u" style="--u: var(--blue)">works</span></h1>
+    <div class="kicker">Paper in the kids' hands, phones as controllers, the TV is the stage.</div>
+  </div>
+
+  <svg class="lines" width="1920" height="1080" aria-hidden="true">
+    <defs><marker id="h" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+      <path d="M1 1 L8 5 L1 9" fill="none" stroke="#1F2A44" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+    <g fill="none" stroke="#1F2A44" stroke-width="7" stroke-linecap="round">
+      <path d="M672 510 C 710 498, 760 522, 802 510" marker-start="url(#h)" marker-end="url(#h)"/>
+      <path d="M1212 510 C 1250 498, 1310 522, 1362 510" marker-start="url(#h)" marker-end="url(#h)"/>
+    </g>
+    <g fill="none" stroke="#1F2A44" stroke-width="5" stroke-dasharray="4 14" stroke-linecap="round">
+      <path d="M950 730 L 790 806" marker-start="url(#h)" marker-end="url(#h)"/>
+      <path d="M1062 730 L 1240 806" marker-start="url(#h)" marker-end="url(#h)"/>
+    </g>
+  </svg>
+  <div class="wire hand" style="left: 656px; top: 436px; width: 160px; font-size: 34px">WebSocket</div>
+  <div class="wire hand" style="left: 1196px; top: 436px; width: 180px; font-size: 34px">WebSocket</div>
+
+  <div class="box sticker tilt-l" style="left: 196px; width: 460px"><span class="tape" style="--t: var(--red)"></span>
+    <img class="icon" src="img/icon_phone.svg" alt="">
+    <h2>Phone web app</h2>
+    <div class="sub hand">Snap the paper, <b>doodle-cutout</b><br>cuts the drawing out.<br>Then tap, jump, ROAR!</div>
+  </div>
+  <div class="box sticker" style="left: 816px; width: 380px"><span class="tape" style="--t: var(--yellow)"></span>
+    <svg class="icon" width="150" height="130" viewBox="0 0 150 130" aria-hidden="true">
+      <rect x="20" y="18" width="110" height="40" rx="12" fill="#ffc531" stroke="#1F2A44" stroke-width="6"/>
+      <rect x="20" y="72" width="110" height="40" rx="12" fill="#ffc531" stroke="#1F2A44" stroke-width="6"/>
+      <circle cx="42" cy="38" r="6" fill="#1F2A44"/><circle cx="42" cy="92" r="6" fill="#1F2A44"/>
+      <path d="M64 38 H108 M64 92 H108" stroke="#1F2A44" stroke-width="6" stroke-linecap="round"/></svg>
+    <h2>Bun relay</h2>
+    <div class="sub hand">Rooms, sprites and<br>the Hall of Fame.<br>No accounts.</div>
+  </div>
+  <div class="box sticker tilt-r" style="left: 1376px; width: 460px"><span class="tape" style="--t: var(--blue)"></span>
+    <svg class="icon" width="150" height="130" viewBox="0 0 120 110" aria-hidden="true">
+      <path d="M44 20 L60 34 L76 14" fill="none" stroke="#1F2A44" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+      <rect x="8" y="32" width="104" height="66" rx="16" fill="#2bb3ff" stroke="#1F2A44" stroke-width="6"/>
+      <rect x="22" y="44" width="76" height="42" rx="8" fill="#fff" stroke="#1F2A44" stroke-width="4"/>
+      <circle cx="47" cy="62" r="5" fill="#1F2A44"/><circle cx="73" cy="62" r="5" fill="#1F2A44"/>
+      <path d="M50 73 Q60 80 70 73" fill="none" stroke="#1F2A44" stroke-width="4" stroke-linecap="round"/></svg>
+    <h2>Vega TV app</h2>
+    <div class="sub hand"><b>React Native for Vega</b><br>on Fire TV: reveal, race,<br>results, D-pad menus.</div>
+  </div>
+
+  <div class="sat sticker" style="left: 360px; width: 560px"><span class="tape" style="--t: var(--purple); left: 30%"></span>
+    <div class="dot" style="--d: var(--purple); width: 46px; height: 46px; margin-top: 4px"></div>
+    <div><h3>Claude vision</h3><div class="sub hand">reads the drawing: name, stats,<br>ability, where the eyes go</div></div>
+  </div>
+  <div class="sat sticker" style="left: 1120px; width: 560px"><span class="tape" style="--t: var(--green); left: 70%"></span>
+    <div class="dot" style="--d: var(--green); width: 46px; height: 46px; margin-top: 4px"></div>
+    <div><h3>Kokoro voices</h3><div class="sub hand">every creature talks: intro,<br>catchphrase, win line</div></div>
+  </div>
+</body></html>

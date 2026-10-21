@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Split-screen frame (transparent windows)</title><link rel="stylesheet" href="style.css">
+<!-- Window rects must match SPLIT in build.mjs: left 176,170 592x740 (family), right 812,170 1056x594 (VVD). -->
+<style>
+  .bg { position: absolute; inset: 0; }
+  body.paper { background: none; }
+  .bg { background:
+    radial-gradient(circle at 57px 218px, #E9E2CF 0 17px, #D8D0B9 17px 20px, transparent 21px),
+    radial-gradient(circle at 57px 538px, #E9E2CF 0 17px, #D8D0B9 17px 20px, transparent 21px),
+    radial-gradient(circle at 57px 858px, #E9E2CF 0 17px, #D8D0B9 17px 20px, transparent 21px),
+    linear-gradient(to right, transparent 131px, var(--margin) 131px 134px, transparent 134px),
+    linear-gradient(to bottom, transparent 0 59px, var(--rule) 59px 62px, transparent 62px) 0 0 / 100% 60px repeat-y,
+    var(--paper);
+    -webkit-mask: linear-gradient(#000 0 0), linear-gradient(#000 0 0) 176px 170px / 592px 740px no-repeat, linear-gradient(#000 0 0) 812px 170px / 1056px 594px no-repeat;
+    -webkit-mask-composite: xor; mask-composite: exclude; }
+  .win { position: absolute; border: 9px solid var(--ink); border-radius: 26px; box-shadow: 8px 10px 0 var(--ink); }
+  .win .tape { top: -28px; }
+  .wordmark { position: absolute; left: 176px; top: 46px; font-size: 96px; }
+  .live { position: absolute; right: 52px; top: 66px; font-size: 40px; }
+  .note { position: absolute; font-size: 50px; line-height: 1.1; color: var(--ink); }
+  .note b { color: var(--red); font-weight: 400; }
+</style></head>
+<body class="paper">
+  <div class="bg"></div>
+  <div class="wordmark"><span>S</span><span>k</span><span>e</span><span>t</span><span>c</span><span>h</span><span>l</span><span>i</span><span>n</span><span>g</span><span>s</span></div>
+  <div class="pill live"><span class="dot"></span>Real capture · Fire TV · Vega Virtual Device</div>
+  <div class="win" style="left: 167px; top: 161px; width: 610px; height: 758px"><span class="tape" style="--t: var(--yellow)"></span></div>
+  <div class="win" style="left: 803px; top: 161px; width: 1074px; height: 612px"><span class="tape" style="--t: var(--blue); left: 22%"></span></div>
+  <div class="note hand" style="left: 180px; top: 950px">Our family, on the couch</div>
+  <div class="note hand" style="left: 818px; top: 812px">One take, <b>no cuts.</b></div>
+</body></html>

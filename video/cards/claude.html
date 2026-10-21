@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Claude persona card</title><link rel="stylesheet" href="style.css">
+<!-- Real persona from GET /api/hall-of-fame (id 0c84fa1d..., source "claude", claude-opus-5-5, 21 Oct 2026). Some fields omitted. -->
+<style>
+  .art { position: absolute; left: 200px; top: 280px; padding: 34px; border-radius: 40px; }
+  .art .tape { --t: var(--purple); }
+  .sp { position: relative; width: 600px; height: 547px; }
+  .sp img { width: 600px; height: 547px; display: block; }
+  .by { position: absolute; left: 650px; top: 316px; font-size: 40px; transform: rotate(-2deg); }
+  .json { position: absolute; left: 930px; top: 250px; width: 900px; padding: 30px 36px; border-radius: 32px; font-size: 29px; line-height: 43px; white-space: pre; }
+  .json .tape { --t: var(--blue); left: 75%; }
+  .k { color: #7a3fd0; } .s { color: #c2363b; } .n { color: #1a7fc0; font-weight: 700; } .p { color: #8a93ab; }
+  .hl { background: color-mix(in srgb, var(--yellow) 45%, transparent); border-radius: 8px; margin: 0 -8px; padding: 0 8px; }
+  .facts { position: absolute; left: 236px; bottom: 58px; display: flex; gap: 22px; font-size: 40px; }
+  svg.link { position: absolute; inset: 0; }
+</style></head>
+<body class="paper">
+  <div class="page">
+    <h1>Claude <span class="u" style="--u: var(--purple)">reads the drawing</span></h1>
+    <div class="kicker">One look at the paper: a name, stats, an ability, a voice line and where the eyes go.</div>
+  </div>
+
+  <div class="art sticker tilt-l"><span class="tape"></span>
+    <div class="sp"><img src="img/captain-bleep.png" alt="">
+      <!-- eyes like the TV app (Sprite.tsx): centre x*600, y*547, radius r*600*1.18 -->
+      <span class="eye" style="left: 222px; top: 224px; width: 92px; height: 92px"></span>
+      <span class="eye" style="left: 339px; top: 224px; width: 92px; height: 92px"></span>
+    </div>
+  </div>
+  <div class="by hand">Drawn by Leo</div>
+
+  <div class="json sticker mono"><span class="tape"></span><span class="p">{</span>
+  <span class="k">"name"</span><span class="p">:</span> <span class="s">"Captain Bleep"</span><span class="p">,</span>
+  <span class="k">"title"</span><span class="p">:</span> <span class="s">"the Antenna Buddy"</span><span class="p">,</span>
+  <span class="k">"stats"</span><span class="p">: {</span><span class="k">"speed"</span><span class="p">:</span> <span class="n">3</span><span class="p">,</span> <span class="k">"jump"</span><span class="p">:</span> <span class="n">2</span><span class="p">,</span> <span class="k">"power"</span><span class="p">:</span> <span class="n">4</span><span class="p">},</span>
+  <span class="k">"ability"</span><span class="p">: {</span>
+    <span class="k">"feature"</span><span class="p">:</span> <span class="s">"big round tummy"</span><span class="p">,</span>
+    <span class="k">"label"</span><span class="p">:</span> <span class="s">"ROAR knocks back ink blots!"</span>
+  <span class="p">},</span>
+  <span class="k">"catchphrase"</span><span class="p">:</span> <span class="s">"Beep boop, let's go!"</span><span class="p">,</span>
+  <span class="hl"><span class="k">"eyes"</span><span class="p">: [</span></span>
+    <span class="hl"><span class="p">{</span><span class="k">"x"</span><span class="p">:</span> <span class="n">0.37</span><span class="p">,</span>  <span class="k">"y"</span><span class="p">:</span> <span class="n">0.41</span><span class="p">,</span> <span class="k">"r"</span><span class="p">:</span> <span class="n">0.065</span><span class="p">},</span></span>
+    <span class="hl"><span class="p">{</span><span class="k">"x"</span><span class="p">:</span> <span class="n">0.565</span><span class="p">,</span> <span class="k">"y"</span><span class="p">:</span> <span class="n">0.41</span><span class="p">,</span> <span class="k">"r"</span><span class="p">:</span> <span class="n">0.065</span><span class="p">}</span></span>
+  <span class="p">],  …</span>
+<span class="p">}</span></div>
+
+  <svg class="link" width="1920" height="1080" aria-hidden="true">
+    <path d="M922 726 C 820 740, 700 640, 632 556" fill="none" stroke="#1F2A44" stroke-width="5" stroke-dasharray="4 13" stroke-linecap="round"/>
+    <circle cx="632" cy="556" r="9" fill="#1F2A44"/>
+  </svg>
+
+  <div class="facts">
+    <span class="pill fill" style="--f: var(--purple); color: #fff">claude-opus-5-5 · vision</span>
+    <span class="pill fill" style="--f: var(--yellow)">median ~4.3 s</span>
+    <span class="pill fill" style="--f: var(--green)">~$0.015 per creature</span>
+  </div>
+</body></html>

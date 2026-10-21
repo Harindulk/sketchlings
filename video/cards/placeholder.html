@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Missing footage slate</title><link rel="stylesheet" href="style.css">
+<!-- Used by build.mjs for inputs that do not exist yet: placeholder.html#<label>|<file>, rendered at the target size. -->
+<style>
+  html, body { width: 100vw; height: 100vh; }
+  body { display: flex; align-items: center; justify-content: center; }
+  .box { width: 88%; height: 82%; border: 0.5vw dashed #ffffffcc; border-radius: 3vw; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; gap: 3vh; text-align: center; padding: 0 5%; }
+  .tag { background: var(--yellow); color: var(--ink); font-weight: 800; font-size: max(3.2vw, 4vh); padding: 0.4vh 2.2vw 0; border-radius: 99px; }
+  .label { font-weight: 800; font-size: max(4.4vw, 5.6vh); line-height: 1.05; }
+  .file { font-size: max(2vw, 2.6vh); color: #c8d3ee; }
+</style></head>
+<body class="slate">
+  <div class="box"><div class="tag">PLACEHOLDER</div><div class="label" id="l"></div><div class="file mono" id="f"></div></div>
+  <script>
+    const [label, file] = decodeURIComponent(location.hash.slice(1)).split('|');
+    document.getElementById('l').textContent = label || 'Missing footage';
+    document.getElementById('f').textContent = file ? 'drop: ' + file : '';
+  </script>
+</body></html>

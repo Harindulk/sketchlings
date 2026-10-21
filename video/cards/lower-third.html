@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Lower third (transparent)</title><link rel="stylesheet" href="style.css">
+<style>
+  .lt { position: absolute; left: 96px; bottom: 84px; display: flex; align-items: center; gap: 30px; padding: 22px 48px 20px 30px; border-radius: 32px; }
+  .lt .tape { left: 120px; --t: var(--blue); }
+  .l1 { font-size: 62px; font-weight: 800; line-height: 1.05; }
+  .l2 { font-size: 44px; line-height: 1.1; color: var(--ink-soft); margin-top: 4px; }
+  .l2 b { color: var(--ink); font-weight: 400; }
+</style></head>
+<body>
+  <div class="lt sticker">
+    <span class="tape"></span>
+    <svg width="120" height="110" viewBox="0 0 120 110" aria-hidden="true">
+      <path d="M44 20 L60 34 L76 14" fill="none" stroke="#1F2A44" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+      <rect x="8" y="32" width="104" height="66" rx="16" fill="#2bb3ff" stroke="#1F2A44" stroke-width="6"/>
+      <rect x="22" y="44" width="76" height="42" rx="8" fill="#fff" stroke="#1F2A44" stroke-width="4"/>
+      <circle cx="47" cy="62" r="5" fill="#1F2A44"/><circle cx="73" cy="62" r="5" fill="#1F2A44"/>
+      <path d="M50 73 Q60 80 70 73" fill="none" stroke="#1F2A44" stroke-width="4" stroke-linecap="round"/>
+    </svg>
+    <div>
+      <div class="l1">Running on Fire TV · Vega OS</div>
+      <div class="l2 hand"><b>Vega Virtual Device</b> · built with React Native for Vega</div>
+    </div>
+  </div>
+</body></html>

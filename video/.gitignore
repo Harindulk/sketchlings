@@ -1,0 +1,12 @@
+# Large renders and local footage stay out of git.
+*.mp4
+*.webm
+*.wav
+*.mov
+out/
+clips/*
+!clips/.gitkeep
+voice/*
+!voice/.gitkeep
+vo/*
+!vo/.gitkeep

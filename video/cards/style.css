@@ -1,0 +1,67 @@
+/* Shared look for every Sketchlings video card: 1920x1080 notebook paper, navy ink, crayon colours,
+   chunky sticker cards. Fonts are OFL (Baloo 2, Patrick Hand), copied from phone/node_modules/@fontsource. */
+@font-face { font-family: 'Baloo 2'; font-weight: 500; src: url(fonts/baloo-2-latin-500-normal.woff2) format('woff2'); }
+@font-face { font-family: 'Baloo 2'; font-weight: 600; src: url(fonts/baloo-2-latin-600-normal.woff2) format('woff2'); }
+@font-face { font-family: 'Baloo 2'; font-weight: 700; src: url(fonts/baloo-2-latin-700-normal.woff2) format('woff2'); }
+@font-face { font-family: 'Baloo 2'; font-weight: 800; src: url(fonts/baloo-2-latin-800-normal.woff2) format('woff2'); }
+@font-face { font-family: 'Patrick Hand'; font-weight: 400; src: url(fonts/patrick-hand-latin-400-normal.woff2) format('woff2'); }
+
+:root {
+  --paper: #FBF7EE; --rule: #CFE3F5; --margin: #F2A7A7; --ink: #1F2A44; --ink-soft: #4A5573;
+  --red: #ff5a5f; --blue: #2bb3ff; --yellow: #ffc531; --green: #3ddc84; --purple: #b06cff; --orange: #ff8a3d;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; }
+body { position: relative; font-family: 'Baloo 2', sans-serif; color: var(--ink); background: transparent; }
+
+/* Notebook paper: ruled lines every 60 px, red margin, three punch holes (matches the TV app). */
+body.paper {
+  background:
+    radial-gradient(circle at 57px 218px, #E9E2CF 0 17px, #D8D0B9 17px 20px, transparent 21px),
+    radial-gradient(circle at 57px 538px, #E9E2CF 0 17px, #D8D0B9 17px 20px, transparent 21px),
+    radial-gradient(circle at 57px 858px, #E9E2CF 0 17px, #D8D0B9 17px 20px, transparent 21px),
+    linear-gradient(to right, transparent 131px, var(--margin) 131px 134px, transparent 134px),
+    linear-gradient(to bottom, transparent 0 59px, var(--rule) 59px 62px, transparent 62px) 0 0 / 100% 60px repeat-y,
+    var(--paper);
+}
+
+.page { position: absolute; inset: 0 0 0 134px; padding: 64px 96px 56px 86px; }
+.hand { font-family: 'Patrick Hand', cursive; font-weight: 400; }
+.mono { font-family: Menlo, 'SF Mono', Monaco, monospace; }
+
+/* Card heading: big Baloo with a crayon underline scribble. */
+h1 { margin: 0; font-size: 92px; line-height: 1; font-weight: 800; letter-spacing: -0.5px; }
+h1 .u { background: linear-gradient(transparent 70%, color-mix(in srgb, var(--u, var(--yellow)) 70%, transparent) 70% 92%, transparent 92%); padding: 0 8px; }
+.kicker { font-family: 'Patrick Hand', cursive; font-size: 46px; color: var(--ink-soft); margin: 4px 0 0 4px; }
+
+/* Rainbow wordmark like the TV home screen. */
+.wordmark { font-weight: 800; letter-spacing: -2px; line-height: 0.95; white-space: nowrap; }
+.wordmark span { text-shadow: 0.025em 0.035em 0 var(--ink); }
+.wordmark span:nth-child(6n+1) { color: var(--red); }
+.wordmark span:nth-child(6n+2) { color: var(--blue); }
+.wordmark span:nth-child(6n+3) { color: var(--yellow); }
+.wordmark span:nth-child(6n+4) { color: var(--green); }
+.wordmark span:nth-child(6n+5) { color: var(--purple); }
+.wordmark span:nth-child(6n+6) { color: var(--orange); }
+
+/* Chunky sticker card: white, navy border, hard offset shadow, optional tape strip on top. */
+.sticker { position: relative; background: #fff; border: 6px solid var(--ink); border-radius: 36px; box-shadow: 8px 10px 0 var(--ink); }
+.tape { position: absolute; top: -24px; left: 50%; width: 170px; height: 44px; transform: translateX(-50%) rotate(-2deg);
+  background: color-mix(in srgb, var(--t, var(--red)) 55%, transparent); }
+.pill { display: inline-flex; align-items: center; gap: 14px; background: #fff; border: 5px solid var(--ink); border-radius: 999px;
+  padding: 6px 30px 4px; font-weight: 700; white-space: nowrap; }
+.pill.fill { background: var(--f, var(--yellow)); }
+.dot { width: 22px; height: 22px; border-radius: 50%; background: var(--d, var(--red)); border: 4px solid var(--ink); flex: none; }
+.tilt-l { transform: rotate(-2deg); } .tilt-r { transform: rotate(2deg); }
+.deco { position: absolute; pointer-events: none; }
+.sprite { filter: drop-shadow(6px 8px 0 rgba(31, 42, 68, 0.18)); }
+
+/* Googly eye (white ball, navy rim, pupil looking slightly down-right). */
+.eye { position: absolute; border-radius: 50%; background: #fff; border: 5px solid var(--ink); transform: translate(-50%, -50%); }
+.eye::after { content: ''; position: absolute; width: 46%; height: 46%; left: 34%; top: 36%; border-radius: 50%; background: var(--ink); }
+
+/* Hand-drawn arrow, drawn with an inline SVG <use href="#arrow">. */
+svg.arrow { overflow: visible; }
+
+/* Placeholder slate for footage that has not been filmed yet. */
+body.slate { background: repeating-linear-gradient(135deg, #2a3553 0 40px, #26304b 40px 80px); color: #fff; }
