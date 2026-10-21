@@ -62,15 +62,11 @@ export const mascot = (fill = '#ffc531') => `
   <path d="M80 106 L83 115 L88 106" fill="#fff" stroke="${INK}" stroke-width="3" stroke-linejoin="round"/>
 </svg>`;
 
-/** Paper with a creature being drawn on by a marker (the outline animates on). */
+/** Plain paper (no lines: kids copy the picture, and ruled lines spoil the cutout) with a creature being drawn on by a marker. */
 export const drawIllo = `
 <svg viewBox="0 0 300 210" xmlns="http://www.w3.org/2000/svg">
   <g transform="rotate(-4 150 105)">
     <rect x="40" y="18" width="210" height="172" rx="6" fill="#fff" stroke="${INK}" stroke-width="4"/>
-    <g stroke="#CFE3F5" stroke-width="2">
-      <path d="M44 50h202M44 76h202M44 102h202M44 128h202M44 154h202"/>
-    </g>
-    <path d="M70 18v172" stroke="#F2A7A7" stroke-width="2.5"/>
   </g>
   <path class="draw-on" d="M108 140 C96 100 120 64 152 66 C188 68 208 96 198 130 C190 156 160 162 140 160 C120 158 110 152 108 140 Z M132 100 a8 8 0 1 0 0.1 0 M168 98 a8 8 0 1 0 0.1 0 M136 128 Q152 142 170 126 M126 66 L114 40 M178 70 L192 44"
     fill="none" stroke="${INK}" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>

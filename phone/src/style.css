@@ -513,9 +513,17 @@ input {
 /* ---------- draw & scan ---------- */
 
 .illo {
+  display: block;
   width: 100%;
   max-width: 300px;
   margin: 0 auto;
+}
+
+/* Real phones lose 100-250 px to browser bars: keep "Snap my drawing" on the first screen. */
+@media (max-height: 760px) {
+  .illo {
+    max-width: 170px;
+  }
 }
 
 .illo .draw-on {

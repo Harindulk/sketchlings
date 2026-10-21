@@ -395,25 +395,65 @@ function lobbyView(): View {
   };
 }
 
+// Android can kill the browser while its camera app is open (low memory); the tab then reloads without the photo.
+// A flag set just before the camera opens tells the reloaded page what happened.
+const SNAP_KEY = 'sketchlings.snapping';
+const snapping = (on: boolean) => {
+  try {
+    if (on) sessionStorage.setItem(SNAP_KEY, '1');
+    else sessionStorage.removeItem(SNAP_KEY);
+  } catch {
+    /* storage blocked */
+  }
+};
+let photoLost = false;
+try {
+  photoLost = sessionStorage.getItem(SNAP_KEY) === '1';
+} catch {
+  /* storage blocked */
+}
+snapping(false);
+document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && snapping(false));
+
 function scanIntroView(): View {
-  const file = h('input', {type: 'file', accept: 'image/*', capture: 'environment', class: 'sr-only', id: 'photo', tabindex: '-1'});
-  file.addEventListener('change', () => {
-    const f = file.files?.[0];
-    file.value = '';
-    if (!f) return;
-    S.source = 'camera';
-    void makeSprite(() => decodeImage(f));
-  });
+  const pick = (id: string, capture: boolean) => {
+    const input = h('input', {type: 'file', accept: 'image/*', capture: capture ? 'environment' : null, class: 'sr-only', id, tabindex: '-1'});
+    input.addEventListener('cancel', () => snapping(false));
+    input.addEventListener('change', () => {
+      snapping(false);
+      const f = input.files?.[0];
+      input.value = '';
+      if (!f) return;
+      S.source = 'camera';
+      void makeSprite(() => decodeImage(f));
+    });
+    return input;
+  };
+  // `capture` opens the camera straight away (without it, newer Android Chrome may show a picker with no camera).
+  // The second input has no `capture`: it can pick a photo taken earlier with the Camera app.
+  const file = pick('photo', true);
+  const library = pick('library', false);
   const snap = h('label', {class: 'btn me', for: 'photo', role: 'button', tabindex: '0'}, svg(icons.camera), 'Snap my drawing');
-  snap.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      file.click();
-    }
-  });
+  const pickBtn = h('label', {class: 'link-btn', for: 'library', role: 'button', tabindex: '0'}, 'Pick a photo you took');
+  for (const [label, input] of [
+    [snap, file],
+    [pickBtn, library],
+  ] as const) {
+    label.addEventListener('click', () => {
+      photoLost = false;
+      snapping(true);
+    });
+    label.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        input.click();
+      }
+    });
+  }
   if (new URLSearchParams(location.search).has('debugImage')) {
     snap.addEventListener('click', (e) => {
       e.preventDefault();
+      snapping(false);
       S.source = 'camera';
       void makeSprite(async () => {
         const blob = await debugImage();
@@ -423,25 +463,33 @@ function scanIntroView(): View {
     });
   }
   const tip = (icon: string, text: string) => h('li', null, svg(icon), text);
+  const keep = S.sketchling;
   return {
     el: h(
       'section',
       {class: 'screen'},
+      // 'Draw a new one' is one tap from the waiting card: give a way back that doesn't need a new photo.
+      keep ? h('button', {type: 'button', class: 'link-btn', onclick: () => ((S.redraw = false), render())}, `Keep ${keep.name}`) : null,
+      photoLost
+        ? h('p', {class: 'card note', role: 'alert'}, 'Your phone needed its memory back, so the photo got lost. Close other apps and try again, or take the photo with the Camera app and use "Pick a photo you took".')
+        : null,
       title('Draw your champion!'),
       h('div', {class: 'card no-tape', style: '--r:1deg;padding:10px'}, svg(drawIllo, 'illo')),
-      h('p', {class: 'big-text'}, 'Draw your champion on paper with a ', h('strong', null, 'thick marker'), '. Make it ', h('strong', {class: 'marker'}, 'BIG!')),
+      h('p', {class: 'big-text'}, 'Draw your champion on paper with a ', h('strong', null, 'thick marker'), '. Make it ', h('strong', {class: 'marker'}, 'BIG!'), ' Leave white space around it.'),
       // What you draw changes how you play: tell them before they draw (matches the persona prompt).
       h('p', {class: 'big-text'}, 'Draw ', h('strong', null, 'wings'), ' to fly over ink, ', h('strong', null, 'wheels'), ' to roll, ', h('strong', null, 'long legs'), ' to hop, a ', h('strong', null, 'big body'), ' to ROAR!'),
+      file,
+      library,
+      snap,
+      h('div', {class: 'stack center', style: 'gap:0'}, pickBtn, h('button', {type: 'button', class: 'link-btn', onclick: () => ((S.step = 'pad'), render())}, 'Draw on screen instead')),
       h(
         'ul',
         {class: 'tips'},
         tip(icons.loop, 'Close the outline all the way round'),
-        tip(icons.sun, 'Plain paper in good light'),
-        tip(icons.frame, 'Fill the photo with the paper'),
+        tip(icons.sun, 'Plain white paper, no lines, in good light'),
+        // The cutout drops ink that touches the photo's edge: the whole sheet must be in the picture.
+        tip(icons.frame, 'Get the whole sheet in the photo'),
       ),
-      file,
-      snap,
-      h('button', {type: 'button', class: 'link-btn', onclick: () => ((S.step = 'pad'), render())}, 'Draw on screen instead'),
     ),
   };
 }
@@ -481,7 +529,7 @@ function emptyView(): View {
         tip(icons.pencil, 'Go over the lines with a thick, dark marker'),
         tip(icons.loop, 'Close the outline all the way round'),
         tip(icons.sun, 'More light, and no shadow from the phone'),
-        tip(icons.frame, 'Hold the phone so the paper fills the photo'),
+        tip(icons.frame, 'Step back so the whole paper fits in the photo'),
       ),
       S.scanMessage ? h('p', {class: 'note'}, S.scanMessage) : null,
       h('button', {type: 'button', class: 'btn me', onclick: () => ((S.step = S.source === 'pad' ? 'pad' : 'intro'), render())}, 'Try again'),
