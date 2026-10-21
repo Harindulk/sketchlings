@@ -93,7 +93,8 @@ export function createServer(cfg: ServerConfig) {
     const playerId = slot.player.id;
     hub.toTvAndPlayer(room, playerId, {t: 'scan', playerId, status: 'processing'});
     try {
-      const persona = await generatePersona(png, size, cfg.claude);
+      const taken = [...room.slots.values()].map(sl => sl.player.sketchling?.name).concat(hall.slice(0, 30).map(h => h.name));
+      const persona = await generatePersona(png, size, cfg.claude, taken.filter((n): n is string => !!n));
       const sketchling: Sketchling = {id, playerId, ...persona, spriteUrl: `/sprites/${id}.png`, width: size.width, height: size.height, artist: slot.player.name};
       slot.player.sketchling = sketchling;
       hub.toTvAndPlayer(room, playerId, {t: 'sketchling', sketchling});

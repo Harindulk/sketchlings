@@ -191,6 +191,17 @@ describe('generatePersona', () => {
     expect(params.system).toMatch(/fly: wings/);
   });
 
+  test('tells the model which names are taken so a family gets different names', async () => {
+    let params: any;
+    const spy = fake(async (p?: unknown) => ((params = p), {stop_reason: 'end_turn', content: [{type: 'text', text: '{}'}]})) as never;
+    await generatePersona(b, size, spy, ['Bobble Pop', 'Bobble Pop', 'Sir Wobbleton']);
+    const text = params.messages[0].content.find((c: any) => c.type === 'text').text;
+    expect(text).toContain('Names already taken: Bobble Pop, Sir Wobbleton.');
+    expect(params.system).toMatch(/never reuse a name or the first word/);
+    await generatePersona(b, size, spy);
+    expect(params.messages[0].content.find((c: any) => c.type === 'text').text).not.toContain('taken');
+  });
+
   test('ability follows the model move: feature clamped, kind = move, label fixed', async () => {
     const ask = async (o: object) => generatePersona(b, size, fake(reply(JSON.stringify(o))));
     const offline = await generatePersona(b, size, null);
