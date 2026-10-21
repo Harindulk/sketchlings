@@ -293,6 +293,11 @@ failed validation`. Not checked on real hardware. Suggestion: fix or document th
 | + native-from-birth values + abilities (21 Oct, ~00:00) | demo | 10 | 0 |
 | **final** (21 Oct, commit afdb370), sound on | demo | **10** | **0** |
 | **final** + fixed room code (soak-only) | live, 4 fake phones (10 rounds) | **10** | **0** |
+| 6 lanes before the blot fix (21 Oct afternoon) | demo + 2 guests | 7 | **3** |
+| + blot fix, 2ee4b14 | demo, 6 lanes | 10 | 0 |
+| + #19 callouts, #20 layout (22 Oct morning, 4c25958), sound on | demo, 6 lanes | **10** | **0** |
+| same build, sound on, final soak | demo, 6 lanes | 11 | 0 (2 sessions ended by a libW3CMedia SIGSEGV at Results, see below) |
+| same build, `MUTE=1` (the filming setup) | demo, 6 lanes | **10** | **0** |
 
 Final build: 20 race starts, 0 frozen; 42 since the fix. Sessions that lost keys to adb restarts (F6) or hit a VVD
 crash (F5) never reached a race and are not counted. Shots of every race (+4.5 s and +6 s) were checked by the soak
@@ -342,3 +347,35 @@ heavy load; the VVD itself kept crashing under the same load on 21 Oct (F5).
 **Other changes today:** app icon (512 px PNG in the manifest; shows on the VVD "Your apps" tile titled Sketchlings), focus returns to the last Home tile, background/active handling with `useKeplerAppStateManager` (hush audio, close the socket, rejoin the same room; resume after the Home key not yet verified), Lobby Start not focusable until a drawing is ready, `soak.mjs --guests N` for 6-lane demo parties.
 
 **Amazon Devices Builder Tools used:** `read_document` and `search_documentation` (Vega KPI docs and the manifest icon format).
+
+## 21 Oct, 09:00-10:20 IST: KPIs, #19/#20 polish, final soaks
+
+- **KPIs:** "Performance (measured on VVD)" at the top. Cool start re-run (665 ms, 10 runs, loaded host); app memory
+  from `activity-monitor`; warm start, the KPI Visualizer's memory KPIs, UI fluidity and focus response can't run on the
+  VVD (Fire TV launcher hard-coded in the warm-start prep; Appium required). Ready for FRICTION_LOG: the warm-start launcher, Appium for memory, and ADBT `analyze_perfetto_traces` not finding the Perf CLI.
+- **#20 layout fixes (22fa1b2):** How to play text clears the Got it! glow (cards 256 tall, button 30 dp lower),
+  Results places 4-6 in a row under the podium (podium floor 462 when there are 4+ racers) and the crown rides in the
+  winner's MoveIdle, seated from the sprite box, Reveal bubble has no tail and no progress dot for a single creature,
+  Lobby shows "Waiting for a drawing…" as a dashed status like the empty slots (no dead button). Shots 07c, 02h, 03f, 05d.
+- **#19 race callouts (4c25958):** Doodle Boost! is a white ink-bordered pill above the runner ring (bottom 10 dp into
+  the ring, right edge at 30 % of the sprite box, behind the creature); dizzy stars are one hand-drawn PNG
+  (`art-src` `dizzy`, three stars on a ring) mounted 150 + 300 x lane ms after race mount, between the ink-blot steps;
+  the WINGS!/SPRINGS! pill is a wide absolute wrapper with the pill shrink-wrapped by `alignItems` (absolute views wrap
+  at their parent's width on Vega); fixed slots from the ground: ability pop at box bottom - 22, ROAR! (24 px font,
+  -4 deg) 8 dp above it, 1st! in the same band as ROAR! but left of it. Shots 04k, 04l, 04m. Soak: 10 of 10 clean.
+- **Docs and cards (211a1e2, 2aa23fe):** no KPI placeholders left in README, the Devpost text, PRODUCT_FEEDBACK; kpi.png and
+  deadlock.png re-rendered (52 race starts, 0 freezes on the fixed builds); tv-overview.png recaptured.
+- **Tests:** `npx jest` 14 of 14 (2 suites), `tsc --noEmit` clean.
+- **New, important: libW3CMedia SIGSEGV with sound on.** Three ACRs on this build, all `SIGSEGV` at
+  `libW3CMedia.so + 0x63e844` on thread 0: 04:13:17 UTC while pressing Next through the Reveal cards every 1.4 s, 04:28:29
+  and 04:35:14 UTC as Results opened (narrator "winner is" then the winLine voice). The app drops to "Your apps"; the
+  last one was counted as "frozen" by `soak.mjs` (the launcher is a still screen) although the race itself was over.
+  None in the first 10-start soak this morning, none with `MUTE=1` (no media stack). Not caused by #19/#20 (no audio
+  code touched). Film on the VVD with `MUTE=1` (the build installed on the VVD now); with sound on, expect a crash about
+  1 in 8 Reveal/Results screens on this VVD today. ACRs: `acr4/` (local), F7 territory.
+- **Open:** the raised Doodle Boost! pill can cover the end of a straggler's lane tag (name and "+40% boost") when that
+  runner is at the left edge (seen as "Gran" hidden in a 4-lane demo at 0:31); backlog #21 (boost badge folded into the
+  name pill) would shorten the tags. The crown is centred on the sprite box, so on a creature whose head is off-centre
+  (the dino) it sits over the neck. One more fake-phone creature in the Hall of Fame ("Dippy Doodlesaur" by Noah, from
+  the one-player Reveal test), now first in the Demo party; the hall shows 68.
+
