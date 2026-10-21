@@ -14,6 +14,11 @@ Behaviour other apps should know (all within the protocol):
   that reconnects mid-race can restore its UI.
 - A phone hello with an unknown `playerId` (e.g. after a server restart) joins as a **new** player: always store the
   `playerId` from `joined`. A known `playerId` keeps name, colour and sketchling (the name in the hello is ignored).
+- A hello with a `playerId` that already has a live socket (a reconnect, or a second tab) closes the older socket with
+  code 1000, reason `replaced`. Its close never marks the player disconnected.
+- A disconnected player with no sketchling (and no scan in flight) is removed after 2 min (`ghostGraceMs`) and a
+  `players` frame goes out, which frees the slot and colour. A player with a sketchling stays with `connected: false`.
+  A reconnect within the 2 min keeps the slot; after that, the old `playerId` joins as a new player.
 - A TV hello with `room` reattaches; if the room no longer exists the server recreates it under the same code, so the
   QR on screen stays valid. The newest TV socket wins; frames from a replaced TV socket get `bad_message`.
 - Protocol update 2026-10-20 implemented: `HelloPhone.ageGroup` (omitted = `'big'`, an unknown value = `bad_message`;
@@ -64,7 +69,7 @@ The first request after a schema change pays a one-time schema compile (cached 2
 - Layout: `src/png.ts` (IHDR + 8-bit RGB/RGBA non-interlaced decode with node:zlib, all five filters),
   `src/persona.ts` (features, offline generator, clamping, Claude call), `src/rooms.ts` (rooms, frame validation, relay),
   `src/server.ts` (HTTP + WS wiring, hall of fame), `src/index.ts` (env + start).
-- Tests: 54 tests over real HTTP + WS on port 0 with temp data dirs and `claude: null`, so `bun test` never calls the
+- Tests: 60 tests over real HTTP + WS on port 0 with temp data dirs and `claude: null`, so `bun test` never calls the
   API even when `server/.env` has a key. The Claude request shape (headers, `?beta=true`, body, no `Authorization`
   header, explicit base URL) and the 12 s timeout were checked once against a local mock API.
 - Room codes use `BCDFGHJKMNPRSTVWXZ`: no vowels so codes never spell words, no I/L/O/Q.

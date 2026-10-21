@@ -96,7 +96,7 @@ export async function connect(url: string) {
   };
 }
 
-export function startTestServer(opts: {dataDir?: string; phoneDist?: string; tts?: () => Promise<Tts | null>} = {}) {
+export function startTestServer(opts: {dataDir?: string; phoneDist?: string; tts?: () => Promise<Tts | null>; ghostGraceMs?: number} = {}) {
   const dataDir = opts.dataDir ?? mkdtempSync(join(tmpdir(), 'sketchlings-'));
   const app = createServer({
     port: 0,
@@ -106,6 +106,7 @@ export function startTestServer(opts: {dataDir?: string; phoneDist?: string; tts
     publicUrl: 'http://test.local:8787',
     claude: null, // never call the API from tests, even if server/.env has a key
     tts: opts.tts, // voices stay off unless a test asks
+    ghostGraceMs: opts.ghostGraceMs,
   });
   return {...app, dataDir, wsUrl: `ws://127.0.0.1:${app.server.port}/ws`, http: `http://127.0.0.1:${app.server.port}`};
 }

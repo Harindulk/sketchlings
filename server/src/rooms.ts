@@ -10,6 +10,7 @@ export interface Slot {
   player: Player;
   ws?: Ws;
   scanning?: boolean;
+  dropTimer?: ReturnType<typeof setTimeout>;
 }
 
 export interface Room {
@@ -77,7 +78,8 @@ export function cleanName(name: string): string {
     .trim();
 }
 
-export function createHub(joinUrl: (code: string) => string) {
+/** graceMs: how long a disconnected player without a sketchling keeps their slot. */
+export function createHub(joinUrl: (code: string) => string, graceMs = 2 * 60_000) {
   const rooms = new Map<string, Room>();
 
   const send = (ws: Ws | undefined, msg: ServerMsg): void => void ws?.send(JSON.stringify(msg));
@@ -129,6 +131,13 @@ export function createHub(joinUrl: (code: string) => string) {
       slot.ws = undefined;
       slot.player.connected = false;
       broadcastPlayers(room);
+      // Gone for good without a creature: free the slot. Players with a sketchling stay (connected: false) for races and the hall.
+      // shortcut: a scan still running when this fires keeps the slot even if it then fails; fine for a party.
+      slot.dropTimer = setTimeout(() => {
+        if (slot.ws || slot.player.sketchling || slot.scanning) return;
+        room.slots.delete(slot.player.id);
+        broadcastPlayers(room);
+      }, graceMs);
     }
   }
 
@@ -156,7 +165,11 @@ export function createHub(joinUrl: (code: string) => string) {
       slot = {player};
       room.slots.set(player.id, slot);
     }
-    if (slot.ws && slot.ws !== ws) slot.ws.data = {}; // an older socket for the same player: let it go quietly
+    clearTimeout(slot.dropTimer);
+    if (slot.ws && slot.ws !== ws) {
+      slot.ws.data = {}; // so the older socket's close event can't mark the live player disconnected
+      slot.ws.close(1000, 'replaced');
+    }
     slot.ws = ws;
     slot.player.connected = true;
     room.touched = Date.now();

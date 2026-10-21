@@ -206,3 +206,80 @@ describe('rooms over WebSocket', () => {
     await Promise.all([tv2.close(), tv3.close(), mia.close()]);
   });
 });
+
+describe('replaced sockets and ghost players', () => {
+  const GRACE = 400;
+  const app = startTestServer({ghostGraceMs: GRACE});
+  afterAll(() => app.stop());
+  const wait = (ms: number) => new Promise(r => setTimeout(r, ms));
+
+  async function setup() {
+    const tv = await connect(app.wsUrl);
+    tv.send({t: 'hello', role: 'tv'});
+    const code = (await tv.next('room')).code as string;
+    await tv.next('players');
+    const mia = await connect(app.wsUrl);
+    mia.send({t: 'hello', role: 'phone', room: code, name: 'Mia'});
+    const {playerId} = await mia.next('joined');
+    await tv.next('players');
+    return {tv, code, mia, playerId: playerId as string};
+  }
+
+  test('a re-hello with the same playerId closes the old socket without a false disconnect', async () => {
+    const {tv, code, mia, playerId} = await setup();
+    const closed = new Promise<number>(r => (mia.ws.onclose = e => r(e.code)));
+    const tab2 = await connect(app.wsUrl);
+    tab2.send({t: 'hello', role: 'phone', room: code, name: 'Mia', playerId});
+    expect((await tab2.next('joined')).playerId).toBe(playerId);
+    expect(await closed).toBe(1000);
+    expect((await tv.next('players')).players).toMatchObject([{id: playerId, connected: true}]);
+
+    await wait(GRACE + 100); // past the grace period: the old socket's close must not have dropped or disconnected her
+    expect(tv.queue.filter(m => m.t === 'players')).toHaveLength(0);
+    tab2.send({t: 'input', kind: 'tap', at: 1});
+    expect(await tv.next('input')).toMatchObject({playerId});
+    await Promise.all([tv.close(), tab2.close()]);
+  });
+
+  test('a player who leaves without a sketchling is dropped after the grace period; one with a sketchling stays', async () => {
+    const {tv, code, mia, playerId} = await setup();
+    const leo = await connect(app.wsUrl);
+    leo.send({t: 'hello', role: 'phone', room: code, name: 'Leo'});
+    const leoId = (await leo.next('joined')).playerId;
+    await tv.next('players');
+    app.hub.rooms.get(code)!.slots.get(leoId)!.player.sketchling = {id: 'x', name: 'Blob'} as any;
+
+    await Promise.all([mia.close(), leo.close()]);
+    const offline = async () => (await tv.next('players')).players.map((p: any) => [p.name, p.connected]);
+    expect(await offline()).toEqual([['Mia', false], ['Leo', true]]);
+    expect(await offline()).toEqual([['Mia', false], ['Leo', false]]);
+    expect(await offline()).toEqual([['Leo', false]]); // Mia is gone, Leo's creature stays
+    expect(app.hub.rooms.get(code)!.slots.has(playerId)).toBe(false);
+
+    // her old id now joins as a new player
+    const back = await connect(app.wsUrl);
+    back.send({t: 'hello', role: 'phone', room: code, name: 'Mia', playerId});
+    expect((await back.next('joined')).playerId).not.toBe(playerId);
+    await Promise.all([tv.close(), back.close()]);
+  });
+
+  test('a player who reconnects within the grace period keeps the slot', async () => {
+    const {tv, code, mia, playerId} = await setup();
+    const slots = app.hub.rooms.get(code)!.slots;
+    await mia.close();
+    expect((await tv.next('players')).players).toMatchObject([{id: playerId, connected: false}]);
+    await wait(GRACE * 0.75);
+    const again = await connect(app.wsUrl);
+    again.send({t: 'hello', role: 'phone', room: code, name: 'Mia', playerId});
+    expect((await again.next('joined')).playerId).toBe(playerId);
+    expect((await tv.next('players')).players).toMatchObject([{id: playerId, connected: true}]);
+
+    // leaves again: the first disconnect's timer must not drop her early
+    await again.close();
+    expect((await tv.next('players')).players).toMatchObject([{id: playerId, connected: false}]);
+    await wait(GRACE * 0.5);
+    expect(slots.has(playerId)).toBe(true);
+    expect((await tv.next('players', GRACE * 2)).players).toEqual([]);
+    await tv.close();
+  });
+});

@@ -20,6 +20,7 @@ export interface ServerConfig {
   publicUrl?: string;
   claude: Claude | null;
   tts?: () => Promise<Tts | null>; // creature voices; omitted = off (tests)
+  ghostGraceMs?: number; // a disconnected player with no sketchling is dropped after this (default 2 min)
 }
 
 export function lanIp(): string {
@@ -87,7 +88,7 @@ export function createServer(cfg: ServerConfig) {
 
   // ---------- rooms ----------
   const base = () => (cfg.publicUrl?.trim() || `http://${lanIp()}:${server.port}`).replace(/\/+$/, '');
-  const hub = createHub(code => `${base()}/j/${code}`);
+  const hub = createHub(code => `${base()}/j/${code}`, cfg.ghostGraceMs);
 
   async function processScan(room: Room, slot: Slot, id: string, png: Uint8Array, size: PngInfo, uploadAt: number) {
     const playerId = slot.player.id;
