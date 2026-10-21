@@ -30,6 +30,7 @@ Real problems hit while building a React Native for Vega app, worst first. Every
 | 20 | qrcode-svg needs a `TextEncoder` polyfill in the app | `react-native-qrcode-svg` | Low |
 | 21 | Custom fonts on RN 0.83: `expo-font` lists only RN 0.72, and `fontFamily` must be the file name | `@amazon-devices/expo-font` docs, React Native for Vega | Low |
 | 22 | Installer: no telemetry opt-out at install, scripted mode undocumented | Vega SDK installer | Low |
+| 23 | The headless VVD renders in software and keeps ~7 host cores busy while an app animates | Vega Virtual Device 0.24 | Medium-high |
 
 ---
 
@@ -71,7 +72,11 @@ Real problems hit while building a React Native for Vega app, worst first. Every
   | + native-from-birth values, abilities | Demo | 10 | 0 |
   | Final (commit `afdb370`), sound on outside the race | Demo | 10 | 0 |
   | Final, 4 simulated phones | Live | 10 | 0 |
-  | **Total since the fix** | | **42** | **0** |
+  | 6 lanes (Hall of Fame guests), before the blot fix | Demo | 7 | **3** |
+  | + ink blots mount one lane per 300 ms during 3-2-1, 20 Hz loop until GO | Demo, 6 lanes | 10 | 0 |
+  | **Total since the fix** (4-6 lanes) | | **59** | **3**, all on the 6-lane build before the blot fix |
+
+  With 6 lanes the freeze came back (3 of 7 starts, 21 Oct, Mac at load 14-20 with 11-14 GB swap in use; this time no ACR was written and Back did not kill the app). A 6-lane build without the ink-blot images ran 8 of 8, so the trigger was ~66 blot images mounting in the same instant as the race (81 image loads within 0.3 ms in the log): a burst of native-to-JS callbacks, each one a watchdog message, on an already starved host (#23). Spreading the blots over the countdown (one lane every 300 ms) and running the loop at 20 Hz until GO ran 10 of 10 six-lane starts clean on the same loaded Mac.
 
   Honest caveat: the 20 Oct build without the fix also passed 12 race starts on 21 Oct, on a quieter Mac. A clean soak alone doesn't prove the fix. The evidence is the mechanism in the stacks, plus removing most of the app's watchdog traffic at race start.
 - **Suggestion:**
@@ -325,6 +330,16 @@ Real problems hit while building a React Native for Vega app, worst first. Every
 - **Suggestion:** document the installer variables on the install page. Add an installer flag or variable (for example `VEGA_TELEMETRY=0`) and a `vega telemetry off` command.
 
 ---
+
+## 23. The headless VVD renders in software and keeps ~7 host cores busy while an app animates
+
+- **Tool and version:** Vega Virtual Device (SDK 0.24.12112), headless (`--no-gui`), Apple-silicon Mac with 16 GB, macOS 27.
+- **Task:** soak-test and film the app on the headless VVD.
+- **Steps:** ran Sketchlings on Home, Results, Hall of Fame and in races; sampled `ps -o pcpu` of the `vega-virtual-device` process (21 Oct); read the instance's `hardware-qemu.ini`.
+- **Expected vs actual:** expected a mostly idle TV UI to cost little host CPU. Actual: `hw.gpu.mode = swangle_indirect` (ANGLE on SwiftShader, i.e. GPU work on the host CPU). With the app in the foreground the VVD uses 590-760 % CPU on Home, Results and Hall of Fame (focus wobble, blinking googly eyes) and in a race, 150-320 % on the mostly still How to play screen, and 15-20 % with the app terminated. On a Mac also running other apps (load 14-20, 11-14 GB of swap in use) this is the host starvation behind #3 and the starved watchdog thread in #1, and every timing measured on the VVD is pessimistic.
+- **Severity:** Medium-high.
+- **Workaround:** quit other apps before soaks and filming; keep heavy animation off screens that sit idle.
+- **Suggestion:** document the VVD's GPU mode and its CPU cost, and offer a working host-GPU (Metal) mode for the headless VVD on Apple silicon, or a frame-rate cap for the headless renderer.
 
 ## What worked well
 
