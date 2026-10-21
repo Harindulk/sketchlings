@@ -719,6 +719,7 @@ const RunnerView = React.memo(
 );
 
 function Medal({place, color}: {place: number; color: string}) {
+  const label = PLACE[place] ?? `${place}th`;
   const v = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     Animated.spring(v, {
@@ -734,10 +735,13 @@ function Medal({place, color}: {place: number; color: string}) {
         styles.medal,
         {
           backgroundColor: place === 1 ? '#ffc531' : color,
+          width: 30 + label.length * 13, // absolute children don't shrink-wrap on Vega: "1st!" wrapped to "1s/t!" in 6 lanes
           transform: [{scale: v}],
         },
       ]}>
-      <Text style={styles.medalText}>{PLACE[place] ?? `${place}th`}</Text>
+      <Text style={styles.medalText} numberOfLines={1}>
+        {label}
+      </Text>
     </Animated.View>
   );
 }
@@ -912,7 +916,7 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     fontFamily: F.bold,
     fontSize: 17,
-    color: '#1E9E57',
+    color: '#13723D', // 5.6:1 on paper (the old #1E9E57 was 2.8:1 on the pink lane)
   },
   dizzy: {
     position: 'absolute',
@@ -960,9 +964,14 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 3,
     borderColor: C.ink,
-    paddingHorizontal: 9,
   },
-  medalText: {fontFamily: F.bold, fontSize: 22, lineHeight: 30, color: C.ink},
+  medalText: {
+    fontFamily: F.bold,
+    fontSize: 22,
+    lineHeight: 30,
+    color: C.ink,
+    textAlign: 'center',
+  },
   tag: {
     position: 'absolute',
     left: 48,
