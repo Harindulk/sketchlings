@@ -140,9 +140,12 @@ from the package typings.
 
 ## Audio outcome on the VVD
 
-- Setup: `@amazon-devices/react-native-w3cmedia` 2.3.2, `AudioPlayer(CONTENT_TYPE_SPEECH, USAGE_GAME)`, MSE:
-  `addSourceBuffer('audio/mp4; codecs="mp4a.40.2"')`, append whole clip, `endOfStream()`, `play()`. URL mode is the
-  fallback if appending throws (never needed). Manifest `[wants]`: mediametrics, mediabuffer, mediatransform,
+- Setup (since 21 Oct midday, F13): `@amazon-devices/react-native-w3cmedia` 2.3.2, one
+  `AudioPlayer(CONTENT_TYPE_SPEECH, USAGE_GAME)`, one `MediaSource` (set as `srcObject` once) and one
+  `addSourceBuffer('audio/mp4; codecs="mp4a.40.2"')` for the whole session. Each clip is appended whole at
+  `timestampOffset` = the end of what is already buffered, the player seeks to its start and plays, and pauses 400 ms
+  after `waiting` follows `playing` (no `endOfStream`, so no `ended`). Never a source swap, no URL fallback. Before
+  that: a new MediaSource per clip + `endOfStream()` + `ended`, which crashed libW3CMedia (F13). Manifest `[wants]`: mediametrics, mediabuffer, mediatransform,
   audio.stream, audio.control, **audio.system** (without it the log says "Unable connect to 'com.amazon.audio.system'.
   Missing the permissions"), media.server, media.playersession. Narrator clips bundled as base64
   (`tv/scripts/bundle-narrator.mjs`), creature voices fetched + prefetched from `/voice/<id>/<line>.m4a`.
@@ -157,12 +160,12 @@ from the package typings.
   PID). Not proven: that the samples are non-silent. Nothing on the Mac can capture the VVD's output (no loopback
   device installed, `screenrecord` has no audio track), so audibility still needs ears or a real Fire TV.
 - The race is silent since 21 Oct (no countdown narration, no ROAR sound, no catchphrase at the finish; captions carry
-  all of it). Voice and narrator play only on Reveal and Results, one clip at a time, never interrupted. A Reveal line
-  still queued when the race mounts is dropped (`hush()`); one already playing finishes (at most a few seconds into the
-  countdown). Every voiced line has an on-screen caption: Reveal intro = speech bubble, narrator "meet the Sketchlings"
+  all of it). Voice and narrator play only on Reveal and Results, one clip at a time, never interrupted by another
+  clip. When the race mounts, `hush()` drops a queued Reveal line and (since F13) pauses the one playing, so the
+  countdown has no media events at all. Every voiced line has an on-screen caption: Reveal intro = speech bubble, narrator "meet the Sketchlings"
   = header, "winner is" = "<name> wins!" title, winLine = Results bubble; the finish catchphrase is a caption only.
-- For recordings and automated runs use `MUTE=1` (sets `SOUND = false`, no media stack at all); dub the server's .m4a
-  clips in the edit.
+- `MUTE=1` (sets `SOUND = false`, no media stack at all) is still there for silent recordings; since the F13 fix the
+  sound-on build passed the crash and race-start soaks (F13), so it is no longer needed for stability.
 
 ## Friction log (Vega SDK snags hit while building the TV app)
 
@@ -298,6 +301,9 @@ failed validation`. Not checked on real hardware. Suggestion: fix or document th
 | + #19 callouts, #20 layout (21 Oct morning, 4c25958), sound on | demo, 6 lanes | **10** | **0** |
 | same build, sound on, final soak | demo, 6 lanes | 11 | 0 (2 sessions ended by a libW3CMedia SIGSEGV at Results, see below) |
 | same build, `MUTE=1` (the filming setup) | demo, 6 lanes | **10** | **0** |
+| F13 one-MediaSource audio, sound on, `--screens 44` (21 Oct 05:34-05:58 UTC) | demo, 5 lanes | 21 | 1 (first start: a 6 s Reveal voice played into the countdown) |
+| + `hush()` pauses the playing clip at race mount (d301384), sound on | demo, 6 lanes | **10** | **0** |
+| same build, sound on, `--screens 44 --guests 3` | demo, 4-6 lanes | **25** | **0** (0 crashes over 51 Reveal/Results screens) |
 
 Final build: 20 race starts, 0 frozen; 42 since the fix. Sessions that lost keys to adb restarts (F6) or hit a VVD
 crash (F5) never reached a race and are not counted. Shots of every race (+4.5 s and +6 s) were checked by the soak
@@ -317,7 +323,8 @@ heavy load; the VVD itself kept crashing under the same load on 21 Oct (F5).
 - Audio on the VVD is fragile beyond F7: an ACR from a soak on 21 Oct (18:55 UTC) is a SIGSEGV inside
   `libkepler_media_player.so` (media thread), and while the Hall of Fame picture was frozen (F11) w3cmedia kept
   logging "No Time update even in Playing state: 0.951" every 250 ms (a player stuck mid-clip). Another reason to
-  film on the VVD with `MUTE=1`.
+  film on the VVD with `MUTE=1`. (All of these were seen with the old per-clip source swap; since F13 the player's
+  source never changes. Sound-on now passes the soaks in F13, but `MUTE=1` remains the zero-media option.)
 - Unity's `-adb2` asset worker kept restarting the adb server on 21 Oct (F6), so soak sessions sometimes lost keys
   and failed to reach a race; those are counted as "failed to start", never as passes.
 - After the live soaks the Hall of Fame's newest creatures are all fake-phone uploads that the server gave the `walk`
@@ -373,6 +380,7 @@ heavy load; the VVD itself kept crashing under the same load on 21 Oct (F5).
   None in the first 10-start soak this morning, none with `MUTE=1` (no media stack). Not caused by #19/#20 (no audio
   code touched). Film on the VVD with `MUTE=1` (the build installed on the VVD now); with sound on, expect a crash about
   1 in 8 Reveal/Results screens on this VVD today. ACRs on the VVD: `crash_1792555997`, `crash_1792556909`, `crash_1792557314` (`vega device copy-logs -a SYSTEM_TOMBSTONE/acr`); F7 territory.
+  **Root-caused and fixed later that morning: F13** (a per-clip source swap; `src/audio.ts` now never swaps).
 - **Open:** the raised Doodle Boost! pill can cover the end of a straggler's lane tag (name and "+40% boost") when that
   runner is at the left edge (seen as "Gran" hidden in a 4-lane demo at 0:31); backlog #21 (boost badge folded into the
   name pill) would shorten the tags. The crown is centred on the sprite box, so on a creature whose head is off-centre
@@ -381,3 +389,95 @@ heavy load; the VVD itself kept crashing under the same load on 21 Oct (F5).
 
 
 **Live view keyboard remote (21 Oct).** The live-view page forwards keys to the VVD as `inputd-cli` button presses over Unity's adb (override with `ADB=`), one at a time and in order: arrows, Enter (OK), Backspace/Esc (Back), Space (Play/Pause = ROAR), M (Menu); any other key is ignored. The server listens on 127.0.0.1 only. Checked with a fake adb that logged the exact presses; not yet driven on the live VVD (the audio debugging soak owned it).
+
+## 21 Oct, 10:20-12:10 IST: F13, the libW3CMedia SIGSEGV with sound on, root-caused and fixed
+
+**F13. libW3CMedia crashes the app when the AudioPlayer's source is swapped for the next clip.**
+Tool: `@amazon-devices/react-native-w3cmedia` 2.3.2 (`libW3CMedia.so`, `libkeplerscript-w3cmedia-lib-1.so.1`), VVD
+headless, Vega SDK 0.24.12112. Task: creature voices and narrator lines on Reveal and Results, one clip at a time. Old
+pattern: one `AudioPlayer` for the session and per clip a new `MediaSource` set as `srcObject`, `addSourceBuffer`,
+append the whole fMP4 clip, `endOfStream()`, `play()`; a line queued behind a playing clip started from the `ended`
+handler. Expected: every clip plays. Actual: about 1 in 8 Reveal/Results screens the app dropped to "Your apps"
+(ACRs `crash_1792555997`, `crash_1792556909`, `crash_1792557314`, SIGSEGV at `libW3CMedia.so + 0x63e844`).
+Severity: high (the party dies mid-game, and voices are a core feature).
+
+*Steps.*
+1. Read every thread's stack in the 3 ACRs' core dumps, with symbol names from the device libraries
+   (`tv/scripts/acr-stacks.py`; `libW3CMedia.so`, `libkeplerscript-w3cmedia-lib-1.so.1`, `libKeplerMedia*.so`,
+   `libkepler_media_player.so` pulled with `adb pull /usr/lib/...`).
+2. Built a fast repro that needs no races: `AUDIOSOAK=1 tv/scripts/vbuild.sh release --run` builds
+   `src/AudioSoak.tsx` instead of the game (the Reveal pattern: narrator, then an intro every 1.4 s; then the Results
+   pattern: narrator, winLine 1.8 s later; on a loop, through the real `src/audio.ts`, voices from the Hall of Fame).
+   `node tv/scripts/audio-soak.mjs 15` relaunches it after each crash and reads the clip counter off the screen;
+   `adb shell loggingctl log -f -o short_precise` captured the w3cmedia log (its JS layer logs every call) around each
+   crash.
+3. Changed one thing at a time and re-ran the same soak, then the real game: `soak.mjs --screens 44` (now counts app
+   crashes and Reveal/Results screens; a crash is never counted as a freeze) and the race-start soak.
+
+*Evidence.* The 3 morning ACRs and both repro ACRs (`crash_1792558908`, `crash_1792559212`) have the identical
+6-frame stack on the crashing thread (`libW3CMedia.so +0x64da44 / +0x64d9fc / +0x653e30 / +0x65449c / +0x6125a4 /
++0x613a6c` from the core dump; internal functions, no exported names), a long-lived libW3CMedia thread started with the
+player; the crash log names it `COMM:JSThread`, but it is not the React Native JS thread (tid 18). The per-clip
+pipeline threads (`ignite::BlockingCommandThread::_command_loop`, `Executor` task threads in
+`libkepler_media_player.so`) are fresh in every ACR (one set, high tids): each clip builds a new pipeline. The React
+Native JS thread at the moment of the crash: in 3 of 5 inside the next clip's `MediaSource.addSourceBuffer` (twice
+in `isTypeSupported` -> `KeplerMediaDescriptor.queryMediaCapabilitiesSync`, once constructing the new
+`ignite::media::SourceBufferStateImpl`, which builds a new `GstPipelineImpl`), in 1 releasing a `shared_ptr` inside a
+w3cmedia TurboModule call, in 1 in a timer callback. The repro's device log, within 120 ms: `ended` -> our handler starts the queued line -> `MediaSource[55]` constructed -> `setting
+srcObject` -> `load` -> `MediaSource[54]:+resetMediaElementHandle` -> `removeSourceBuffer 53` -> `DetachMediaSource` ->
+the old pipeline (same `GstPipelineImpl` address) still posts duration and render-timing messages 80-100 ms later ->
+new source attached -> `addSourceBuffer` -> SIGSEGV.
+
+*Root cause.* A source change (`srcObject = new MediaSource`, which is also what `src = URL.createObjectURL(ms)` does
+inside the library) detaches the old MediaSource and removes its SourceBuffer on the JS thread while the old pipeline
+is still winding down from end-of-stream; libW3CMedia's own long-lived thread then crashes, consistent with it using
+the removed source/buffer context. Starting the next clip from the `ended` handler made that overlap as large as
+possible. No JS error, nothing of ours runs on that thread. (Also seen: the library keeps every MediaSource in
+`GlobalMediaSources` and every SourceBuffer in its event router when `srcObject` is set directly, a small leak per clip.)
+
+*Workaround / fix (`tv/src/audio.ts`, d301384): never swap the source.* One AudioPlayer, one MediaSource, one SourceBuffer for the
+session. Each clip is appended at `timestampOffset` = the end of what is buffered, the player seeks to the clip's start
+and plays, and pauses 400 ms after `waiting` follows `playing` (the clip ran out of data; `waiting` comes ~0.1 s before
+the last samples are heard). `timeupdate` was no use as an end signal (with "position within 50 ms of the buffered end"
+as the test, every clip in the first build ended on the fallback timer instead). A fallback timer ends a clip at its
+length + 1.5 s. The library evicts old samples by itself (`DemuxerImpl::evict_coded_frames`). `hush()` (race mount, leaving a screen, app in background) now also pauses the
+clip that is playing, so the race has no media events at all: the first sound-on soak of the fix had one race start
+stuck on "3" while a 6 s Reveal voice played into the countdown (JS logged nothing after the blots mounted, the F4
+picture). Unit test: `tv/test/audio.spec.ts` (fake w3cmedia: one `srcObject` for three clips, appends at 0, 1, 2).
+
+| run (VVD, sound on) | clips / screens | crashes | race starts | frozen |
+|---|---|---|---|---|
+| repro, old `audio.ts` (15 min) | 216 clips | **5** detected (2 confirmed by ACR + log; 3 after the log stream dropped, no ACR) | - | - |
+| repro, one MediaSource (15 min) | 193 clips | **0** (1 false detection: app still playing, no crash in the log) | - | - |
+| game, one MediaSource, `--screens 44 --guests 2` | 24 Reveal cards + 20 Results | **0** | 21 | 1 (see above) |
+| game, + `hush()` pauses, `soak.mjs 10 --guests 3 --rounds 5` | 12 Reveal cards + 10 Results | **0** | **10** | **0** |
+| game, + `hush()` pauses, `--screens 44 --guests 3 --rounds 5` (06:11-06:43 UTC) | 26 Reveal cards + 25 Results | **0** | **25** (4-6 lanes) | **0** |
+| **final build (d301384), total** | **38 Reveal cards + 35 Results = 73 screens** | **0** | **35** | **0** |
+
+Morning, old code: 3 crashes, about 1 in 8 Reveal/Results screens; at that rate 73 clean screens in a row would
+happen by chance with p = (7/8)^73 = 0.00006. No new Sketchlings ACR on the VVD after the repro's two (copy-logs at
+06:45 UTC). The repro's crash detector first
+trusted one `is-app-running` answer and counted an adb hiccup as a crash; both soak scripts now need "not running"
+twice, 3 s apart.
+
+Installed on the VVD now: the sound-on release build of d301384 (`tv/build/sketchlings_aarch64.vpkg`).
+
+*What is audible now (sound-on build):* Reveal: the narrator's "Let's meet our Sketchlings!", then each creature's intro
+as its card shows (a newer intro waits for the one playing; the latest wins; with fast Next presses some intros are
+skipped). Results: the narrator's "And the winner is...", then the winner's win line. The race is silent; a Reveal line
+still playing when the race mounts is cut off. Every line is also a caption.
+
+*Suggestion to Amazon:* make a source change safe at any time (stop the old pipeline's event delivery before freeing
+its MediaSource/SourceBuffer contexts), fire `emptied`/`abort` for the old source, and document how to play many short
+clips on one AudioPlayer (the README shows one MediaSource per player and never a second one; nothing says a swap is
+risky). A short sound-effect API for games would avoid all of this. Unwinding every thread in `<minidump_stackwalk>`
+would again have shown this in minutes.
+
+*Tools.* Skill: `amazon-devices-vega-media-player`. Amazon Devices Builder Tools
+MCP: `read_document` (`react_native_for_vega_get_started.md`, `react_native_for_vega_media_player.md`,
+`react_native_for_vega_media_troubleshooting.md`; the w3cmedia README URL came back as navigation only) and
+`search_documentation` (AudioPlayer + MediaSource: one snippet, the README's single-MediaSource example).
+`symbolicate_acr` (gdb mode, `deviceId: emulator-5554`) on `crash_1792558908` failed again: "Failed to copy
+.../temp_acr_debugFs/acr_libraries.txt to emulator-5554" (F8), so `acr-stacks.py` read the stacks. The package's own
+README and JS (`node_modules/@amazon-devices/react-native-w3cmedia/dist`) showed what a
+`srcObject` change does.
