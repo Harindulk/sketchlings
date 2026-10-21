@@ -140,7 +140,7 @@ export function Race({racers, bots, onInput, onFinish}: Props) {
   // the game loop
   useEffect(() => {
     let alive = true;
-    hush(); // the race is silent: drop a Reveal line still queued (one already playing ends on its own)
+    hush(); // the race is silent: drop a Reveal line still queued and stop the one playing
     const eyes = racers.map(() => ({
       ox: 0,
       oy: 0.3,

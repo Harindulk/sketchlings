@@ -40,7 +40,7 @@ export const App = () => {
   const party = useParty(mode);
   const appState = useKeplerAppStateManager();
   useEffect(() => {
-    // backgrounded (Home button, another app): drop queued voice lines; the AudioPlayer stays (F7: no deinit)
+    // backgrounded (Home button, another app): stop the voice lines; the AudioPlayer stays (F7: no deinit)
     const sub = appState.addAppStateListener('change', (st) => {
       if (st === 'background') hush();
     });
