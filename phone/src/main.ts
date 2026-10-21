@@ -579,8 +579,8 @@ function cardView(): View {
   };
 }
 
-function tvView(): View {
-  return {el: h('section', {class: 'screen center'}, svg(mascot(S.color), 'mascot'), title('Look at the TV!'), h('p', {class: 'big-text'}, 'Everyone\'s champions are showing up on the big screen.'))};
+function tvView(text = "Everyone's champions are showing up on the big screen."): View {
+  return {el: h('section', {class: 'screen center'}, svg(mascot(S.color), 'mascot'), title('Look at the TV!'), h('p', {class: 'big-text'}, text))};
 }
 
 /** Our place from the results phase data: {placements: [{playerId, place}]} or {ranking: [playerId, ...]}. */
@@ -666,8 +666,11 @@ function screenKey(): string {
       return S.sketchling && !S.redraw ? 'card' : `scan:${S.step}`;
     case 'reveal':
       return S.sketchling ? 'card' : 'tv';
-    case 'race':
-      return 'race';
+    case 'race': {
+      // Only players who had a champion when the race started are in it; the TV ignores anyone else's taps.
+      const racers = S.phaseData.racers;
+      return Array.isArray(racers) && !racers.includes(S.playerId) ? 'watch' : 'race';
+    }
     case 'results':
       return 'results';
   }
@@ -702,6 +705,8 @@ function build(key: string): View {
       return cardView();
     case 'tv':
       return tvView();
+    case 'watch':
+      return tvView(S.sketchling ? `Cheer them on! ${S.sketchling.name} joins the next race.` : 'Cheer them on!');
     case 'race':
       return raceView(
         () => ({name: S.name, color: S.color, ageGroup: S.age ?? 'grownup', spriteUrl: S.sketchling?.spriteUrl ?? S.sprite?.url}),
