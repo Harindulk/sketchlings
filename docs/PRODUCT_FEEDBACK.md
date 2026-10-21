@@ -63,7 +63,7 @@ Setup: MacBook (Apple silicon, 16 GB), macOS 27.0.1, Node 26.12, Bun 1.4.3, Vega
 
 ## 3. Amazon Devices Builder Tools: MCP server and Vega skills, with Claude Code
 
-**What I used it for.** Vega guidance inside the coding agent while building the TV app. The skills used were `amazon-devices-vega-media-player` (audio setup and the manifest) and `amazon-devices-vega-app-performance` (the KPI Visualizer). The MCP server was not connected in the session that built the TV app, so the docs were read on developer.amazon.com and in the package typings there (#17). On 21 Oct, with the server connected, I tried its `symbolicate_acr` tool on the race-freeze crash reports (#11).
+**What I used it for.** Vega guidance inside the coding agent while building the TV app. The skills used were `amazon-devices-vega-media-player` (audio setup and the manifest) and `amazon-devices-vega-app-performance` (the KPI Visualizer). The MCP server was not connected in the session that built the TV app, so the docs were read on developer.amazon.com and in the package typings there (#17). On 21 Oct, with the server connected, I tried its `symbolicate_acr` tool on the race-freeze crash reports (#11) and `analyze_perfetto_traces` on the cool-start traces (#24).
 
 **What worked well.**
 - One command (`init-context --agent claude-code-cli`) installed the steering doc, the MCP config and 18 Vega skills straight into Claude Code.
@@ -74,6 +74,7 @@ Setup: MacBook (Apple silicon, 16 GB), macOS 27.0.1, Node 26.12, Bun 1.4.3, Vega
 - `symbolicate_acr` failed on the VVD with "Failed to copy .../temp_acr_debugFs/acr_libraries.txt to emulator-5554", so I wrote my own reader of the ACR core dump (`tv/scripts/acr-stacks.py`) (#11).
 - `init-context` writes `"command": "npx"`, which runs on the default Node 26, even though the docs say the server needs Node 24 (Node 26 fails with an SQLite3 bindings error). The skills' own install snippet has the same plain `npx` (#12).
 - `check-status` reports "Partially configured" without saying which part is missing (#12).
+- `analyze_perfetto_traces` couldn't find the Vega Perf CLI ("Vega Performance CLI path is not available"), although `vega exec perf` worked in the same shell (#24).
 - Without the MCP server the skills add little: their workflow steps are calls to the server, and the skill body leaves out specifics such as the list of audio services (#17).
 
 **Onboarding.** One command, plus a hand edit of `~/.claude.json` to pin Node 24.
@@ -89,7 +90,7 @@ Setup: MacBook (Apple silicon, 16 GB), macOS 27.0.1, Node 26.12, Bun 1.4.3, Vega
 **What worked well.**
 - D-pad focus needed only the stock pieces (`TVFocusGuideView`, `hasTVPreferredFocus`). Our own focus code is just the look (scale, glow and wobble) and a Hall of Fame list that scrolls to follow focus.
 - Declaring Alexa voice targets takes one `aria-label` per button plus the `kva` category. Voice selection can't be tested on the VVD, so we haven't seen it work.
-- Native-driver `Animated` values created with `useNativeDriver: true` from the start make a race with no React render per frame straightforward. The race ran at 57 to 65 loops a second with 0.1 to 1.2 ms of JS per frame for 4 to 6 lanes on the VVD (in-app overlay).
+- Native-driver `Animated` values created with `useNativeDriver: true` from the start make a race with no React render per frame straightforward. The race ran at 55 to 62 loops a second with 0.3 to 0.5 ms of JS per frame with 6 lanes on the VVD (in-app overlay, 21 Oct).
 - Bundled OFL fonts work without `expo-font`. On Vega the `fontFamily` is the font file name (for example `Baloo2-ExtraBold`).
 
 **What needs work.**
@@ -107,7 +108,7 @@ Setup: MacBook (Apple silicon, 16 GB), macOS 27.0.1, Node 26.12, Bun 1.4.3, Vega
 
 **What needs work.**
 - Even a 2-second clip needs eight `[wants]` services in `manifest.toml`. Without `com.amazon.audio.system` the log shows "Unable connect to 'com.amazon.audio.system'. Missing the permissions", and the media docs say missing services fail silently (#9).
-- Replacing a playing clip slowed the game to 0 to 15 frames a second on the VVD, `ended` never fired for the replaced clip, one crash report shows the JS thread blocked on a mutex inside `libW3CMedia.so`, and another a SIGSEGV in `libkepler_media_player.so` (#5). Since then the race plays no audio at all.
+- Replacing a playing clip slowed the game to 0 to 15 frames a second on the VVD, `ended` never fired for the replaced clip, one crash report shows the JS thread blocked on a mutex inside `libW3CMedia.so`, and another a SIGSEGV in `libkepler_media_player.so` (#5). Since then the race plays no audio at all. On 21 Oct, with sound on, three more ACRs show a SIGSEGV in `libW3CMedia.so` at Reveal and Results; that crash is under investigation (#5).
 - A short sound-effect API, or a documented recipe for short clips, would help games.
 
 ### 4c. `@amazon-devices/react-native-qrcode-svg` 3.0.0 with `@amazon-devices/react-native-svg`
@@ -134,7 +135,7 @@ Setup: MacBook (Apple silicon, 16 GB), macOS 27.0.1, Node 26.12, Bun 1.4.3, Vega
 
 ## 5. Vega performance tools (Perf CLI 0.24.0)
 
-**What I used it for.** Cool-start latency with the KPI Visualizer (`vega exec perf kpi-visualizer --app-name com.starfungames.sketchlings.main --kpi cool-start-latency --iterations 3`), with `useReportFullyDrawn` (above) marking fully drawn. A performance overlay of my own in the race (Menu key: loop rate, JS time per frame, input latency, audio state). On 21 Oct, measured on the Vega Virtual Device, headless, Apple-silicon host: cool start again with 10 runs (time to first frame 665 ms mean, min 631, max 719, on a loaded host), and attempts at warm start, memory, foreground memory and UI fluidity. Only cool start produced numbers; app memory came from `vega exec perf activity-monitor` instead (124 MiB on Home, 233 MiB at most after three races).
+**What I used it for.** Cool-start latency with the KPI Visualizer (`vega exec perf kpi-visualizer --app-name com.starfungames.sketchlings.main --kpi cool-start-latency --iterations 3`), with `useReportFullyDrawn` (above) marking fully drawn. A performance overlay of my own in the race (Menu key: loop rate, JS time per frame, input latency, audio state). On 21 Oct, measured on the Vega Virtual Device, headless, Apple-silicon host: cool start again with 10 runs (time to first frame 665 ms mean, min 631, max 719, on a loaded host), and attempts at warm start, memory, foreground memory and UI fluidity. Only cool start produced numbers. Also measured on the VVD: app memory with `vega exec perf activity-monitor` instead (124-284 MiB: 124 on Home, 233 at most after three races, 284 after the Hall of Fame and six 6-lane races), and from my overlay the race loop (55-62 Hz with 6 lanes) and phone input applied in 6-9 ms. Not measurable on the VVD: warm start, the KPI Visualizer's memory and foreground-memory KPIs, UI fluidity and focus response (#24, below).
 
 **What worked well.**
 - One command gave a report with n, min, mean, max, standard deviation and confidence interval per KPI: on 20 Oct (3 runs) time to first frame 408 ms mean (min 192, max 553), time to fully drawn 409 ms mean, JS bundle load 17.6 ms; on 21 Oct (10 runs, loaded host) 665 ms, 665 ms and 8.5 ms. The targets are under 1.5 s and under 8 s.
@@ -143,9 +144,9 @@ Setup: MacBook (Apple silicon, 16 GB), macOS 27.0.1, Node 26.12, Bun 1.4.3, Vega
 **What needs work.**
 - An app that makes no network calls at launch fails validation with "[-1 != -1]" and "VALUE VALIDATION FAILED", even though the latency numbers are fine (#16).
 - UI fluidity needs a `--test-scenario` script; a ready-made "D-pad through every focusable item" scenario would help.
-- `--kpi memory`, `--kpi foreground-memory` and `--kpi ui-fluidity` all stop with "Appium server is not found in the platform", even with no `--test-scenario`. Memory doesn't need UI automation, and `activity-monitor` reads it without Appium, so the KPI could too.
-- `--kpi warm-start-latency` can't run on the Vega Virtual Device: its prep step sends the app to the background with `vmsgr send pkg://com.amazon.smplighthouse.launcher.main`, the Fire TV launcher. The VVD's launcher is `com.amazon.keplerlauncherapp.main`, so every prep fails ("Failed to send message, remote error"), each iteration retries 5 times and the report ends with "iterations completed: 0" and doesn't say why. Pick the launcher from the device, or say why the prep failed.
-- ADBT `analyze_perfetto_traces` couldn't read the cool-start traces: "Unable to locate trace processor binary ... Vega Performance CLI path is not available", while `vega exec perf` worked in the same shell.
+- `--kpi memory`, `--kpi foreground-memory` and `--kpi ui-fluidity` all stop with "Appium server is not found in the platform", even with no `--test-scenario`. Memory doesn't need UI automation, and `activity-monitor` reads it without Appium, so the KPI could too. Appium isn't in the SDK install, and `kpi-visualizer --help` doesn't mention it (#24).
+- `--kpi warm-start-latency` can't run on the Vega Virtual Device: its prep step sends the app to the background with `vmsgr send pkg://com.amazon.smplighthouse.launcher.main`, the Fire TV launcher. The VVD's launcher is `com.amazon.keplerlauncherapp.main`, so every prep fails ("Failed to send message, remote error"), each iteration retries 5 times and the report ends with "iterations completed: 0" and doesn't say why. Pick the launcher from the device, or say why the prep failed (#24).
+- ADBT `analyze_perfetto_traces` couldn't read the cool-start traces: "Unable to locate trace processor binary ... Vega Performance CLI path is not available", while `vega exec perf` worked in the same shell (#24).
 
 **Onboarding.** Add one hook, run one command. The performance skill (section 3) pointed to it.
 

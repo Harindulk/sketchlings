@@ -7,7 +7,7 @@ A native Fire TV app built with **React Native for Vega** on the **Vega SDK 0.24
 Fire TV track, Amazon "Build, Ship, Shape" hackathon 2026. Built and tested on the **Vega Virtual Device only**: not yet run on Fire TV hardware, not on the Appstore. MIT licence. Made by Harindu, StarFun Games, Sri Lanka.
 
 - Video (under 3 minutes): TBD
-- Open-source library from this project: **doodle-cutout**, [github.com/Harindulk/doodle-cutout](https://github.com/Harindulk/doodle-cutout) (MIT, 25 tests; also in [`packages/doodle-cutout`](packages/doodle-cutout))
+- Open-source library from this project: **doodle-cutout**, [github.com/Harindulk/doodle-cutout](https://github.com/Harindulk/doodle-cutout) (MIT, 39 tests; also in [`packages/doodle-cutout`](packages/doodle-cutout))
 - [Friction log](FRICTION_LOG.md) · [Product feedback](docs/PRODUCT_FEEDBACK.md) · [Impact and launch memo](docs/IMPACT.md) · [How it came to be](docs/journey/)
 
 ![The TV app on the Vega Virtual Device: Home, Lobby with the join QR code, the Reveal with its ability sticker, the Doodle Dash race with age boosts and ROAR, Doodle Boost and ability callouts, the finish, and the Results podium](docs/preview/tv-overview.png)
@@ -48,7 +48,7 @@ Demo party tries the relay's Hall of Fame for 3 seconds, then uses the bundled s
 
 ## Tech Implementation
 
-**We root-caused a deadlock inside Vega's own JS-thread watchdog.** About 1 race start in 4 froze on "3" and the app was later killed as AppNotResponding, with "No JavaScript code is currently being executed". The crash report only unwinds the main thread, but it also embeds a full core dump, so we read the core dump's thread stacks with symbol names from the device libraries ([`tv/scripts/acr-stacks.py`](tv/scripts/acr-stacks.py), reusable on any Vega ACR). Five reports show the same picture: the JS thread blocked in a `send()` to the watchdog's wake-up socket while holding the watchdog loop's mutex, and the loop thread, the only reader of that socket, waiting for the same mutex. A classic ABBA deadlock that the watchdog can't report, because it is one of the stuck threads. The app now starves it of wake-ups: one JS task per frame, animated values native from birth, a silent race, and ink blots that mount one lane at a time during the countdown. **52 race starts on the fixed builds (42 at 4 lanes, plus 10 at 6 lanes after the blot fix), 0 freezes** (`tv/scripts/soak.mjs`). Full write-up and platform suggestions: [FRICTION_LOG #1](FRICTION_LOG.md#1-race-start-freeze-an-abba-deadlock-inside-vegas-js-thread-watchdog).
+**We root-caused a deadlock inside Vega's own JS-thread watchdog.** About 1 race start in 4 froze on "3" and the app was later killed as AppNotResponding, with "No JavaScript code is currently being executed". The crash report only unwinds the main thread, but it also embeds a full core dump, so we read the core dump's thread stacks with symbol names from the device libraries ([`tv/scripts/acr-stacks.py`](tv/scripts/acr-stacks.py), reusable on any Vega ACR). Five reports show the same picture: the JS thread blocked in a `send()` to the watchdog's wake-up socket while holding the watchdog loop's mutex, and the loop thread, the only reader of that socket, waiting for the same mutex. A classic ABBA deadlock that the watchdog can't report, because it is one of the stuck threads. The app now starves it of wake-ups: one JS task per frame, animated values native from birth and a silent race. At 6 lanes the trigger was an image-mount burst (about 66 ink-blot images mounting in the same instant as the race; 3 of 7 starts froze), so the blots now mount one lane at a time during the countdown. **52 race starts on the fixed builds (42 at 4 lanes + 10 at 6 lanes), 0 freezes** (`tv/scripts/soak.mjs`). Full write-up and platform suggestions: [FRICTION_LOG #1](FRICTION_LOG.md#1-race-start-freeze-an-abba-deadlock-inside-vegas-js-thread-watchdog).
 
 **A native Vega app built for the remote.** React Native for Vega (RN 0.83, `@amazon-devices/react-native-kepler` 4.0.1), built with `react-native build-vega`, installed with `vega run-app`.
 
@@ -74,20 +74,21 @@ Demo party tries the relay's Hall of Fame for 3 seconds, then uses the bundled s
 
 | KPI | Vega target | Sketchlings | How, when |
 |---|---|---|---|
-| Time to First Frame, cool start | < 1.5 s | **665 ms** mean (min 631, max 719) | KPI Visualizer, 10 runs, 21 Oct, host under load (408 ms over 3 runs on 20 Oct) |
-| Time to Fully Drawn, cool start | < 8 s | **665 ms** mean | same run (`useReportFullyDrawn`) |
-| Time to First Frame, warm start | < 0.5 s | not measurable on the VVD | the KPI Visualizer backgrounds the app by opening the Fire TV launcher (`com.amazon.smplighthouse.launcher.main`), which the VVD doesn't have: 0 of 5 runs completed |
-| UI fluidity | > 99% | not measured | the KPI Visualizer needs an Appium server for it (not installed) |
-| Focus response | < 200 ms | not measured | needs an Appium scenario too |
-| Foreground memory | < 400 MiB | **124 MiB** on Home, **233 MiB** peak after three races; 284 MiB after the Hall of Fame and six 6-lane races | `vega exec perf activity-monitor`, 21 Oct (the KPI Visualizer's memory KPI needs Appium) |
-| Race loop rate and JS time per frame | 60 Hz | 55-62 Hz, 0.3-0.5 ms of JS per frame (6 lanes) | in-app overlay, 21 Oct |
-| Phone input applied in the race | none set | 7 ms median receive-to-applied; +1 ms median delivery jitter | simulated phones on the same Mac, 20 Oct |
-| Race-start freezes | 0 | 0 in 52 race starts on the fixed builds (42 at 4 lanes, 10 at 6 lanes after the blot fix) | `soak.mjs`, 21 Oct |
+| Time to First Frame, cool start | < 1.5 s | **665 ms** mean (min 631, max 719) | KPI Visualizer `--kpi cool-start-latency`, 10 of 10 runs, 21 Oct, host under load |
+| Time to Fully Drawn, cool start | < 8 s | **665 ms** mean | same run (`useReportFullyDrawn` on Home's first frame) |
+| App memory | < 400 MiB (foreground) | **124-284 MiB**: 124 on Home, 233 peak after three races, 284 after the Hall of Fame and six 6-lane races | `vega exec perf activity-monitor`, 21 Oct |
+| Race loop rate and JS time per frame | 60 Hz | **55-62 Hz**, 0.3-0.5 ms of JS per frame (6 lanes) | in-app overlay, 21 Oct |
+| Phone input, received to applied in the race | none set | **6-9 ms** (n = 300, 6 lanes) | simulated phones on the same Mac, in-app timing, 21 Oct |
+| Race-start freezes | 0 | 0 in 52 race starts on the fixed builds (42 at 4 lanes + 10 at 6 lanes) | `soak.mjs`, 21 Oct |
+| Time to First Frame, warm start | < 0.5 s | not measurable on the VVD | the KPI Visualizer's prep step opens the Fire TV launcher (`com.amazon.smplighthouse.launcher.main`), but the VVD's launcher is `com.amazon.keplerlauncherapp.main`: 0 of 5 runs completed (FRICTION_LOG #24) |
+| Foreground memory (KPI Visualizer) | < 400 MiB | not measured | `--kpi memory` and `--kpi foreground-memory` stop with "Appium server is not found" (#24); app memory above is from `activity-monitor` instead |
+| UI fluidity | > 99% | not measured | `--kpi ui-fluidity` stops with the same Appium error (#24) |
+| Focus response | < 200 ms | not measured | needs an Appium-driven scenario (#24) |
 
 The absolute phone-to-TV time can't be measured from the VVD, whose clock ran 2 h 11 min behind the Mac (FRICTION_LOG #18).
 
 **Computer vision and AI that do real work.**
-- [`doodle-cutout`](packages/doodle-cutout) is ours: open source, zero dependencies, 25 tests. It flattens lamp light and phone shadows, finds the ink, closes small gaps, fills outlines into solid stickers, and drops table edges and crumbs. It runs on the phone in a Web Worker, so only the cut-out drawing is uploaded.
+- [`doodle-cutout`](packages/doodle-cutout) is ours: open source, zero dependencies, 39 tests. It flattens lamp light and phone shadows, finds the ink, closes small gaps, fills outlines into solid stickers, and drops table edges and crumbs. It runs on the phone in a Web Worker, so only the cut-out drawing is uploaded.
 - Claude vision (`claude-opus-5-5`, effort low, structured JSON output) reads the drawing and returns a name, title, personality, three lines, stats that match the body, a move style, the drawn feature behind its ability ("big wings" means it flies over ink blots), and where the child drew the eyes. Every field is validated and clamped; a 12 s timeout or any problem falls back to the offline generator.
 - The offline generator is a real fallback: stats from ink coverage and shape, the ability from the silhouette, colours from the drawing, and an eye finder that reports only a convincing pair of dark dots.
 - Googly eyes with spring physics land on the drawn eyes. When the child drew eyes that can't be placed, the TV adds none, so no creature gets four eyes.
@@ -103,9 +104,9 @@ The absolute phone-to-TV time can't be measured from the VVD, whose clock ran 2 
 
 **Robust in a living room.** Phones reconnect with backoff and rejoin as the same player after a reload. If the relay restarts, the TV recreates its room under the same code, so the QR code on screen stays valid. Every WebSocket frame is validated (64 KB cap), uploads are checked for type and size, and the Hall of Fame file is written atomically.
 
-**Built with Amazon Devices Builder Tools.** The ADBT steering doc ([`CLAUDE.md`](CLAUDE.md)) and Vega skills ran inside Claude Code. The media-player skill pointed at missing `[wants]` services as the cause of silent playback, which is where audio setup went wrong; the performance skill led to the KPI Visualizer numbers above. ADBT's `symbolicate_acr` failed on the VVD (FRICTION_LOG #11), which is why we wrote `acr-stacks.py`.
+**Built with Amazon Devices Builder Tools.** The ADBT steering doc ([`CLAUDE.md`](CLAUDE.md)) and Vega skills ran inside Claude Code. The media-player skill pointed at missing `[wants]` services as the cause of silent playback, which is where audio setup went wrong; the performance skill led to the KPI Visualizer numbers above. ADBT's `symbolicate_acr` failed on the VVD (FRICTION_LOG #11), which is why we wrote `acr-stacks.py`, and its `analyze_perfetto_traces` couldn't find the Vega Perf CLI, so the cool-start traces were not analysed (#24).
 
-**Tests** (run on 21 Oct): **96 automated tests**. 57 for the relay over real HTTP and WebSocket (`cd server && bun test`; 3 skip without ffmpeg or the voice model), 25 for doodle-cutout (`cd packages/doodle-cutout && bun test`), 14 Jest tests for the race simulation, ability balance and Demo party (`cd tv && npx jest`). The phone app is typechecked (`cd phone && npm run typecheck`).
+**Tests** (run on 21 Oct): **113 automated tests**. 60 for the relay over real HTTP and WebSocket (`cd server && bun test`; 3 skip without ffmpeg or the voice model), 39 for doodle-cutout (`cd packages/doodle-cutout && bun test`), 14 Jest tests for the race simulation, ability balance and Demo party (`cd tv && npx jest`). The phone app is typechecked (`cd phone && npm run typecheck`).
 
 ## Design
 
@@ -138,7 +139,7 @@ The absolute phone-to-TV time can't be measured from the VVD, whose clock ran 2 
 - **Vega Virtual Device only.** Never run on Fire TV hardware. All KPIs are VVD numbers.
 - **The race loop is paced with `setTimeout`, not vsync.** On the headless VVD `requestAnimationFrame` free-runs at about 7,600 a second (FRICTION_LOG #4), and fewer JS tasks keep the watchdog deadlock away (#1). We'll move to `requestAnimationFrame` once it is tested on hardware.
 - **The deadlock is less likely, not ruled out.** It is a platform bug; the app only avoids feeding it.
-- **The race is silent.** Audio work can stall or hang the JS thread on the VVD (#5), so voices play only on Reveal and Results, and captions carry every line. The VVD's audio reaches the Mac's speakers, but we couldn't record it.
+- **The race is silent.** Audio work can stall or hang the JS thread on the VVD (#5), so voices play only on Reveal and Results, and captions carry every line. Voices play through the Vega W3C media player; see [FRICTION_LOG #5](FRICTION_LOG.md#5-audio-work-stalls-or-hangs-the-js-thread-on-the-vvd) for a media-player crash under investigation. The VVD's audio reaches the Mac's speakers, but we couldn't record it.
 - **It needs a relay on the home network today:** a Mac running Bun, Kokoro and ffmpeg, with `HOST = '10.0.2.2:8787'` in `tv/src/config.ts` (the VVD's address for its host). The plan to remove it is in [docs/IMPACT.md](docs/IMPACT.md).
 - **Alexa voice selection is declared, not shown.** Every button has an `aria-label` and the manifest has the `kva` category, per the Vega docs, but voice can't be tested on the VVD.
 - **Mic shouting works only over HTTPS** (browsers allow the microphone only on secure pages): run `scripts/tunnel.sh` for a temporary HTTPS link. On the plain-HTTP LAN page the ROAR button, which always works, is the way to ROAR.

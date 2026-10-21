@@ -31,6 +31,7 @@ Real problems hit while building a React Native for Vega app, worst first. Every
 | 21 | Custom fonts on RN 0.83: `expo-font` lists only RN 0.72, and `fontFamily` must be the file name | `@amazon-devices/expo-font` docs, React Native for Vega | Low |
 | 22 | Installer: no telemetry opt-out at install, scripted mode undocumented | Vega SDK installer | Low |
 | 23 | The headless VVD renders in software and keeps ~7 host cores busy while an app animates | Vega Virtual Device 0.24 | Medium-high |
+| 24 | KPI Visualizer can't measure warm start (Fire TV launcher hard-coded) or memory and UI fluidity (Appium required) on the VVD; ADBT `analyze_perfetto_traces` can't find the Perf CLI | Vega Perf CLI (`kpi-visualizer`), Amazon Devices Builder Tools MCP | Medium |
 
 ---
 
@@ -130,6 +131,7 @@ Real problems hit while building a React Native for Vega app, worst first. Every
   - An ACR from 20 Oct (13:22, `LCM_ANR_REASON: Thread Monitor`) shows the JS thread blocked on a mutex inside `libW3CMedia.so`, with a JS frame in the w3cmedia bundle: audio can hang the JS thread by itself.
   - An ACR from a soak on 21 Oct (18:55 UTC) is a SIGSEGV inside `libkepler_media_player.so` on the media thread. During another hang (#6), w3cmedia kept logging "No Time update even in Playing state: 0.951" every 250 ms: a player stuck mid-clip.
   - Race starts with narration playing froze more often in #1.
+  - On 21 Oct, with sound on (build `4c25958`), three ACRs are a SIGSEGV at `libW3CMedia.so + 0x63e844` on thread 0: one while pressing Next through the Reveal cards every 1.4 s, two as Results opened (the narrator's "winner is", then the creature's win line). The app drops to the launcher. None with `MUTE=1`. Under investigation.
 - **Severity:** High. It can hang or crash the app, and the cause isn't obvious.
 - **Workaround:**
   - Never interrupt a playing clip: lines are queued, and a narrator line is dropped while a creature voice plays. A safety cap clears the "busy" state if `ended` never arrives (`tv/src/audio.ts`).
@@ -340,6 +342,21 @@ Real problems hit while building a React Native for Vega app, worst first. Every
 - **Severity:** Medium-high.
 - **Workaround:** quit other apps before soaks and filming; keep heavy animation off screens that sit idle.
 - **Suggestion:** document the VVD's GPU mode and its CPU cost, and offer a working host-GPU (Metal) mode for the headless VVD on Apple silicon, or a frame-rate cap for the headless renderer.
+
+## 24. KPI Visualizer can't measure warm start, memory or UI fluidity on the VVD; ADBT can't find the Perf CLI
+
+- **Tool / version:** `vega exec perf kpi-visualizer` (Perf CLI 0.24.0), Vega SDK 0.24.12112, Vega Virtual Device (headless); Amazon Devices Builder Tools MCP (`@amazon-devices/amazon-devices-buildertools-mcp@latest` through `npx`, 21 Oct), `analyze_perfetto_traces` tool, Claude Code CLI.
+- **Task attempted:** measure every Vega KPI with a target (cool and warm start, foreground memory, UI fluidity, focus response) on the only device we had, and analyse the cool-start traces.
+- **Steps taken:** on 21 Oct ran `vega exec perf kpi-visualizer --app-name com.starfungames.sketchlings.main` with `--kpi cool-start-latency --iterations 10`, then `--kpi warm-start-latency`, `--kpi memory`, `--kpi foreground-memory` and `--kpi ui-fluidity`, with no `--test-scenario`. Called ADBT `analyze_perfetto_traces` on the cool-start traces (`iter_*_vs_trace`).
+- **Expected:** each KPI runs on the VVD, or the tool says up front which KPIs need hardware or extra software and how to get it.
+- **Actual:**
+  - Cool start worked: 10 of 10 runs, 665 ms to first frame and to fully drawn.
+  - Warm start: 0 of 5 iterations. Its prep step backgrounds the app with `vmsgr send pkg://com.amazon.smplighthouse.launcher.main`, the Fire TV launcher. The VVD's launcher is `com.amazon.keplerlauncherapp.main`, so every prep fails ("CLI Send Error ... Failed to send message, remote error", 5 retries per iteration).
+  - `--kpi memory`, `--kpi foreground-memory` and `--kpi ui-fluidity` stop with "Appium server is not found in the platform", even with no custom scenario. The SDK install has no Appium, and `kpi-visualizer --help` doesn't mention it. Focus response needs an Appium-driven scenario too.
+  - `analyze_perfetto_traces` failed: "Unable to locate trace processor binary ... Vega Performance CLI path is not available", although `vega exec perf` worked in the same shell. The MCP server doesn't see the SDK.
+- **Severity:** Medium. Four of the six KPIs with a Vega target could not run in the KPI Visualizer on the VVD, and nothing says why before the run.
+- **Workaround:** app memory from `vega exec perf activity-monitor` (its "Memory Application" column, about 2 samples a second, no Appium): 124-284 MiB. Race loop rate and input latency from the app's own overlay. Warm start, UI fluidity and focus response stay unmeasured until Fire TV hardware or an Appium setup; the traces were not analysed.
+- **Suggestion:** read the launcher from the device (or take a `--launcher` flag), and fail at once with a clear message instead of retrying. Measure memory without Appium, as `activity-monitor` already does. If Appium is required, bundle it or list it as a prerequisite with an install step. Have `analyze_perfetto_traces` find the Perf CLI from the Vega SDK install (or accept its path).
 
 ## What worked well
 
