@@ -183,7 +183,7 @@ All sizes are in working-image pixels (after the downscale to `maxSize`).
 ## Development
 
 ```sh
-bun test             # 37 tests on synthetic photos (shadows, noise, tables, gaps, specks, ruled paper...)
+bun test             # 39 tests on synthetic photos (shadows, noise, tables, gaps, specks, ruled paper...)
 bun scripts/demo.ts  # regenerates the images in examples/
 npm run build        # dist/ (ESM + .d.ts)
 ```

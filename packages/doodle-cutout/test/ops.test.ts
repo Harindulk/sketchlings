@@ -1,5 +1,5 @@
 import {describe, expect, test} from 'bun:test';
-import {closeMask, edt, fillHoles, grayClose, hysteresis, label, otsu} from '../src/ops';
+import {closeMask, edt, enlarge, fillHoles, grayClose, grayOpen, hysteresis, label, otsu, shrink} from '../src/ops';
 import {decodePNG, encodePNG} from './helpers/png';
 
 const mask = (rows: string[]) => Uint8Array.from(rows.join(''), (c) => (c === '#' ? 1 : 0));
@@ -47,6 +47,28 @@ describe('ops', () => {
     expect(out[10]).toBe(1);
     expect(out[35]).toBeCloseTo(0.3);
     expect(out[24]).toBe(1);
+  });
+
+  test('grayOpen removes thin bright lines but keeps wide plateaus', () => {
+    const w = 40;
+    const src = new Float32Array(w);
+    src[10] = 0.8; // thin line
+    for (let i = 25; i < w; i++) src[i] = 0.6; // wide area
+    const out = grayOpen(src, w, 1, 2);
+    expect(out[10]).toBe(0);
+    expect(out[30]).toBeCloseTo(0.6);
+  });
+
+  test('shrink area-averages and enlarge interpolates back', () => {
+    const w = 9;
+    const h = 5;
+    const ramp = Float32Array.from({length: w * h}, (_, i) => (i % w) / 10);
+    const s = shrink(ramp, w, h, 2);
+    expect([s.w, s.h]).toEqual([5, 3]);
+    expect(s.data[0]).toBeCloseTo(0.05); // mean of 0 and 0.1
+    expect(s.data[4]).toBeCloseTo(0.8); // edge block averages the pixels it has
+    const back = enlarge(s.data, s.w, s.h, 2, w, h);
+    for (let x = 1; x < 7; x++) expect(back[2 * w + x]).toBeCloseTo(x / 10); // linear ramp survives inside
   });
 
   test('otsu splits a bimodal distribution', () => {
