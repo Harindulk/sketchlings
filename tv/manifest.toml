@@ -4,6 +4,7 @@ schema-version = 1
 title = "Sketchlings"
 version = "0.1.0"
 id = "com.starfungames.sketchlings"
+icon = "@image/app_icon.png" # 512x512 PNG (Settings > Applications); made by art-src/make-art.mjs
 
 [os.version]
 min = "1.2"

@@ -334,6 +334,29 @@ seed = 3;
     ${line('M52 84 L52 6', 8)}${shape('M54 8 L100 26 L54 46 Z', '#FF5A5F', {sw: 6, dx: 2, dy: 2})}</g></svg>`;
 }
 
+// App icon (manifest [package] icon: 512x512 PNG in assets/image): a googly-eyed doodle racing across notebook paper.
+// Light background, as the Vega docs recommend for the Settings > Applications list. Rendered to tv/assets/image/.
+{
+  const ruled = [];
+  for (let y = 96; y < 512; y += 52) ruled.push(`<line x1="0" y1="${y}" x2="512" y2="${y}" stroke="#CFE3F5" stroke-width="5"/>`);
+  const trail = ['#FF5A5F', '#FFC531', '#3DDC84', '#2BB3FF']
+    .map((c, i) => line(`M${44 + i * 10} ${236 + i * 40} Q${92 + i * 6} ${226 + i * 40} ${150} ${240 + i * 40}`, 22, c))
+    .join('');
+  art.app_icon = `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">${DEFS(6)}
+  <rect width="512" height="512" fill="#FBF7EE"/>${ruled.join('')}
+  <line x1="78" y1="0" x2="78" y2="512" stroke="#F2A7A7" stroke-width="5"/>
+  <g filter="url(#hand)">${trail}</g>
+  <g filter="url(#sticker)"><g filter="url(#hand)">
+    ${line('M246 400 L232 452') + line('M332 400 L346 452')}
+    ${blob(222, 458, 34, 15, '#1F2A44') + blob(356, 458, 34, 15, '#1F2A44')}
+    ${shape(blobPath(290, 286, 148, 14, 0.18), '#B06CFF', {dx: 7, dy: 6, sw: 12})}
+    ${line('M146 300 L104 270', 12) + line('M432 284 L470 246', 12)}
+    ${eye(236, 236, 56, 0.42, 0.08) + eye(352, 228, 62, 0.4, 0.06)}
+    ${line('M226 318 Q292 372 362 312', 12)}
+    ${cheek(196, 314, 24) + cheek(394, 306, 24)}
+  </g></g></svg>`;
+}
+
 for (const [name, svg] of Object.entries(art)) {
   writeFileSync(join(SVG_DIR, `${name}.svg`), svg);
 }
@@ -342,7 +365,8 @@ for (const name of Object.keys(art)) {
   if (only.length && !only.includes(name)) continue;
   const svg = art[name];
   const [, w, h] = svg.match(/width="(\d+)" height="(\d+)"/);
-  const out = join(OUT_DIR, `${name}.png`);
+  const out = name === 'app_icon' ? join(HERE, '..', 'assets', 'image', 'app_icon.png') : join(OUT_DIR, `${name}.png`);
+  mkdirSync(dirname(out), {recursive: true});
   execFileSync(CHROME, ['--headless=new', '--disable-gpu', '--hide-scrollbars', `--window-size=${w},${h}`, '--default-background-color=00000000', `--screenshot=${out}`, `file://${join(SVG_DIR, name + '.svg')}`], {stdio: 'ignore'});
   console.log(existsSync(out) ? `ok ${name}.png ${w}x${h}` : `FAILED ${name}`);
 }
