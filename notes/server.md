@@ -90,3 +90,9 @@ The first request after a schema change pays a one-time schema compile (cached 2
 - 2026-10-20: port 8787 was held by an earlier network-probe echo server (`bun server.ts` in a temp folder
   `nettest/` folder, an echo server). The Sketchlings server fails loudly with EADDRINUSE in that case; stop the probe
   first. `PORT=8788 bun run start` was used for the smoke test (health, placeholder page, TV hello, ping, bad frame: all OK).
+
+## Measured with the real Claude API (21 Oct 2026, claude-opus-5-5, effort low)
+- Persona latency over 11 real scans: cold first call 7.2 s, then 3.7-5.3 s (median about 4.3 s). Voice clips ready 7-13 s after upload.
+- Tokens per scan: 2.4-2.7k in, 210-255 out, about $0.014-0.016 per creature at list price ($4/$20 per MTok).
+- Names were repetitive ("Bobble ..." x5) until the request listed names already taken in the room and recent hall of fame; after that: Zippy Sprinkle, Sunny Jellybean, Captain Bleep, Mister Fizzwhistle, Wiggle Muffin, Peachy Plum.
+- Keys not scoped to a workspace need `ANTHROPIC_WORKSPACE_ID` in server/.env (400 "must include the anthropic-workspace-id header").
