@@ -10,7 +10,7 @@ Fire TV track, Amazon "Build, Ship, Shape" hackathon 2026. Built and tested on t
 - Open-source library from this project: **doodle-cutout**, [github.com/Harindulk/doodle-cutout](https://github.com/Harindulk/doodle-cutout) (MIT, 25 tests; also in [`packages/doodle-cutout`](packages/doodle-cutout))
 - [Friction log](FRICTION_LOG.md) · [Product feedback](docs/PRODUCT_FEEDBACK.md) · [Impact and launch memo](docs/IMPACT.md) · [How it came to be](docs/journey/)
 
-![The TV app on the Vega Virtual Device: Home, Lobby with the join QR code, the Reveal, the Doodle Dash race with age boosts, the finish, and the Results podium](docs/preview/tv-overview.png)
+![The TV app on the Vega Virtual Device: Home, Lobby with the join QR code, the Reveal with its ability sticker, the Doodle Dash race with age boosts and ROAR, Doodle Boost and ability callouts, the finish, and the Results podium](docs/preview/tv-overview.png)
 
 <p align="center">
   <img src="phone/docs/screens/02-draw.jpg" width="200" alt="Phone: draw a creature, then snap it">
