@@ -375,6 +375,8 @@ function scanIntroView(): View {
       title('Draw your champion!'),
       h('div', {class: 'card no-tape', style: '--r:1deg;padding:10px'}, svg(drawIllo, 'illo')),
       h('p', {class: 'big-text'}, 'Draw your champion on paper with a ', h('strong', null, 'thick marker'), '. Make it ', h('strong', {class: 'marker'}, 'BIG!')),
+      // What you draw changes how you play: tell them before they draw (matches the persona prompt).
+      h('p', {class: 'big-text'}, 'Draw ', h('strong', null, 'wings'), ' to fly over ink, ', h('strong', null, 'wheels'), ' to roll, ', h('strong', null, 'long legs'), ' to hop, a ', h('strong', null, 'big body'), ' to ROAR!'),
       h(
         'ul',
         {class: 'tips'},
