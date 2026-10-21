@@ -1,7 +1,8 @@
 // Race-start soak test on the headless Vega Virtual Device: drives the remote, reads the screen, flags freezes.
-//   node tv/scripts/soak.mjs [races=20] [--live 3] [--rounds 4] [--out dir]
+//   node tv/scripts/soak.mjs [races=20] [--live 3] [--rounds 4] [--guests 2] [--out dir]
 // Demo party by default; --live N runs a real party against the server with N fake phones (scripts/fake-phones.mjs);
 // the room code is read off the screen, or given with --room CODE (Vision can't read the tilted code tiles reliably).
+// --guests N first picks N Hall of Fame cards (second row) for "Race again", so a demo party races up to 4 + N lanes.
 // Each session launches the app, goes Home -> lobby -> reveal -> race, then "Play again" for --rounds races.
 // A race counts as frozen when, 6 s after it mounted, the countdown title is still up or the screen stopped moving.
 // On a freeze it presses Back (the system then kills the hung app and writes an ACR) and copies the ACRs to --out.
@@ -25,6 +26,7 @@ const races = Number(args.find((a) => /^\d+$/.test(a)) ?? 20);
 const live = Number(opt('--live', 0));
 const rounds = Number(opt('--rounds', 4));
 const room = opt('--room', '');
+const guests = Number(opt('--guests', 0));
 const out = opt('--out', join(process.env.TMPDIR || '/tmp', `sketchlings-soak-${Date.now()}`));
 mkdirSync(out, {recursive: true});
 
@@ -129,10 +131,24 @@ async function session(s) {
     if (!(await waitFor(new RegExp(`Start the show! \\(${live}\\)`, 'i'), 90, `s${s}-joining`))) throw new Error('phones never got ready');
     await sleep(2);
   } else {
-    key('right');
+    if (guests) {
+      for (const k of ['right', 'right', 'ok']) { key(k); await sleep(0.8); } // Hall of Fame
+      await sleep(2.5);
+      key('down'); // second row: older creatures than the demo's four newest
+      for (let g = 0; g < guests; g++) { await sleep(0.8); if (g) key('right'); await sleep(0.8); key('ok'); }
+      await sleep(1);
+      key('back');
+      await sleep(1.5);
+    }
+    key(guests ? 'left' : 'right'); // Home focuses the tile you came from: Hall of Fame, or Start party at launch
     await sleep(0.8);
     key('ok'); // Demo party
-    if (!(await waitFor(/Start the show! \(4\)/i, 25, `s${s}-lobby`))) throw new Error('demo lobby never got ready');
+    // guests already in the demo's four are not added twice, and a party stops at 6, so read the count
+    const f = await waitFor(new RegExp(`Start the show! \\(${guests ? '[5-6]' : 4}\\)`, 'i'), 25, `s${s}-lobby`);
+    if (!f) throw new Error('demo lobby never got ready');
+    await sleep(3); // the demo players join one by one; let the last ones in
+    players = Number(ocr(shot(`s${s}-lobby`)).match(/Start the show! \((\d)\)/i)?.[1] ?? 4);
+    log(`demo party with ${players} racers`);
   }
   key('ok'); // Start the show
   await sleep(2.5);
