@@ -1,5 +1,6 @@
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {BackHandler, Dimensions, StyleSheet, View} from 'react-native';
+import {useKeplerAppStateManager} from '@amazon-devices/react-native-kepler';
 import type {Player, ResultsData, Sketchling} from '../../shared/protocol';
 import {hush, prefetch} from './audio';
 import {ScreenIn} from './components/Bits';
@@ -37,6 +38,14 @@ export const App = () => {
   const [guests, setGuests] = useState<Sketchling[]>([]); // Hall of Fame "Race again" picks for the next party
   const [lastTile, setLastTile] = useState<HomeChoice>('start'); // focus returns to it on Home
   const party = useParty(mode);
+  const appState = useKeplerAppStateManager();
+  useEffect(() => {
+    // backgrounded (Home button, another app): drop queued voice lines; the AudioPlayer stays (F7: no deinit)
+    const sub = appState.addAppStateListener('change', (st) => {
+      if (st === 'background') hush();
+    });
+    return () => sub.remove();
+  }, [appState]);
   const {sendPhase} = party;
   const partyState = useMemo(
     () => withGuests(party.state, guests),

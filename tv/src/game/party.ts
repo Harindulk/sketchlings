@@ -2,6 +2,7 @@
 // Lobby state lives in React state (changes a few times a minute); race inputs bypass React entirely
 // and go straight to listeners so taps never trigger re-renders.
 import {useCallback, useEffect, useRef, useState} from 'react';
+import {useKeplerAppStateManager} from '@amazon-devices/react-native-kepler';
 import type {
   InputKind,
   Phase,
@@ -86,6 +87,7 @@ export function useParty(mode: PartyMode | null) {
   const ws = useRef<WebSocket | null>(null);
   const listeners = useRef(new Set<InputListener>());
   const code = useRef<string | undefined>(undefined);
+  const appState = useKeplerAppStateManager(); // memoized per root tag: stable across renders
 
   useEffect(() => {
     setState(EMPTY);
@@ -94,6 +96,7 @@ export function useParty(mode: PartyMode | null) {
     if (mode !== 'live') return;
 
     let closed = false;
+    let away = false; // backgrounded: socket closed on purpose, reopened (same room) when active again
     let retry: ReturnType<typeof setTimeout> | undefined;
     let failures = 0;
     const ping = setInterval(
@@ -132,7 +135,7 @@ export function useParty(mode: PartyMode | null) {
         if (msg.t === 'room') code.current = msg.code;
       };
       sock.onclose = () => {
-        if (closed) return;
+        if (closed || away) return;
         failures++;
         setState((s) => ({
           ...s,
@@ -143,14 +146,25 @@ export function useParty(mode: PartyMode | null) {
       sock.onerror = () => {}; // onclose follows and handles the retry
     };
     connect();
+    const life = appState.addAppStateListener('change', (st) => {
+      if (st === 'background' && !away) {
+        away = true;
+        if (retry) clearTimeout(retry);
+        ws.current?.close();
+      } else if (st === 'active' && away) {
+        away = false;
+        connect(); // hello carries code.current, so the TV rejoins its room and the phones stay in it
+      }
+    });
     return () => {
+      life.remove();
       closed = true;
       if (retry) clearTimeout(retry);
       clearInterval(ping);
       ws.current?.close();
       ws.current = null;
     };
-  }, [mode]);
+  }, [mode, appState]);
 
   const sendPhase = useCallback(
     (phase: Phase, data?: Record<string, unknown>) => {
