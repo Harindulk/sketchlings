@@ -36,17 +36,19 @@ export function Reveal({
       <Title size={30} style={styles.header}>
         Meet the Sketchlings!
       </Title>
-      <View style={styles.dots}>
-        {racers.map((r, k) => (
-          <View
-            key={r.id}
-            style={[
-              styles.dot,
-              {backgroundColor: k <= i ? r.color : 'transparent'},
-            ]}
-          />
-        ))}
-      </View>
+      {racers.length > 1 && (
+        <View style={styles.dots}>
+          {racers.map((r, k) => (
+            <View
+              key={r.id}
+              style={[
+                styles.dot,
+                {backgroundColor: k <= i ? r.color : 'transparent'},
+              ]}
+            />
+          ))}
+        </View>
+      )}
       <RevealCard key={p.id} p={p} />
       <FocusButton
         label={last ? 'Race' : 'Next'}
@@ -251,7 +253,7 @@ function RevealCard({p}: {p: Player}) {
           styles.bubbleWrap,
           {opacity: bubble, transform: [{scale: bubble}]},
         ]}>
-        <Bubble text={s.intro} tail="left" size={21} />
+        <Bubble text={s.intro} tail="none" size={21} />
       </Animated.View>
     </>
   );

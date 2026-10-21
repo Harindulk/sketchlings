@@ -82,7 +82,7 @@ const styles = StyleSheet.create({
   row: {flexDirection: 'row', marginTop: 16},
   card: {
     width: 184,
-    height: 270,
+    height: 256,
     marginHorizontal: 10,
     backgroundColor: C.white,
     borderWidth: 4,
@@ -134,6 +134,6 @@ const styles = StyleSheet.create({
     width: 860,
     textAlign: 'center',
   },
-  btn: {width: 200, height: 62, marginTop: 16},
+  btn: {width: 200, height: 62, marginTop: 30}, // the focus glow reaches ~27 dp above the button
   btnText: {fontFamily: F.bold, fontSize: 28, color: C.ink},
 });

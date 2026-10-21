@@ -108,21 +108,25 @@ export function Lobby({mode, state, onStart, onDemo}: Props) {
               <Text style={styles.btnText}>Demo party</Text>
             </FocusButton>
           )}
-          <FocusButton
-            key={ready ? 'go' : 'wait'} // remount when ready so the preferred focus lands on it
-            label="Start the show"
-            color="#3ddc84"
-            disabled={!ready}
-            preferred={!offline}
-            onPress={() => ready && onStart(racers)}
-            style={styles.startBtn}
-            cardStyle={{backgroundColor: ready ? '#3ddc84' : '#E6E1D6'}}>
-            <Text style={[styles.btnText, !ready && {color: C.inkSoft}]}>
-              {ready
-                ? `Start the show! (${racers.length})`
-                : 'Waiting for a drawing…'}
-            </Text>
-          </FocusButton>
+          {ready ? (
+            // mounts when the first drawing is ready, so the preferred focus lands on it
+            <FocusButton
+              label="Start the show"
+              color="#3ddc84"
+              preferred={!offline}
+              onPress={() => onStart(racers)}
+              style={styles.startBtn}
+              cardStyle={{backgroundColor: '#3ddc84'}}>
+              <Text style={styles.btnText}>
+                Start the show! ({racers.length})
+              </Text>
+            </FocusButton>
+          ) : (
+            // a status, not a button: dashed like the empty player slots
+            <View style={[styles.startBtn, styles.chipEmpty, styles.waitPill]}>
+              <Text style={styles.emptyText}>Waiting for a drawing…</Text>
+            </View>
+          )}
         </View>
       </View>
     </View>
@@ -347,6 +351,7 @@ const styles = StyleSheet.create({
   ability: {position: 'absolute', right: -12, bottom: -10, width: 34, height: 34},
   actions: {position: 'absolute', right: 0, bottom: 4, flexDirection: 'row'},
   startBtn: {width: 300, height: 66},
+  waitPill: {borderWidth: 3, borderRadius: 22, alignItems: 'center'},
   demoBtn: {width: 190, height: 66, marginRight: 24},
   btnText: {fontFamily: F.bold, fontSize: 26, color: C.ink},
 });

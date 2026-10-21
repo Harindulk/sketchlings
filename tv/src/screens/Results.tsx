@@ -4,7 +4,7 @@ import {TVFocusGuideView} from '@amazon-devices/react-native-kepler';
 import type {Player} from '../../../shared/protocol';
 import {Bubble, Confetti, MoveIdle, Title} from '../components/Bits';
 import {FocusButton} from '../components/FocusButton';
-import {Sprite} from '../components/Sprite';
+import {Sprite, spriteBox} from '../components/Sprite';
 import {C, F} from '../theme';
 import {narrator, say} from '../audio';
 
@@ -22,7 +22,6 @@ const PODIUM: [number, number, number, number][] = [
   [3, 590, 80, 110],
 ];
 const BLOCK_W = 160;
-const FLOOR = 520;
 const BLOCK_COLORS = ['', '#ffc531', '#CFE3F5', '#ff8a3d'];
 
 export function Results({racers, order, onAgain, onHome}: Props) {
@@ -67,6 +66,7 @@ export function Results({racers, order, onAgain, onHome}: Props) {
   }, [rises, bubble]);
   if (!winner?.sketchling) return null;
   const rest = ranked.slice(3);
+  const floor = rest.length ? 462 : 520; // places 4-6 get a row under the podium
 
   return (
     <View style={styles.root}>
@@ -93,7 +93,7 @@ export function Results({racers, order, onAgain, onHome}: Props) {
             key={place}
             style={[
               styles.slot,
-              {left: cx - BLOCK_W / 2, top: FLOOR - h - size - 10},
+              {left: cx - BLOCK_W / 2, top: floor - h - size - 10},
               {
                 opacity: v,
                 transform: [
@@ -109,16 +109,23 @@ export function Results({racers, order, onAgain, onHome}: Props) {
                 alignItems: 'center',
                 justifyContent: 'flex-end',
               }}>
-              {place === 1 && (
-                <Image
-                  source={require('../assets/art/crown.png')}
-                  style={styles.crown}
-                />
-              )}
               <MoveIdle
                 move={place === 1 ? 'hop' : p.sketchling.move}
                 amp={place === 1 ? 1 : 0.6}>
                 <Sprite s={p.sketchling} size={size} />
+                {place === 1 && (
+                  // seated on the drawing's own box and hops with it
+                  <Image
+                    source={require('../assets/art/crown.png')}
+                    style={[
+                      styles.crown,
+                      {
+                        left: (spriteBox(p.sketchling, size).w - 80) / 2,
+                        top: -54 + spriteBox(p.sketchling, size).h * 0.08,
+                      },
+                    ]}
+                  />
+                )}
               </MoveIdle>
             </View>
             <View
@@ -136,12 +143,14 @@ export function Results({racers, order, onAgain, onHome}: Props) {
       })}
 
       {rest.length > 0 && (
-        <View style={styles.rest}>
+        <View style={[styles.rest, {top: floor + 8}]}>
           {rest.map((p, i) => (
             <View key={p.id} style={styles.restRow}>
               <Text style={styles.restPlace}>{i + 4}</Text>
-              <Sprite s={p.sketchling!} size={54} still />
-              <Text style={styles.restName}>{p.name}</Text>
+              <Sprite s={p.sketchling!} size={46} still />
+              <Text style={styles.restName} numberOfLines={1}>
+                {p.name}
+              </Text>
             </View>
           ))}
         </View>
@@ -184,10 +193,9 @@ const styles = StyleSheet.create({
   sub: {fontFamily: F.semi, fontSize: 22, color: C.inkSoft, marginTop: -6},
   slot: {position: 'absolute', width: BLOCK_W, alignItems: 'center'},
   crown: {
+    position: 'absolute',
     width: 80,
     height: 62,
-    marginBottom: -14,
-    zIndex: 2,
     transform: [{rotate: '-8deg'}],
   },
   block: {
@@ -206,10 +214,22 @@ const styles = StyleSheet.create({
     color: C.ink,
     marginTop: -6,
   },
-  rest: {position: 'absolute', left: 92, top: 150},
-  restRow: {flexDirection: 'row', alignItems: 'center', marginBottom: 6},
-  restPlace: {fontFamily: F.bold, fontSize: 24, color: C.inkSoft, width: 26},
-  restName: {fontFamily: F.semi, fontSize: 20, color: C.ink, marginLeft: 6},
+  rest: {
+    position: 'absolute',
+    left: 170, // under the podium blocks (170..670)
+    width: 500,
+    flexDirection: 'row',
+    justifyContent: 'center',
+  },
+  restRow: {flexDirection: 'row', alignItems: 'center', marginHorizontal: 10},
+  restPlace: {fontFamily: F.bold, fontSize: 24, color: C.inkSoft, marginRight: 4},
+  restName: {
+    fontFamily: F.semi,
+    fontSize: 20,
+    color: C.ink,
+    marginLeft: 6,
+    maxWidth: 90,
+  },
   bubble: {position: 'absolute', left: 520, top: 140, width: 260},
   buttons: {position: 'absolute', right: 48, bottom: 40, width: 190},
   btn: {width: 190, height: 62, marginTop: 18},
