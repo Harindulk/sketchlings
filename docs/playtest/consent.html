@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sketchlings Consent Form</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&display=swap" rel="stylesheet">
+<style>
+  /* Print: Chrome > Cmd+P > A4, Margins "Default", Scale 100%. Fits one page. */
+  @page { size: A4; margin: 13mm 15mm; }
+  :root { --ink: #1f2a44; --soft: #4a5572; --rule: #cfe3f5; --red: #ff5a5f; --blue: #2bb3ff; --yellow: #ffc531; --green: #3ddc84; --purple: #b06cff; --orange: #ff8a3d; }
+  * { box-sizing: border-box; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { margin: 0; background: #fff; color: var(--ink); font: 10pt/1.36 -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; }
+  .page { max-width: 180mm; margin: 0 auto; }
+  @media screen { body { background: #eee; padding: 16px; } .page { background: #fff; padding: 13mm 15mm; box-shadow: 0 2px 12px rgba(0,0,0,.15); max-width: 210mm; } }
+  header { display: flex; align-items: baseline; justify-content: space-between; border-bottom: 2px solid var(--ink); padding-bottom: 3pt; margin-bottom: 6pt; }
+  .logo { font: 800 20pt/1 "Baloo 2", "Arial Rounded MT Bold", sans-serif; letter-spacing: .5px; }
+  .logo span:nth-child(6n+1) { color: var(--red); } .logo span:nth-child(6n+2) { color: var(--blue); }
+  .logo span:nth-child(6n+3) { color: #e0a800; } .logo span:nth-child(6n+4) { color: #20b866; }
+  .logo span:nth-child(6n+5) { color: var(--purple); } .logo span:nth-child(6n) { color: var(--orange); }
+  h1 { font: 800 13pt/1.1 "Baloo 2", "Arial Rounded MT Bold", sans-serif; margin: 0; }
+  h2 { font: 800 10.5pt/1.2 "Baloo 2", "Arial Rounded MT Bold", sans-serif; margin: 6pt 0 1pt; }
+  p, ul { margin: 0 0 3pt; }
+  ul { padding-left: 14pt; }
+  li { margin-bottom: 1pt; }
+  .intro { margin-bottom: 2pt; }
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 0 9mm; }
+  table { width: 100%; border-collapse: collapse; margin-top: 3pt; }
+  th, td { border: 1px solid var(--ink); padding: 3pt 4pt; text-align: left; vertical-align: middle; }
+  th { font-size: 8.5pt; font-weight: 600; background: #f3f6fb; }
+  td { height: 23pt; }
+  td.box { text-align: center; font-size: 13pt; }
+  .sign { display: grid; grid-template-columns: 1.3fr 1.3fr .8fr; gap: 6mm; margin-top: 9pt; }
+  .line { border-bottom: 1px solid var(--ink); height: 20pt; }
+  .label { font-size: 8.5pt; color: var(--soft); margin-top: 1pt; }
+  .agree { margin-top: 6pt; font-weight: 600; }
+  .foot { display: flex; justify-content: space-between; gap: 6mm; margin-top: 8pt; align-items: end; }
+  .foot .line { flex: 1; }
+  .small { font-size: 8.5pt; color: var(--soft); }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div class="logo" aria-label="Sketchlings"><span>S</span><span>k</span><span>e</span><span>t</span><span>c</span><span>h</span><span>l</span><span>i</span><span>n</span><span>g</span><span>s</span></div>
+    <h1>Family playtest: permission to film</h1>
+  </header>
+
+  <p class="intro"><b>Hello! I'm Harindu, a solo game developer at StarFun Games in Sri Lanka.</b> I made <b>Sketchlings</b>, a TV game for Amazon's "Build, Ship, Shape" developer hackathon, an online contest for app makers. Children draw a creature on paper, a phone takes a photo of it, and the creature appears on the TV with a name, a voice and a special power. Then the family races the creatures, using phones as controllers.</p>
+
+  <div class="cols">
+    <div>
+      <h2>What will happen</h2>
+      <p>Your child will draw, play and race for about 30 to 45 minutes. I will film it with phones and record the TV screen, and I will write down who won each race, how long each scan took, and things the children say.</p>
+
+      <h2>Where the video goes</h2>
+      <ul>
+        <li><b>YouTube, public.</b> A demo video of under 3 minutes. Anyone can watch it, and it stays online after the contest.</li>
+        <li><b>The hackathon entry</b> on Devpost (the contest website). Judges at Amazon and the public can see it.</li>
+        <li><b>GitHub, public.</b> The game's code is published there. It may include a short clip or still picture and the written results (first names, ages, quotes).</li>
+      </ul>
+      <p>I won't use the footage anywhere else without asking you again.</p>
+
+      <h2>What the video may show</h2>
+      <p><b>No faces.</b> The cameras point at hands, paper, phones and the TV. The video may show your child's hands, drawings, voice and <b>first name</b>, and maybe their age (for example "Nila, 6"). If a face gets into a shot by accident, I will cut or blur it. Never a surname, school, address or anything that says where you live.</p>
+    </div>
+    <div>
+      <h2>Drawings and AI</h2>
+      <p>To create each character, a picture of the drawing is sent to an AI service, <b>Claude by Anthropic</b>, which suggests its name, personality and power. Only the drawing is sent: the phone cuts it out of the photo first. Your child's name, face and voice are never sent to the AI. The creature's voice is made on my own computer. The phones reach my computer through a temporary secure link run by Cloudflare, so the cut-out drawing and first name pass through it.</p>
+      <p>When a child shouts "ROAR!", the phone's microphone only checks how loud it is. The sound is not recorded or sent anywhere.</p>
+
+      <h2>What I keep</h2>
+      <p>The drawings, creature cards and first names stay in the game's "Hall of Fame" on my computer and may appear in the video. Footage I don't use stays private and I will delete it by <b>31 December 2026</b>. Tell me if you want anything deleted sooner.</p>
+
+      <h2>You can say no or change your mind</h2>
+      <p>Taking part is your choice, and a child can stop at any time. You can withdraw <b>any time before the video is uploaded</b> (planned for <b>Friday 23 October 2026</b>). Just tell me, no reason needed, and I will cut your child's hands, drawings and voice out. After upload you can still ask, and I will remove or edit the video and the GitHub files, but I can't pull back copies other people may have saved.</p>
+    </div>
+  </div>
+
+  <p>Please ask your child too. I only film children who are happy to be filmed.</p>
+
+  <h2>Your choice for each child (tick one per child)</h2>
+  <table>
+    <tr><th style="width:27%">Child's first name</th><th style="width:9%">Age</th><th>Hands, drawings and voice<br>(no face)</th><th>Hands and drawings only, voice muted</th><th>Play, but don't film</th></tr>
+    <tr><td></td><td></td><td class="box">☐</td><td class="box">☐</td><td class="box">☐</td></tr>
+    <tr><td></td><td></td><td class="box">☐</td><td class="box">☐</td><td class="box">☐</td></tr>
+    <tr><td></td><td></td><td class="box">☐</td><td class="box">☐</td><td class="box">☐</td></tr>
+  </table>
+
+  <p class="agree">I am the parent or guardian of the children above, I have read this page, and I agree to the choices I ticked.</p>
+  <div class="sign">
+    <div><div class="line"></div><div class="label">Parent or guardian name</div></div>
+    <div><div class="line"></div><div class="label">Signature</div></div>
+    <div><div class="line"></div><div class="label">Date</div></div>
+  </div>
+  <div class="foot">
+    <div class="small">Parent's hands and voice may be filmed too? &nbsp;☐ Yes &nbsp;☐ No</div>
+    <div style="flex:1.4; display:flex; flex-direction:column"><div class="line"></div><div class="label">Harindu's contact, to ask a question or withdraw</div></div>
+  </div>
+</div>
+</body>
+</html>

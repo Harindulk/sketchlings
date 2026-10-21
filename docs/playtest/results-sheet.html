@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sketchlings Playtest Results</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&display=swap" rel="stylesheet">
+<style>
+  /* Print: Chrome > Cmd+P > Layout Landscape, A4, Margins "Default". 3 pages. Typed copy: results-sheet.md */
+  @page { size: A4 landscape; margin: 10mm 12mm; }
+  :root { --ink: #1f2a44; --soft: #4a5572; --head: #eef3fa; --red: #ff5a5f; --blue: #2bb3ff; --purple: #b06cff; --orange: #ff8a3d; }
+  * { box-sizing: border-box; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { margin: 0; background: #fff; color: var(--ink); font: 9.5pt/1.3 -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; }
+  @media screen { body { background: #eee; padding: 16px; } .page { background: #fff; max-width: 297mm; margin: 0 auto 16px; padding: 10mm 12mm; box-shadow: 0 2px 12px rgba(0,0,0,.15); overflow-x: auto; } }
+  .page + .page { break-before: page; }
+  header { display: flex; align-items: baseline; gap: 6mm; border-bottom: 2px solid var(--ink); padding-bottom: 2pt; margin-bottom: 5pt; }
+  .logo { font: 800 17pt/1 "Baloo 2", "Arial Rounded MT Bold", sans-serif; }
+  .logo b:nth-child(6n+1) { color: var(--red); } .logo b:nth-child(6n+2) { color: var(--blue); } .logo b:nth-child(6n+3) { color: #e0a800; }
+  .logo b:nth-child(6n+4) { color: #20b866; } .logo b:nth-child(6n+5) { color: var(--purple); } .logo b:nth-child(6n) { color: var(--orange); }
+  header h1 { font: 800 13pt/1 "Baloo 2", "Arial Rounded MT Bold", sans-serif; margin: 0; flex: 1; }
+  header .pg { color: var(--soft); }
+  h2 { font: 800 11pt/1.1 "Baloo 2", "Arial Rounded MT Bold", sans-serif; margin: 7pt 0 2pt; }
+  h2 small { font: 400 8.5pt/1.2 -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; color: var(--soft); margin-left: 4pt; }
+  p.note { margin: 0 0 3pt; font-size: 8.5pt; color: var(--soft); }
+  table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  th, td { border: 1px solid var(--ink); padding: 2pt 3pt; text-align: left; vertical-align: top; }
+  th { background: var(--head); font-size: 8pt; font-weight: 600; line-height: 1.15; }
+  td { height: 29pt; }
+  .short td { height: 22pt; }
+  .tall td { height: 31pt; }
+  tbody[data-rows] td:first-child { text-align: center; font-weight: 600; color: var(--soft); }
+  .session { display: grid; grid-template-columns: repeat(8, 1fr); border: 1px solid var(--ink); }
+  .session div { border-right: 1px solid var(--ink); padding: 2pt 3pt; height: 32pt; font-size: 8pt; color: var(--soft); line-height: 1.15; }
+  .session div:last-child { border-right: 0; }
+  .two { display: grid; grid-template-columns: 1fr 1.05fr; gap: 8mm; }
+  .obs div { border-bottom: 1px solid var(--ink); height: 37pt; padding-top: 2pt; font-size: 8.5pt; color: var(--soft); }
+  .nums td { height: 23pt; font-size: 8.5pt; }
+  .nums td:first-child { width: 6%; text-align: center; color: var(--soft); }
+  .nums td:nth-child(2) { width: 52%; }
+  .nums tr.key td { font-weight: 700; }
+</style>
+</head>
+<body>
+
+<section class="page">
+  <header>
+    <div class="logo"><b>S</b><b>k</b><b>e</b><b>t</b><b>c</b><b>h</b><b>l</b><b>i</b><b>n</b><b>g</b><b>s</b></div>
+    <h1>Playtest results</h1><span class="pg">Page 1 of 3 · first names only · write the clock time (HH:MM) by every race, scan and quote</span>
+  </header>
+
+  <div class="session">
+    <div>Date</div><div>Start / end time</div><div>"Start party" pressed at (HH:MM:SS)</div><div>First race started at (HH:MM:SS)</div>
+    <div>Personas: Claude model or offline</div><div>TV build: sound on or MUTE=1</div><div>How the family saw the TV</div><div>Sheet filled by</div>
+  </div>
+
+  <h2>Players <small>Little kid = 7 or under, +40% · Big kid = 8 to 12, +20% · Grown-up = no boost. Check each child picked the right one.</small></h2>
+  <table class="short">
+    <colgroup><col style="width:5%"><col style="width:18%"><col style="width:7%"><col style="width:13%"><col style="width:8%"><col style="width:12%"><col></colgroup>
+    <tr><th>#</th><th>First name</th><th>Age</th><th>Age group</th><th>Boost</th><th>Colour on TV</th><th>Filming consent (hands + voice / voice muted / none)</th></tr>
+    <tbody data-rows="4" data-cols="7"></tbody>
+  </table>
+  <p class="note" style="margin-top:3pt">Youngest player: ______________________</p>
+
+  <h2>Races <small>Abilities: fly (wings) · roll (wheels, round body) · hop (long legs) · walk (big body, ROAR)</small></h2>
+  <table>
+    <colgroup><col style="width:4.5%"><col style="width:6%"><col style="width:17%"><col style="width:13%"><col style="width:9%"><col style="width:9%"><col style="width:7%"><col style="width:8%"><col><col style="width:8%"></colgroup>
+    <tr><th>Race</th><th>Time</th><th>Racers</th><th>Abilities in this race</th><th>Winner</th><th>2nd</th><th>Youngest won? Y/N</th><th>Youngest needed help? Y/N</th><th>Problems or notes</th><th>VVD clip</th></tr>
+    <tbody data-rows="8" data-cols="10"></tbody>
+  </table>
+</section>
+
+<section class="page">
+  <header>
+    <div class="logo"><b>S</b><b>k</b><b>e</b><b>t</b><b>c</b><b>h</b><b>l</b><b>i</b><b>n</b><b>g</b><b>s</b></div>
+    <h1>Scans and quotes</h1><span class="pg">Page 2 of 3</span>
+  </header>
+
+  <h2>Scans <small>Stopwatch: start at the photo, Lap at "Bring it to life!", stop when the creature is ready on the TV (picture in its Lobby chip). Server ms and Claude/offline from the [scan] log line afterwards.</small></h2>
+  <p class="note">Re-snaps = extra photos needed (0 if the first worked) · Eyes right? = googly eyes on the drawn eyes, none floating off · Ability matches? = the named feature is really in the drawing</p>
+  <table>
+    <colgroup><col style="width:3%"><col style="width:5%"><col style="width:8%"><col style="width:5.5%"><col style="width:6%"><col style="width:6%"><col style="width:6%"><col style="width:5%"><col style="width:5%"><col style="width:12%"><col style="width:11%"><col style="width:6%"><col style="width:5.5%"><col></colgroup>
+    <tr><th>#</th><th>Time</th><th>Child</th><th>Snap to TV (s)</th><th>Bring to life to TV (s)</th><th>Server ms ([scan] log)</th><th>Claude or offline</th><th>Re-snaps</th><th>Eyes right?</th><th>Creature name</th><th>Ability (feature)</th><th>Ability matches?</th><th>Voice heard?</th><th>Notes</th></tr>
+    <tbody data-rows="8" data-cols="14"></tbody>
+  </table>
+
+  <h2>Quotes <small>Exact words, never tidied up</small></h2>
+  <table class="tall">
+    <colgroup><col style="width:4%"><col style="width:7%"><col style="width:16%"><col></colgroup>
+    <tr><th>#</th><th>Time</th><th>Who (first name, age)</th><th>What they said</th></tr>
+    <tbody data-rows="5" data-cols="4"></tbody>
+  </table>
+</section>
+
+<section class="page">
+  <header>
+    <div class="logo"><b>S</b><b>k</b><b>e</b><b>t</b><b>c</b><b>h</b><b>l</b><b>i</b><b>n</b><b>g</b><b>s</b></div>
+    <h1>Observations, one change, headline numbers</h1><span class="pg">Page 3 of 3</span>
+  </header>
+
+  <div class="two">
+    <div>
+      <h2>Observations</h2>
+      <div class="obs">
+        <div>Where they got stuck or confused</div>
+        <div>What they loved</div>
+        <div>Unprompted "again!" requests (tally)</div>
+        <div>Did the youngest play without adult help? How did they hold the phone?</div>
+        <div>Controls used (tap, swipe-up jump, ROAR button, real shouting) · kept the AI's name or their own?</div>
+        <div>Noticed their power (WINGS! WHEELS! SPRINGS! BIG ROAR!)? · Parent: on their TV? any worry?</div>
+      </div>
+      <h2>One change the kids caused</h2>
+      <table>
+        <tr><th style="width:38%">What we saw</th><th style="width:38%">What we changed (commit)</th><th>Did it help?</th></tr>
+        <tr><td style="height:68pt"></td><td></td><td></td></tr>
+      </table>
+    </div>
+    <div>
+      <h2>Headline numbers <small>fill after the session, then copy to IMPACT.md</small></h2>
+      <table class="nums">
+        <tr><td>1</td><td>Start party to first race start</td><td>___ min ___ s</td></tr>
+        <tr><td>2</td><td>Median snap-to-creature, server log</td><td>___ s over ___ scans</td></tr>
+        <tr><td>3</td><td>Average snap to TV, stopwatch</td><td>___ s (fastest ___, slowest ___)</td></tr>
+        <tr><td>4</td><td>Re-snaps needed</td><td>___ over ___ drawings</td></tr>
+        <tr><td>5</td><td>Googly eyes placed correctly</td><td>___ of ___</td></tr>
+        <tr><td>6</td><td>Ability matched the drawn feature</td><td>___ of ___</td></tr>
+        <tr><td>7</td><td>Races played</td><td></td></tr>
+        <tr class="key"><td>8</td><td>Youngest won, with the boost (fair share 1 in ___)</td><td>___ of ___</td></tr>
+        <tr><td>9</td><td>Youngest played without adult help?</td><td></td></tr>
+        <tr><td>10</td><td>Unprompted "again!" requests</td><td></td></tr>
+        <tr><td>11</td><td>One kid quote (exact)</td><td></td></tr>
+        <tr><td>12</td><td>One parent quote (exact)</td><td></td></tr>
+        <tr class="key"><td>13</td><td>One design change the kids caused</td><td></td></tr>
+        <tr><td>14</td><td>Persona source, cost per creature (log)</td><td></td></tr>
+        <tr><td>15</td><td>Creature voices heard in the room?</td><td></td></tr>
+        <tr><td>16</td><td>Creatures made</td><td></td></tr>
+      </table>
+    </div>
+  </div>
+</section>
+
+<script>
+  // Fill each blank table body with numbered empty rows.
+  for (const tb of document.querySelectorAll('tbody[data-rows]')) {
+    const rows = +tb.dataset.rows, cols = +tb.dataset.cols;
+    for (let r = 1; r <= rows; r++) {
+      const tr = tb.insertRow();
+      for (let c = 0; c < cols; c++) tr.insertCell().textContent = c === 0 ? r : '';
+    }
+  }
+</script>
+</body>
+</html>
