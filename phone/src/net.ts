@@ -85,21 +85,23 @@ export class Link {
       }
       if (msg && typeof msg === 'object' && 't' in msg) this.onMessage(msg);
     };
-    ws.onclose = () => {
+    ws.onclose = (e) => {
       clearTimeout(timeout);
-      this.drop(ws);
+      // 'replaced': another tab took this player over. Don't fight it every second; the visibility handler
+      // reconnects (and takes the player back) when this tab is shown again.
+      this.drop(ws, e.reason === 'replaced');
     };
   }
 
   /** Forget a closed, stuck or dead socket and (unless stopped) retry with backoff. */
-  private drop(ws: WebSocket): void {
+  private drop(ws: WebSocket, parked = false): void {
     if (this.ws !== ws) return;
     ws.onopen = ws.onmessage = ws.onclose = null;
     ws.close();
     clearInterval(this.pingTimer);
     this.ws = null;
     this.onStatus('closed');
-    if (this.stopped) return;
+    if (this.stopped || parked) return;
     const delay = Math.min(8000, 500 * 2 ** this.attempts++) * (0.75 + Math.random() * 0.5);
     this.retryTimer = window.setTimeout(() => this.connectNow(), delay);
   }
