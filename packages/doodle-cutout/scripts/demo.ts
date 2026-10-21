@@ -69,6 +69,32 @@ function blobPhoto(): RGBAImage {
     .render({shadow: 0.45, angle: 2.4, noise: 0.02, seed: 5});
 }
 
+/** The hard case: lined notebook paper on a table, the sheet's shadow, and legs drawn right down to the paper's edge. */
+function ruledPhoto(): RGBAImage {
+  const W = 600;
+  const H = 800;
+  const sheet = {x: 34, y: 40, w: 530, h: 728}; // bottom edge at y = 768
+  const s = new Scene(W, H);
+  for (let y = sheet.y + 34; y < sheet.y + sheet.h; y += 24) s.stroke([[sheet.x, y], [sheet.x + sheet.w, y]], 1.6, [0.55, 0.72, 0.92]);
+  s.stroke([[sheet.x + 56, sheet.y], [sheet.x + 56, sheet.y + sheet.h]], 1.6, [0.92, 0.55, 0.55]);
+  s.table(sheet, [0.42, 0.3, 0.2]).stroke([[567, 46], [567, 771], [40, 771]], 7, [0.5, 0.5, 0.5]);
+  const cx = 300;
+  const cy = 330;
+  const body: [number, number][] = [];
+  for (let i = 0; i <= 100; i++) {
+    const t = (i / 100) * Math.PI * 2;
+    const R = 150 * (1 + 0.06 * Math.sin(4 * t + 0.7));
+    body.push([cx + R * Math.cos(t), cy + R * Math.sin(t) * 1.1]);
+  }
+  s.fill((x, y) => Math.hypot(x - cx, (y - cy) / 1.1) < 128 && y > cy + 30, [cx - 140, cy, cx + 140, cy + 160], PINK, 0.75, 8);
+  s.stroke(body, 10);
+  s.stroke([[cx - 60, cy + 160], [cx - 70, 766]], 10).stroke([[cx + 60, cy + 160], [cx + 72, 766]], 10); // legs to the edge
+  s.stroke([[cx - 160, cy], [cx - 220, cy - 70]], 9).stroke([[cx + 160, cy], [cx + 225, cy - 60]], 9);
+  for (const ex of [cx - 50, cx + 50]) s.strokeEllipse(ex, cy - 50, 26, 30, 6).disc(ex + 6, cy - 45, 11);
+  s.stroke([[cx - 55, cy + 40], [cx, cy + 75], [cx + 55, cy + 40]], 8);
+  return s.render({shadow: 0.4, angle: 0.8, blobShadow: 0.3, noise: 0.02, seed: 21});
+}
+
 /** Box-downscale by an integer factor. */
 function shrink(img: RGBAImage, f: number): RGBAImage {
   const w = Math.floor(img.width / f);
@@ -142,7 +168,7 @@ const save = (name: string, img: RGBAImage) => {
   console.log(`  examples/${name}  ${img.width}x${img.height}`);
 };
 
-for (const [name, photo] of [['monster', monsterPhoto()], ['crayon-blob', blobPhoto()]] as const) {
+for (const [name, photo] of [['monster', monsterPhoto()], ['crayon-blob', blobPhoto()], ['ruled', ruledPhoto()]] as const) {
   const t0 = performance.now();
   const plain = cutout(photo, {debug: true});
   const ms = performance.now() - t0;

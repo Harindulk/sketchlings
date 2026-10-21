@@ -28,7 +28,10 @@ export interface ImageLike {
 export interface CutoutOptions {
   /** Longest side of the working image; larger inputs are area-downscaled first. Default 1024. */
   maxSize?: number;
-  /** Radius (working px) of the paper/lighting estimate. Must exceed your thickest stroke. Default 12% of the long side. */
+  /**
+   * Radius (working px) of the paper/lighting estimate. Must exceed your thickest stroke. Also how far ink touching
+   * the photo edge or the table must reach into the photo to count as drawing. Default 12% of the long side.
+   */
   backgroundRadius?: number;
   /** Ink score threshold 0..1, or 'auto' (Otsu, clamped to 0.12..0.4 and above the paper noise). Default 'auto'. */
   threshold?: number | 'auto';
@@ -40,7 +43,7 @@ export interface CutoutOptions {
   closeRadius?: number;
   /** Make regions enclosed by an outline solid. Default true. */
   fillHoles?: boolean;
-  /** Drop ink touching the photo edge (table, fingers, paper edge), unless that would leave nothing. Default true. */
+  /** Cut away what surrounds the sheet (table, fingers, the paper's edge and shadow), unless that would leave nothing. Default true. */
   removeBorderBlobs?: boolean;
   /** Keep the largest shape plus any shape at least this fraction of its area. Default 0.15. */
   keepRatio?: number;
@@ -323,8 +326,9 @@ const to255 = (m: Mask) => m.map((v) => (v ? 255 : 0));
  * Cut a drawing out of a photo of paper. Returns an RGBA sprite of the drawing on transparency.
  *
  * Pipeline: downscale -> paper/lighting estimate (grayscale closing) -> flatten -> ink score
- * (darkness + colourfulness) -> hysteresis threshold -> drop specks and edge blobs -> close gaps
- * -> fill enclosed regions -> keep main shapes -> recolour, soft edge, optional sticker outline.
+ * (darkness + colourfulness, minus ruled lines) -> hysteresis threshold -> drop specks and what
+ * surrounds the sheet -> close gaps -> fill enclosed regions -> keep main shapes -> recolour, soft
+ * edge, optional sticker outline.
  */
 export function cutout(img: ImageLike, options: CutoutOptions = {}): CutoutResult {
   const {width: W, height: H, data} = img;
