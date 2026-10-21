@@ -35,6 +35,7 @@ export const App = () => {
   const [order, setOrder] = useState<string[]>([]);
   const [round, setRound] = useState(0);
   const [guests, setGuests] = useState<Sketchling[]>([]); // Hall of Fame "Race again" picks for the next party
+  const [lastTile, setLastTile] = useState<HomeChoice>('start'); // focus returns to it on Home
   const party = useParty(mode);
   const {sendPhase} = party;
   const partyState = useMemo(
@@ -107,6 +108,7 @@ export const App = () => {
   }, [screen, mode, goHome, goLobby]);
 
   const choose = (c: HomeChoice) => {
+    setLastTile(c);
     if (c === 'start' || c === 'demo') {
       setMode(c === 'start' ? 'live' : 'demo');
       setScreen('lobby');
@@ -185,7 +187,7 @@ export const App = () => {
       body = <HowTo onDone={goHome} />;
       break;
     default:
-      body = <Home onChoose={choose} />;
+      body = <Home onChoose={choose} initial={lastTile} />;
   }
 
   return (

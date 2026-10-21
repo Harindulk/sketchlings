@@ -53,8 +53,14 @@ const TILES: {
   },
 ];
 
-export function Home({onChoose}: {onChoose: (c: HomeChoice) => void}) {
-  const [focused, setFocused] = useState<HomeChoice>('start');
+export function Home({
+  onChoose,
+  initial = 'start',
+}: {
+  onChoose: (c: HomeChoice) => void;
+  initial?: HomeChoice; // the tile to focus: where you were before (Back from Hall of Fame lands on Hall of Fame)
+}) {
+  const [focused, setFocused] = useState<HomeChoice>(initial);
   const reportFullyDrawn = useReportFullyDrawn();
   useEffect(() => {
     // first meaningful frame is up: lets Vega measure Time To Fully Drawn
@@ -73,7 +79,7 @@ export function Home({onChoose}: {onChoose: (c: HomeChoice) => void}) {
             key={t.id}
             label={t.label}
             testID={`tile-${t.id}`}
-            preferred={t.id === 'start'}
+            preferred={t.id === initial}
             color={t.color}
             tilt={t.tilt}
             onFocus={() => setFocused(t.id)}
