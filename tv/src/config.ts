@@ -6,6 +6,7 @@ export const HOST = '10.0.2.2:8787';
 export const HTTP_BASE = `http://${HOST}`;
 export const WS_URL = `ws://${HOST}/ws`;
 
-// Creature voices + narrator (src/audio.ts). The Vega Virtual Device has no audio service, so it is always silent
-// there; set false to mute on a real Fire TV during automated runs.
+// Creature voices + narrator (src/audio.ts). On the Vega Virtual Device the clips play and the emulator holds an
+// output stream on the Mac's speakers (notes/tv.md, Audio outcome), but screenrecord captures no audio.
+// false = no media stack at all (MUTE=1 builds: automated runs, screen recording).
 export const SOUND = true;
