@@ -152,6 +152,60 @@ describe('cutout', () => {
     expectNear(opaqueArea(r), Math.PI * 73 * 53, Math.PI * 73 * 53 * 0.1);
   });
 
+  // Repro from the phone review (768x1024 portrait, like a downscaled phone photo): a creature with legs.
+  const creature = (s: Scene, legEnd: number) =>
+    s
+      .strokeEllipse(384, 450, 260, 320, 14)
+      .stroke([[294, 760], [284, legEnd]], 14)
+      .stroke([[474, 760], [484, legEnd]], 14)
+      .disc(294, 350, 30)
+      .disc(474, 350, 30);
+
+  test('legs drawn to the edge of the paper: the table is cut away, the creature is kept', () => {
+    const photo = creature(new Scene(768, 1024).table({x: 40, y: 40, w: 688, h: 944}), 990).render({shadow: 0.3, noise: 0.01});
+    const r = cutout(photo);
+    expectNear(r.bbox.x, 117, 4); // the body, not the eyes (264) and not the table (0)
+    expectNear(r.bbox.width, 535, 8);
+    expectNear(r.bbox.y, 123, 4);
+    expect(r.bbox.y + r.bbox.height).toBeGreaterThan(940); // legs run down to the paper edge (984)
+    expect(r.bbox.y + r.bbox.height).toBeLessThanOrEqual(984); // but no table
+    const [cx, cy] = sp(r, 384, 450);
+    expect(alphaAt(r, cx, cy)).toBe(255);
+  });
+
+  test('legs that run off the photo: the creature is kept', () => {
+    const r = cutout(creature(new Scene(768, 1024), 1030).render({noise: 0.01}));
+    expectNear(r.bbox.x, 117, 4);
+    expectNear(r.bbox.width, 535, 8);
+    expect(r.bbox.y + r.bbox.height).toBeGreaterThan(990);
+    const [cx, cy] = sp(r, 384, 450);
+    expect(alphaAt(r, cx, cy)).toBe(255);
+  });
+
+  test('a body outline cut off by the top and bottom of the photo is kept, not just the eyes', () => {
+    const photo = new Scene(768, 1024).strokeEllipse(384, 540, 300, 520, 14).disc(294, 420, 30).disc(474, 420, 30).render({noise: 0.01});
+    const r = cutout(photo);
+    expectNear(r.bbox.x, 77, 4);
+    expectNear(r.bbox.width, 615, 8);
+    expect(r.bbox.height).toBeGreaterThan(900);
+  });
+
+  test('a single outline touching the table: neither the table nor the whole sheet is kept', () => {
+    // No separate parts: once the table is gone the outline must survive on its own.
+    const photo = new Scene(W, H)
+      .table({x: 25, y: 20, w: 350, h: 260})
+      .strokeEllipse(200, 150, 80, 60, 6)
+      .stroke([[160, 205], [155, 280]], 6)
+      .stroke([[240, 205], [245, 280]], 6)
+      .render({shadow: 0.3, noise: 0.015});
+    const r = cutout(photo);
+    expectNear(r.bbox.x, 117, 3);
+    expectNear(r.bbox.width, 166, 6);
+    expect(r.bbox.y + r.bbox.height).toBeGreaterThan(265);
+    expect(r.bbox.y + r.bbox.height).toBeLessThanOrEqual(280);
+    expectNear(opaqueArea(r), Math.PI * 83 * 63, Math.PI * 83 * 63 * 0.12); // body + legs, no table frame
+  });
+
   test('ruled school paper: the faint lines are not ink', () => {
     const scene = new Scene(W, H);
     for (let y = 20; y < H; y += 22) scene.stroke([[0, y], [W, y]], 1.5, [0.72, 0.84, 0.97]);

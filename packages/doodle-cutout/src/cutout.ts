@@ -195,6 +195,52 @@ function repairBackground(bg: Float32Array[], mask: Mask, w: number, h: number, 
   });
 }
 
+/**
+ * The ink that belongs to the drawing, without what surrounds the sheet. Thick ink touching the photo
+ * edge (a table, a cloth, fingers) is cut away pixel by pixel, with any ink joined to it or to the photo
+ * edge within a 2 * `thick` margin (a thin strip of table, the paper's edge and its shadow), so a stroke
+ * that touches it is trimmed rather than lost with it. What is left touching the cut (a margin line, a
+ * strip of shadow) is dropped unless it reaches `depth` px into the photo, which strokes joined to a
+ * drawing do. Specks go too.
+ */
+function dropSurroundings(ink: Mask, w: number, h: number, thick: number, depth: number, minArea: number): Mask {
+  const n = w * h;
+  const cut = 2 * thick;
+  // Thick ink = the part that survives eroding by a disk of radius `thick` (later dilated back).
+  const toPaper = edt(invert(ink), w, h);
+  const core = new Uint8Array(n);
+  for (let i = 0; i < n; i++) core[i] = toPaper[i] > thick * thick ? 1 : 0;
+  const cores = label(core, w, h);
+  const outside = selectComponents(cores, (id) => cores.touchesBorder[id]);
+  const toOutside = outside.includes(1) ? edt(outside, w, h) : null;
+  // Distance to the photo edge or to the thick ink touching it.
+  const dist = new Float32Array(n);
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = y * w + x;
+      const edge = Math.min(x, y, w - 1 - x, h - 1 - y);
+      dist[i] = toOutside ? Math.min(edge, Math.sqrt(toOutside[i]) - thick) : edge;
+    }
+  }
+  // Flood from the ink on the photo edge through the ink within the margin: that is what gets cut.
+  const zone = new Float32Array(n);
+  for (let i = 0; i < n; i++) if (ink[i]) zone[i] = dist[i] < 1 ? 2 : dist[i] <= cut ? 1 : 0;
+  const removed = hysteresis(zone, w, h, 2, 1);
+  const kept = new Uint8Array(n);
+  for (let i = 0; i < n; i++) kept[i] = ink[i] && !removed[i] ? 1 : 0;
+  const parts = label(kept, w, h);
+  const reach = new Float32Array(parts.count + 1);
+  const touches = new Uint8Array(parts.count + 1);
+  for (let i = 0; i < n; i++) {
+    const id = parts.labels[i];
+    if (!id) continue;
+    if (dist[i] > reach[id]) reach[id] = dist[i];
+    const x = i % w;
+    if ((x > 0 && removed[i - 1]) || (x < w - 1 && removed[i + 1]) || (i >= w && removed[i - w]) || (i < n - w && removed[i + w])) touches[id] = 1;
+  }
+  return selectComponents(parts, (id) => parts.area[id] >= minArea && (!touches[id] || reach[id] >= depth));
+}
+
 function buildPalette(cols: Float32Array, count: number, size: number): string[] {
   if (count === 0 || size <= 0) return [];
   const bins = 4096;
@@ -320,14 +366,12 @@ export function cutout(img: ImageLike, options: CutoutOptions = {}): CutoutResul
   const weak = Math.min(t, Math.max(0.06, t * 0.5, noiseFloor));
   const ink = hysteresis(score, w, h, t, weak);
 
-  // 4. Drop specks and anything touching the photo edge (table, fingers, paper edge).
-  const inkParts = label(ink, w, h);
-  const bigEnough = (id: number) => inkParts.area[id] >= o.minSpeckArea;
-  let cleaned = selectComponents(
-    inkParts,
-    (id) => bigEnough(id) && !(o.removeBorderBlobs && inkParts.touchesBorder[id]),
-  );
-  if (o.removeBorderBlobs && !cleaned.includes(1)) cleaned = selectComponents(inkParts, bigEnough);
+  // 4. Drop specks and what surrounds the sheet (table, fingers, the paper's edge), unless nothing is left.
+  let cleaned = o.removeBorderBlobs ? dropSurroundings(ink, w, h, Math.max(2, Math.round(long * 0.012)), o.backgroundRadius, o.minSpeckArea) : null;
+  if (!cleaned || !cleaned.includes(1)) {
+    const inkParts = label(ink, w, h);
+    cleaned = selectComponents(inkParts, (id) => inkParts.area[id] >= o.minSpeckArea);
+  }
 
   // 5. Bridge small gaps, 6. fill enclosed regions, 7. keep the main shapes.
   const closed = o.closeRadius > 0 ? closeMask(cleaned, w, h, o.closeRadius) : cleaned;
