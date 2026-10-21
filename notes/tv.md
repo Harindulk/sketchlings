@@ -1,5 +1,33 @@
 # TV app notes (React Native for Vega, SDK 0.24, RN 0.83)
 
+## Performance (measured on VVD)
+
+Measured on the Vega Virtual Device, headless, Apple-silicon host (10 cores, 16 GB), 21 Oct 2026 09:02-09:39 IST,
+release build with sound on (cool start: commit 8864823; the rest: the #19/#20 build, 4c25958). Host load: 1-min load average 20.6 at the start of the cool-start run and 15.1 at its end,
+9-14 during the memory runs and the soak; 11.7-13.7 GB of 13-14 GB swap in use; Unity open (~170 % CPU); the VVD
+process itself at 700-810 % CPU with the app in the foreground (software rendering, F12). Every timing here is
+pessimistic for real hardware. Raw reports: KPI Visualizer `output/2026-10-21_09-02-34` (cool start).
+
+| KPI | Vega target | Measured | How |
+|---|---|---|---|
+| Time to first frame, cool start | < 1.5 s | **665 ms** mean (min 631, max 719, sd 27, CI ±16) | KPI Visualizer `--kpi cool-start-latency --iterations 10` (10 of 10 completed) |
+| Time to fully drawn, cool start | < 8 s | **665 ms** mean (min 631, max 719) | same run; `useReportFullyDrawn` on Home's first frame |
+| JS bundle load | none | 8.5 ms mean (6.0-12.5) | same run |
+| Time to first frame, warm start | < 0.5 s | **not measurable on the VVD** (0 of 5 iterations) | `--kpi warm-start-latency`: its prep step backgrounds the app with `vmsgr send pkg://com.amazon.smplighthouse.launcher.main`, the Fire TV launcher. The VVD's launcher is `com.amazon.keplerlauncherapp.main`, so every prep fails ("CLI Send Error ... Failed to send message, remote error", 5 retries per iteration) |
+| Foreground memory (KPI Visualizer) | < 400 MiB | **not measurable without Appium** | `--kpi memory` and `--kpi foreground-memory` stop with "Appium server is not found in the platform" (no custom scenario given) |
+| App memory, `vega exec perf activity-monitor` (no Appium) | < 400 MiB (foreground) | **124-126 MiB** on Home; 133-144 MiB Lobby + Reveal; 204-219 MiB in the first 4-lane race; **233 MiB** peak after 3 races; 283-284 MiB after a Hall of Fame visit and 6 six-lane races | activity monitor "Memory Application" column, ~0.5 s samples (380 from a fresh launch, 188 in a 6-lane race) |
+| UI fluidity | > 99 % | **not measured** | `--kpi ui-fluidity` needs an Appium server even without `--test-scenario` (same error) |
+| Focus response | < 200 ms | **not measured** | needs an Appium-driven scenario (same) |
+| Race loop, 6 lanes | 60 Hz | **55-62 Hz**, JS 0.3-0.5 ms per frame | in-app overlay (Menu), read in 18 screenshots of one demo race with the activity monitor running |
+| Race-start freezes, 6 lanes | 0 | **0 in 10** on this build | `soak.mjs 10 --guests 3 --rounds 5` |
+
+- Cool start ended with the same "[-1 != -1]" network-calls validation failure as before (FRICTION_LOG #16).
+- ADBT `analyze_perfetto_traces` on the cool-start traces (`iter_*_vs_trace`) failed: "Unable to locate trace processor
+  binary ... Vega Performance CLI path is not available", although `vega exec perf` works in the same shell (the MCP
+  server doesn't see the SDK). ADBT `search_documentation` gave the warm-start targets (TTFF 0.5 s, TTFD 1.5 s).
+- Memory grows with each race but levels off (+11 MiB race 2, +3 MiB race 3); the Hall of Fame (no virtualisation,
+  backlog #22) adds ~50 MiB. Both far under 400 MiB.
+
 ## Protocol notes
 
 None. The TV implements `shared/protocol.ts` as written (incl. eyes, ageGroup/AGE_BOOST, `shout`, artist, voice,
@@ -107,8 +135,8 @@ from the package typings.
   phone->TV delivery **+1 ms** median above the best observed delivery (jitter). The absolute phone->TV figure is not
   measurable from the TV alone: the VVD clock was **~2 h 11 min behind** the Mac (raw `recv - at` = -7,869,824 ms), so
   we report jitter over best + apply time. On real hardware use NTP-synced phones or a ping/pong offset estimate.
-- Not measured: UI fluidity %, memory, focus response (the KPI Visualizer needs a `--test-scenario` script for fluidity;
-  no time left).
+- Superseded on 21 Oct by "Performance (measured on VVD)" at the top (cool start re-run with 10 iterations, memory;
+  warm start, UI fluidity and focus response can't run on the VVD without Appium or with the VVD's launcher).
 
 ## Audio outcome on the VVD
 
