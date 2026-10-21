@@ -123,16 +123,16 @@ driven by a fake TV script.
 - **EXIF and size.** A JPEG stored sideways with Orientation=6 comes out upright. Decode + cutout on this Mac takes
   1.6 s for a 4000×3000 JPEG and 0.6 s for a 900×1200 one. Expect 3-6 s on a mid-range Android.
 
-**Not fixed (outside `phone/`)**
-- **Cutout** (`packages/doodle-cutout`, step 4):
-  - A stroke that touches the photo edge, or a dark table at the paper edge, deletes the whole outline, so only the
-    eyes are left.
-  - Ruled or squared paper becomes the whole page.
-  - Only the new tips and plain paper on a light table protect against this.
-- **Server:**
-  - A replaced socket is never closed. The phone now recovers on its own.
-  - Ghost players still count toward the 6-player limit.
-  - The tunnel preflight doesn't check `/health` or the WebSocket upgrade.
+**Fixed since (outside `phone/`, 21 Oct)**
+- **Cutout** (`packages/doodle-cutout`, 39 tests): strokes touching the photo edge or a dark table are trimmed, not
+  deleted; the table frame and the sheet's shadow are dropped; ruled/squared paper lines are measured on the sheet's
+  emptiest parts and removed. The four reviewers' repro photos now return the creature. Remaining limits are in the
+  library README (outlines cut open by the photo edge, thick crayon touching the table, pencil hatching over the
+  whole page, heavy dark grids). Plain white paper is still the safest advice.
+- **Server:** a replaced socket is closed with reason `replaced` (the phone then parks until shown again), and
+  disconnected players without a creature are removed after 2 minutes.
+
+**Still open:** the tunnel preflight doesn't check `/health` or the WebSocket upgrade.
 
 **Needs a real device to test.** None of this can be checked in the browser pane:
 - whether the wake lock actually holds (the pane refuses it)
