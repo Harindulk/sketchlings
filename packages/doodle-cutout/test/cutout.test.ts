@@ -257,6 +257,37 @@ describe('cutout', () => {
     }
   });
 
+  test('combined: ruled sheet on a table, shadows, legs drawn to the paper edge', () => {
+    const sheet = {x: 45, y: 55, w: 670, h: 920}; // bottom edge at y = 975
+    const s = new Scene(768, 1024);
+    for (let y = sheet.y + 30; y < sheet.y + sheet.h; y += 30) s.stroke([[sheet.x, y], [sheet.x + sheet.w, y]], 2, [0.55, 0.72, 0.92]);
+    s.stroke([[sheet.x + 70, sheet.y], [sheet.x + 70, sheet.y + sheet.h]], 2, [0.92, 0.55, 0.55]);
+    s.table(sheet).stroke([[718, 62], [718, 979], [52, 979]], 9, [0.5, 0.5, 0.5]); // the sheet's shadow on the table
+    const r = cutout(creature(s, 970).render({shadow: 0.4, angle: 0.8, blobShadow: 0.35, noise: 0.02}));
+    expectNear(r.bbox.x, 117, 4);
+    expectNear(r.bbox.width, 535, 8);
+    expectNear(r.bbox.y, 123, 4);
+    expect(r.bbox.y + r.bbox.height).toBeGreaterThan(930);
+    expect(r.bbox.y + r.bbox.height).toBeLessThanOrEqual(975);
+    const [cx, cy] = sp(r, 384, 450);
+    expect(alphaAt(r, cx, cy)).toBe(255);
+    expectNear(opaqueArea(r), Math.PI * 267 * 327 + 2 * 14 * 190, Math.PI * 267 * 327 * 0.08); // body + legs
+  });
+
+  test('a hard-edged shadow across the drawing does not break it', () => {
+    const scene = new Scene(W, H).strokeEllipse(200, 150, 90, 70, 6);
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        const f = 1 - 0.55 * Math.min(1, Math.max(0, (x - 215 - 0.2 * (y - 150)) / 3 + 0.5)); // 3 px penumbra
+        for (let k = 0; k < 3; k++) scene.albedo[(y * W + x) * 3 + k] *= f;
+      }
+    }
+    const r = cutout(scene.render({noise: 0.02}));
+    expectNear(r.bbox.x, 107, 3);
+    expectNear(r.bbox.width, 186, 6);
+    expectNear(opaqueArea(r), Math.PI * 93 * 73, Math.PI * 93 * 73 * 0.08);
+  });
+
   test('blank paper with heavy shadows yields an empty result', () => {
     const photo = new Scene(W, H).render({shadow: 0.6, blobShadow: 0.5, noise: 0.03});
     const r = cutout(photo);
