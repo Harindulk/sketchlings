@@ -42,5 +42,13 @@
   },
   "devDependencies": {
     "typescript": "^7.0.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Harindulk/doodle-cutout.git"
+  },
+  "homepage": "https://github.com/Harindulk/doodle-cutout#readme",
+  "bugs": {
+    "url": "https://github.com/Harindulk/doodle-cutout/issues"
   }
 }
