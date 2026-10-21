@@ -55,6 +55,8 @@ describe('offline ability from the silhouette', () => {
       expect(ABILITY_LABEL[k].split(' ').length).toBeLessThanOrEqual(6);
       expect(GENERIC_FEATURE[k].split(' ').length).toBeLessThanOrEqual(4);
     }
+    // offline wording names only what the silhouette proves
+    expect(GENERIC_FEATURE).toEqual({fly: 'wide stretchy shape', roll: 'round shape', hop: 'long legs', walk: 'big strong body'});
   });
 
   test('old hall entries without an ability get one matching their move', () => {

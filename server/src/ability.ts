@@ -14,10 +14,11 @@ export const ABILITY_LABEL: Record<MoveStyle, string> = {
   walk: 'ROAR knocks back ink blots!',
 };
 
-// Used offline, and when the model's feature text is unusable.
+// Used offline, and when the model's feature text is unusable. Names only what the silhouette proves
+// (a star's points also read as `fly`, so no "wings").
 export const GENERIC_FEATURE: Record<MoveStyle, string> = {
-  fly: 'wide wings',
-  roll: 'round body',
+  fly: 'wide stretchy shape',
+  roll: 'round shape',
   hop: 'long legs',
   walk: 'big strong body',
 };

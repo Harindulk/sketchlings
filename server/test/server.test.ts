@@ -110,7 +110,7 @@ describe('hall of fame from older builds', () => {
     const app = startTestServer({dataDir});
     const hall = (await (await fetch(`${app.http}/api/hall-of-fame`)).json()) as Sketchling[];
     expect(hall).toHaveLength(1);
-    expect(hall[0]!.ability).toEqual({kind: 'roll', feature: 'round body', label: 'Zooms fast on flat ground!'});
+    expect(hall[0]!.ability).toEqual({kind: 'roll', feature: 'round shape', label: 'Zooms fast on flat ground!'});
     app.stop();
   });
 });
