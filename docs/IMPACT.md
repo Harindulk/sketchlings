@@ -94,7 +94,7 @@ What that means in detail:
 - **Collect almost nothing.** A first name or nickname and an age band, no accounts, no persistent identifiers (a random player id per room, kept on the phone), no ads, no third-party analytics, no chat between players.
 - **A grown-up consent step** on the TV before any drawing goes to Claude, behind a parent gate. Without consent the game runs on offline personas, and nothing leaves the home network.
 - **Fire TV Appstore kids plan:** list in the kids and family category, support Amazon Kids profiles, a privacy policy, a parent gate on every purchase. Amazon's Child-Directed App (COPPA) policy (checked Oct 2026) covers children under 13 (under 16 in the EU, Australia and Japan) and asks for age-appropriate content, COPPA compliance with verifiable parental consent before collecting a child's personal information, no Amazon Advertising or Associates, and only child-suitable SDKs. The category, Amazon Kids support and the parent gate are our own choices: we found no Appstore page that requires them.
-- **Delete early.** In the cloud version drawings and voice clips live in S3 for 24 hours, long enough for the TV to fetch them. The Hall of Fame lives on the Fire TV. A parent **Clear Hall of Fame** button deletes it.
+- **Delete early.** In the cloud version drawings and voice clips are deleted by the relay itself as soon as the TV has fetched them (at most 24 hours later); an S3 lifecycle rule (whole-day granularity, asynchronous) is only the backstop. The Hall of Fame lives on the Fire TV. A parent **Clear Hall of Fame** button deletes it.
 - **Known risk: handwriting.** A child may write their full name on the drawing. It would be in the cut-out, sent to Claude (the prompt tells it to ignore any writing) and shown on the TV. Mitigations: "Don't write your name" on the draw screen, and blurring text on the phone before upload (not built).
 - **Kind-only content.** The prompt allows only kind, playful text: never mock a drawing; nothing scary, violent, gross, sad or romantic; no weapons, real people, characters or brands. Every answer is checked against a schema and clamped. A refusal, timeout or bad answer gives the offline persona, built from curated word lists.
 - **Room codes in the cloud.** A 4-letter code is guessable on a public server. The QR will carry a long random join token, the TV shows everyone who joins, and a grown-up can remove a player. Codes already avoid vowels, so they never spell words.
@@ -109,6 +109,7 @@ What that means in detail:
 - [ ] "Hold to run" on the phone controller (the race engine already supports it).
 - [ ] Voices in parallel: with six scans at once, the last creature's voice can take 30 to 40 s today.
 - [ ] Creature voices and real mic shouting heard on a real Fire TV and real phones.
+- [ ] User-generated content safeguards per the Appstore content policy: moderate each drawing before it is shown (Claude already describes it; add an explicit unsafe-content check), a way to report a creature, and a parent-only Hall of Fame delete.
 
 ## Sources (prices checked 21 Oct 2026)
 
