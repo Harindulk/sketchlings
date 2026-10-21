@@ -1,7 +1,7 @@
 // Demo party: bundled sample Sketchlings (our own drawings in art-src/) and fake players, so the whole
 // flow runs offline — for judges without phones, and for testing before the server exists.
 import type {ImageSourcePropType} from 'react-native';
-import type {AgeGroup, Player, Sketchling} from '../../../shared/protocol';
+import type {Player, Sketchling} from '../../../shared/protocol';
 import {PLAYER_COLORS} from '../../../shared/protocol';
 import {HTTP_BASE} from '../config';
 
@@ -41,6 +41,7 @@ export const SAMPLE_SKETCHLINGS: Sketchling[] = [
       {x: 0.59, y: 0.418, r: 0.078},
     ],
     artist: 'Mia',
+    artistAge: 'little',
   },
   {
     ...base,
@@ -63,6 +64,7 @@ export const SAMPLE_SKETCHLINGS: Sketchling[] = [
       {x: 0.617, y: 0.293, r: 0.0625},
     ],
     artist: 'Leo',
+    artistAge: 'big',
   },
   {
     ...base,
@@ -85,6 +87,7 @@ export const SAMPLE_SKETCHLINGS: Sketchling[] = [
       {x: 0.617, y: 0.543, r: 0.07},
     ],
     artist: 'Ava',
+    artistAge: 'grownup',
   },
   {
     ...base,
@@ -107,6 +110,7 @@ export const SAMPLE_SKETCHLINGS: Sketchling[] = [
       {x: 0.586, y: 0.461, r: 0.059},
     ],
     artist: 'Sam',
+    artistAge: 'little',
   },
   {
     ...base,
@@ -125,6 +129,7 @@ export const SAMPLE_SKETCHLINGS: Sketchling[] = [
     spriteUrl: 'demo:dino',
     eyes: [{x: 0.777, y: 0.203, r: 0.043}],
     artist: 'Noah',
+    artistAge: 'little',
   },
   {
     ...base,
@@ -146,22 +151,33 @@ export const SAMPLE_SKETCHLINGS: Sketchling[] = [
       {x: 0.621, y: 0.492, r: 0.055},
     ],
     artist: 'Zoe',
+    artistAge: 'big',
   },
 ];
 
 export const DEMO_NAMES = ['Mia', 'Leo', 'Ava', 'Sam'];
-const DEMO_AGES: AgeGroup[] = ['little', 'big', 'grownup', 'little'];
 
-/** The 4 demo players with their Sketchlings: the newest Hall of Fame creatures (one per name, credited to their
- *  artists) when the hall has at least two, topped up with our bundled samples. */
+/** One creature per name and one per artist, first wins (the hall is newest first). */
+function unique(list: Sketchling[]): Sketchling[] {
+  const seen = new Set<string>();
+  return list.filter((s) => {
+    const keys = [`n:${s.name}`, `a:${s.artist || s.name}`];
+    if (keys.some((k) => seen.has(k))) return false;
+    keys.forEach((k) => seen.add(k));
+    return true;
+  });
+}
+
+/** The 4 demo players with their Sketchlings: the newest Hall of Fame creatures (one per name and per artist,
+ *  credited to their artists, with their artists' age boost) when the hall has at least two, topped up with our
+ *  bundled samples. Entries saved before `artistAge` existed race as grown-ups (no boost). */
 export function demoPlayers(hall: Sketchling[] = []): Player[] {
-  const names = new Set<string>();
-  const saved = hall.filter((s) => !names.has(s.name) && names.add(s.name));
-  const pool = [...(saved.length >= 2 ? saved : []), ...SAMPLE_SKETCHLINGS].slice(0, 4);
+  const saved = unique(hall);
+  const pool = unique([...(saved.length >= 2 ? saved : []), ...SAMPLE_SKETCHLINGS]).slice(0, 4);
   return pool.map((s, i) => ({
     id: `demo-${i + 1}`,
     name: s.artist || DEMO_NAMES[i],
-    ageGroup: DEMO_AGES[i],
+    ageGroup: s.artistAge ?? 'grownup',
     color: PLAYER_COLORS[i],
     connected: true,
     sketchling: {...s, playerId: `demo-${i + 1}`},

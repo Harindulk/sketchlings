@@ -72,7 +72,7 @@ export function withGuests(s: PartyState, guests: Sketchling[]): PartyState {
     players.push({
       id,
       name: g.artist || g.name,
-      ageGroup: 'grownup',
+      ageGroup: g.artistAge ?? 'grownup', // the artist's boost; older hall entries race as grown-ups
       color: PLAYER_COLORS.find((c) => !used.has(c)) ?? PLAYER_COLORS[0],
       connected: true,
       sketchling: {...g, playerId: id},

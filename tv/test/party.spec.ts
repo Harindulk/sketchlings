@@ -37,6 +37,19 @@ describe('Demo party', () => {
     expect(ps.every((p) => p.sketchling!.playerId === p.id)).toBe(true);
   });
 
+  it("gives each artist one lane and the artist's own age boost (legacy entries race as grown-ups)", () => {
+    const hall = [
+      {...hedgehog, id: 'h1', name: 'Spiky', artist: 'Dad', artistAge: 'grownup' as const},
+      {...frog, id: 'h2', name: 'Hoppy', artist: 'Dad', artistAge: 'grownup' as const},
+      {...cloud, id: 'h3', name: 'Puff', artist: 'Lily', artistAge: 'little' as const},
+      {...star, id: 'h4', name: 'Old Star', artist: 'Omar', artistAge: undefined},
+    ];
+    const ps = demoPlayers(hall);
+    expect(ps.map((p) => p.sketchling!.id)).toEqual(['h1', 'h3', 'h4', potato.id]);
+    expect(ps.map((p) => p.ageGroup)).toEqual(['grownup', 'little', 'grownup', 'little']);
+    expect(ps.map((p) => p.name)).toEqual(['Dad', 'Lily', 'Omar', 'Mia']);
+  });
+
   it('keeps the samples when the hall has fewer than two', () => {
     expect(demoPlayers([dino]).map((p) => p.sketchling!.id)).toEqual(
       SAMPLE_SKETCHLINGS.slice(0, 4).map((s) => s.id),
