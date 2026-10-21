@@ -124,7 +124,7 @@ Setup: MacBook (Apple silicon, 16 GB), macOS 27.0.1, Node 26.12, Bun 1.4.3, Vega
 
 **What I used it for.** `useReportFullyDrawn()` on Home's first frame, so Vega can measure Time to Fully Drawn.
 
-**What worked well.** One hook, one call. The KPI Visualizer picked it up: TTFD 409 ms mean on the VVD.
+**What worked well.** One hook, one call. The KPI Visualizer picked it up: TTFD 409 ms mean on the VVD (665 ms over 10 runs on a loaded host on 21 Oct).
 
 **What needs work.** Nothing found.
 
@@ -134,15 +134,18 @@ Setup: MacBook (Apple silicon, 16 GB), macOS 27.0.1, Node 26.12, Bun 1.4.3, Vega
 
 ## 5. Vega performance tools (Perf CLI 0.24.0)
 
-**What I used it for.** Cool-start latency with the KPI Visualizer (`vega exec perf kpi-visualizer --app-name com.starfungames.sketchlings.main --kpi cool-start-latency --iterations 3`), with `useReportFullyDrawn` (above) marking fully drawn. A performance overlay of my own in the race (Menu key: loop rate, JS time per frame, input latency, audio state). TBD
+**What I used it for.** Cool-start latency with the KPI Visualizer (`vega exec perf kpi-visualizer --app-name com.starfungames.sketchlings.main --kpi cool-start-latency --iterations 3`), with `useReportFullyDrawn` (above) marking fully drawn. A performance overlay of my own in the race (Menu key: loop rate, JS time per frame, input latency, audio state). On 21 Oct, measured on the Vega Virtual Device, headless, Apple-silicon host: cool start again with 10 runs (time to first frame 665 ms mean, min 631, max 719, on a loaded host), and attempts at warm start, memory, foreground memory and UI fluidity. Only cool start produced numbers; app memory came from `vega exec perf activity-monitor` instead (124 MiB on Home, 233 MiB at most after three races).
 
 **What worked well.**
-- One command gave a report with n, min, mean, max, standard deviation and confidence interval per KPI: time to first frame 408 ms mean (min 192, max 553), time to fully drawn 409 ms mean, JS bundle load 17.6 ms. The targets are under 1.5 s and under 8 s.
+- One command gave a report with n, min, mean, max, standard deviation and confidence interval per KPI: on 20 Oct (3 runs) time to first frame 408 ms mean (min 192, max 553), time to fully drawn 409 ms mean, JS bundle load 17.6 ms; on 21 Oct (10 runs, loaded host) 665 ms, 665 ms and 8.5 ms. The targets are under 1.5 s and under 8 s.
 - It installs what it needs on the device (`KSPTService`) by itself.
 
 **What needs work.**
 - An app that makes no network calls at launch fails validation with "[-1 != -1]" and "VALUE VALIDATION FAILED", even though the latency numbers are fine (#16).
 - UI fluidity needs a `--test-scenario` script; a ready-made "D-pad through every focusable item" scenario would help.
+- `--kpi memory`, `--kpi foreground-memory` and `--kpi ui-fluidity` all stop with "Appium server is not found in the platform", even with no `--test-scenario`. Memory doesn't need UI automation, and `activity-monitor` reads it without Appium, so the KPI could too.
+- `--kpi warm-start-latency` can't run on the Vega Virtual Device: its prep step sends the app to the background with `vmsgr send pkg://com.amazon.smplighthouse.launcher.main`, the Fire TV launcher. The VVD's launcher is `com.amazon.keplerlauncherapp.main`, so every prep fails ("Failed to send message, remote error"), each iteration retries 5 times and the report ends with "iterations completed: 0" and doesn't say why. Pick the launcher from the device, or say why the prep failed.
+- ADBT `analyze_perfetto_traces` couldn't read the cool-start traces: "Unable to locate trace processor binary ... Vega Performance CLI path is not available", while `vega exec perf` worked in the same shell.
 
 **Onboarding.** Add one hook, run one command. The performance skill (section 3) pointed to it.
 

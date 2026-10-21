@@ -48,7 +48,7 @@ Demo party tries the relay's Hall of Fame for 3 seconds, then uses the bundled s
 
 ## Tech Implementation
 
-**We root-caused a deadlock inside Vega's own JS-thread watchdog.** About 1 race start in 4 froze on "3" and the app was later killed as AppNotResponding, with "No JavaScript code is currently being executed". The crash report only unwinds the main thread, but it also embeds a full core dump, so we read the core dump's thread stacks with symbol names from the device libraries ([`tv/scripts/acr-stacks.py`](tv/scripts/acr-stacks.py), reusable on any Vega ACR). Five reports show the same picture: the JS thread blocked in a `send()` to the watchdog's wake-up socket while holding the watchdog loop's mutex, and the loop thread, the only reader of that socket, waiting for the same mutex. A classic ABBA deadlock that the watchdog can't report, because it is one of the stuck threads. The app now starves it of wake-ups: one JS task per frame, animated values native from birth, a silent race. **42 race starts, 0 freezes since** (`tv/scripts/soak.mjs`). Full write-up and platform suggestions: [FRICTION_LOG #1](FRICTION_LOG.md#1-race-start-freeze-an-abba-deadlock-inside-vegas-js-thread-watchdog).
+**We root-caused a deadlock inside Vega's own JS-thread watchdog.** About 1 race start in 4 froze on "3" and the app was later killed as AppNotResponding, with "No JavaScript code is currently being executed". The crash report only unwinds the main thread, but it also embeds a full core dump, so we read the core dump's thread stacks with symbol names from the device libraries ([`tv/scripts/acr-stacks.py`](tv/scripts/acr-stacks.py), reusable on any Vega ACR). Five reports show the same picture: the JS thread blocked in a `send()` to the watchdog's wake-up socket while holding the watchdog loop's mutex, and the loop thread, the only reader of that socket, waiting for the same mutex. A classic ABBA deadlock that the watchdog can't report, because it is one of the stuck threads. The app now starves it of wake-ups: one JS task per frame, animated values native from birth, a silent race, and ink blots that mount one lane at a time during the countdown. **52 race starts on the fixed builds (42 at 4 lanes, plus 10 at 6 lanes after the blot fix), 0 freezes** (`tv/scripts/soak.mjs`). Full write-up and platform suggestions: [FRICTION_LOG #1](FRICTION_LOG.md#1-race-start-freeze-an-abba-deadlock-inside-vegas-js-thread-watchdog).
 
 **A native Vega app built for the remote.** React Native for Vega (RN 0.83, `@amazon-devices/react-native-kepler` 4.0.1), built with `react-native build-vega`, installed with `vega run-app`.
 
@@ -74,15 +74,15 @@ Demo party tries the relay's Hall of Fame for 3 seconds, then uses the bundled s
 
 | KPI | Vega target | Sketchlings | How, when |
 |---|---|---|---|
-| Time to First Frame, cool start | < 1.5 s | **408 ms** mean (min 192, max 553) | KPI Visualizer, 3 runs, 20 Oct |
-| Time to Fully Drawn, cool start | < 8 s | **409 ms** mean | same run (`useReportFullyDrawn`) |
-| Time to First Frame, warm start | TBD | TBD | |
-| UI fluidity | > 99% | TBD | |
-| Focus response | < 200 ms | TBD | |
-| Foreground memory | < 400 MiB | TBD | |
-| Race loop rate and JS time per frame | 60 Hz | 57-65 Hz, 0.1-1.2 ms of JS per frame (4-6 lanes) | in-app overlay, 20 Oct, before the one-task loop |
+| Time to First Frame, cool start | < 1.5 s | **665 ms** mean (min 631, max 719) | KPI Visualizer, 10 runs, 21 Oct, host under load (408 ms over 3 runs on 20 Oct) |
+| Time to Fully Drawn, cool start | < 8 s | **665 ms** mean | same run (`useReportFullyDrawn`) |
+| Time to First Frame, warm start | < 0.5 s | not measurable on the VVD | the KPI Visualizer backgrounds the app by opening the Fire TV launcher (`com.amazon.smplighthouse.launcher.main`), which the VVD doesn't have: 0 of 5 runs completed |
+| UI fluidity | > 99% | not measured | the KPI Visualizer needs an Appium server for it (not installed) |
+| Focus response | < 200 ms | not measured | needs an Appium scenario too |
+| Foreground memory | < 400 MiB | **124 MiB** on Home, **233 MiB** peak after three races; 284 MiB after the Hall of Fame and six 6-lane races | `vega exec perf activity-monitor`, 21 Oct (the KPI Visualizer's memory KPI needs Appium) |
+| Race loop rate and JS time per frame | 60 Hz | 55-62 Hz, 0.3-0.5 ms of JS per frame (6 lanes) | in-app overlay, 21 Oct |
 | Phone input applied in the race | none set | 7 ms median receive-to-applied; +1 ms median delivery jitter | simulated phones on the same Mac, 20 Oct |
-| Race-start freezes | 0 | 0 in 42 race starts since the fix | `soak.mjs`, 21 Oct |
+| Race-start freezes | 0 | 0 in 52 race starts on the fixed builds (42 at 4 lanes, 10 at 6 lanes after the blot fix) | `soak.mjs`, 21 Oct |
 
 The absolute phone-to-TV time can't be measured from the VVD, whose clock ran 2 h 11 min behind the Mac (FRICTION_LOG #18).
 
