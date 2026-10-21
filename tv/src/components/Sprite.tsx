@@ -39,7 +39,7 @@ export const spriteBox = (s: Sketchling, size: number) => {
 /** A Sketchling drawing with living googly eyes stuck on top (where the server found its eyes). */
 export const Sprite = React.memo(({s, size, pupils, style, still}: Props) => {
   const box = spriteBox(s, size);
-  const eyes = s.eyes?.length ? s.eyes : DEFAULT_EYES;
+  const eyes = s.eyes?.length ? s.eyes : s.ownEyes ? [] : DEFAULT_EYES; // ownEyes: the child drew eyes we couldn't place
   const idle = useIdlePupils(!pupils && !still);
   const p = pupils ?? idle;
   const blink = useBlink(!still);
