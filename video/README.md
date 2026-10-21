@@ -38,7 +38,8 @@ screens for the two unbroken takes (family left, VVD right, running clock), over
 crossfades as `edl.json` says, voice/VO cues placed on the timeline, music beds ducked about 8 dB under anything
 spoken (room audio and cues), then a two-pass `loudnorm` to -14 LUFS / -1 dBTP and AAC 192k.
 
-`out/draft-placeholder.mp4` is the all-placeholder draft from 21 Oct (2:50.5, -14.0 LUFS).
+`out/draft-placeholder.mp4` is the all-placeholder draft from 21 Oct (2:50.5, -14.0 LUFS); `out/draft-vvd.mp4` is the
+21 Oct dress rehearsal with real VVD clips (family/phone shots still placeholders), frames in `out/frames/`.
 
 ## Capture the VVD
 
@@ -53,6 +54,20 @@ prints its length. The recording also carries an audio track; the build ignores 
 Before filming on the VVD (from `notes/tv.md`): build the TV app with `MUTE=1` (F7), keep the Mac's memory free (F5),
 and clear `server/data` so the Hall of Fame and the demo party show real creatures, not soak-test ones. Use a build
 from commit 647a6f0 or later (no "Alexa, select" line on Home, "press ROAR" instead of "shout").
+
+**Dress rehearsal, 21 Oct** (demo party, remote only, sound-on build d301384). Whole sessions were recorded with
+`adb emu screenrecord` and the named clips cut out with `ffmpeg -ss <t> -i in.webm -t <d> -c copy` (keyframes every
+~0.44 s); each segment's `ss` in `edl.json` picks the window. What it showed:
+- **The race doesn't fit take B.** GO to the first finisher took ~53 s on the app's race clock (~60 s wall), and takeB
+  is 33 s, so the VVD side shows the last 33 s (from ~0:28) and no countdown. Faster phone tapping helps, but decide
+  before Thursday: start take B mid-race (same moment in both files) or give it more time. The app's clock (0:41)
+  then disagrees with the edit's take clock (0:15), and it runs ~12 % slow under VVD load.
+- Results: Play again sits above Home (Down/Up moves focus), and OK on Results is Play again, so pressing OK at the
+  finish skips the Results screen. `vvd-results.webm` is one recording: podium (`results`, ss 1.4), then a cut to the
+  Hall of Fame further in (`hall`, ss 20).
+- The recordings carry the app's audio, with timestamp glitches and ~1.5 s of latency: keep the voice cues.
+- The Hall of Fame froze on the second visit of a session (picture and keys, `notes/tv.md` F11): film it soon after
+  an app restart.
 
 ## Where footage goes
 
@@ -88,7 +103,7 @@ Creature voices are the app's own clips. Find the creature and copy its files:
 curl -s http://localhost:8787/api/hall-of-fame | jq -r '.[] | [.id, .name, .artist, .source] | @tsv'
 cp ../server/data/voice/<id>/intro.m4a   voice/hero-intro.m4a     # the 0:06 wow moment
 cp ../server/data/voice/<id>/intro.m4a   voice/takeA-intro.m4a    # Take A reveal (optional)
-cp ../server/data/voice/<id>/winLine.m4a voice/winner-win.m4a     # end of Take B (optional)
+cp ../server/data/voice/<id>/winLine.m4a voice/winner-win.m4a     # Results podium, the winner of Take B (optional)
 ```
 
 Because the VVD is filmed muted, these are laid in during the edit, so the build shows a small note while they play:
@@ -123,8 +138,8 @@ Times are the built video's (2:50.5 total); "bp" is the blueprint's slot.
 | 0:15.6-0:22.2 | 0:15-0:22 | home | VVD Home + lower third "Running on Fire TV · Vega OS / Vega Virtual Device · React Native for Vega" | VO hook |
 | 0:22.2-0:30.2 | 0:22-0:30 | who | you on camera | your voice, music ducked |
 | 0:29.8-0:54.8 | 0:30-0:55 | takeA | split screen, clock: scan, processing, reveal | room + creature voice |
-| 0:54.8-1:27.8 | 0:55-1:30 | takeB | split screen, clock: countdown to finish, youngest wins | room, winner's line (noted) |
-| 1:27.8-1:36.8 | 1:30-1:40 | results | podium, Hall of Fame, caption "Saved. Still here tomorrow night." | kids react, music |
+| 0:54.8-1:27.8 | 0:55-1:30 | takeB | split screen, clock: race to the finish (33 s), youngest wins | room (the race is silent in the app) |
+| 1:27.8-1:36.8 | 1:30-1:40 | results, hall | podium; cut to the Hall of Fame, caption "Saved. Still here tomorrow night." | winner's line (noted), kids react, music |
 | 1:36.8-1:51.3 | 1:40-1:55 | remote, playagain, demo | remote close-up, D-pad to Play again, demo party (no Alexa beat) | VO modes, music |
 | 1:50.9-1:57.9 | 1:55-2:02 | arch | architecture card with the Vega packages | VO |
 | 1:57.5-2:05.0 | 2:02-2:10 | cutout | doodle-cutout steps, open source, MIT, 25 tests | VO |
