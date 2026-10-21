@@ -295,7 +295,7 @@ failed validation`. Not checked on real hardware. Suggestion: fix or document th
 | **final** + fixed room code (soak-only) | live, 4 fake phones (10 rounds) | **10** | **0** |
 | 6 lanes before the blot fix (21 Oct afternoon) | demo + 2 guests | 7 | **3** |
 | + blot fix, 2ee4b14 | demo, 6 lanes | 10 | 0 |
-| + #19 callouts, #20 layout (22 Oct morning, 4c25958), sound on | demo, 6 lanes | **10** | **0** |
+| + #19 callouts, #20 layout (21 Oct morning, 4c25958), sound on | demo, 6 lanes | **10** | **0** |
 | same build, sound on, final soak | demo, 6 lanes | 11 | 0 (2 sessions ended by a libW3CMedia SIGSEGV at Results, see below) |
 | same build, `MUTE=1` (the filming setup) | demo, 6 lanes | **10** | **0** |
 
@@ -372,7 +372,7 @@ heavy load; the VVD itself kept crashing under the same load on 21 Oct (F5).
   last one was counted as "frozen" by `soak.mjs` (the launcher is a still screen) although the race itself was over.
   None in the first 10-start soak this morning, none with `MUTE=1` (no media stack). Not caused by #19/#20 (no audio
   code touched). Film on the VVD with `MUTE=1` (the build installed on the VVD now); with sound on, expect a crash about
-  1 in 8 Reveal/Results screens on this VVD today. ACRs: `acr4/` (local), F7 territory.
+  1 in 8 Reveal/Results screens on this VVD today. ACRs on the VVD: `crash_1792555997`, `crash_1792556909`, `crash_1792557314` (`vega device copy-logs -a SYSTEM_TOMBSTONE/acr`); F7 territory.
 - **Open:** the raised Doodle Boost! pill can cover the end of a straggler's lane tag (name and "+40% boost") when that
   runner is at the left edge (seen as "Gran" hidden in a 4-lane demo at 0:31); backlog #21 (boost badge folded into the
   name pill) would shorten the tags. The crown is centred on the sprite box, so on a creature whose head is off-centre
