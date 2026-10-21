@@ -357,6 +357,20 @@ seed = 3;
   </g></g></svg>`;
 }
 
+// Dizzy stars: three small stars on a ring, spun over a stunned racer's head (one image per racer, not three)
+{
+  const star = (cx, cy, R) => {
+    const pts = [];
+    for (let k = 0; k < 10; k++) {
+      const a = -Math.PI / 2 + (k * Math.PI) / 5, r = k % 2 ? R * 0.46 : R;
+      pts.push(`${r1(cx + Math.cos(a) * r)} ${r1(cy + Math.sin(a) * r)}`);
+    }
+    return `<path d="M${pts.join(' L')} Z" fill="#FFC531" stroke="${INK}" stroke-width="4.5" stroke-linejoin="round"/>`;
+  };
+  const ring = [0, 120, 240].map((d) => star(r1(56 + Math.cos((d * Math.PI) / 180) * 40), r1(56 + Math.sin((d * Math.PI) / 180) * 38), 17)).join('');
+  art.dizzy = `<svg xmlns="http://www.w3.org/2000/svg" width="112" height="112" viewBox="0 0 112 112">${DEFS(3)}<g filter="url(#hand)">${ring}</g></svg>`;
+}
+
 for (const [name, svg] of Object.entries(art)) {
   writeFileSync(join(SVG_DIR, `${name}.svg`), svg);
 }

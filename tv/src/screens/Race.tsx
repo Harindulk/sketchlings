@@ -577,6 +577,7 @@ const RunnerView = React.memo(
     const kind = abilityOf(s).kind;
     const box = spriteBox(s, size);
     const ground = top + laneH - 12;
+    const ring = Math.max(box.w, box.h) * 1.08; // runner ring diameter
     const spin = useRef(new Animated.Value(0)).current;
     useEffect(() => {
       const loop = Animated.loop(
@@ -645,13 +646,21 @@ const RunnerView = React.memo(
             />
           ))}
         </Animated.View>
-        <Animated.Text
+        <View
           style={[
-            styles.boostText,
-            {opacity: v.boost, right: box.w * 0.62, top: box.h * 0.74},
+            styles.calloutRight,
+            {right: box.w * 0.7, top: (box.h - ring) / 2 + 10 - 28},
           ]}>
-          Doodle Boost!
-        </Animated.Text>
+          <Animated.View
+            style={[
+              styles.pill,
+              {opacity: v.boost, transform: [{rotate: '-4deg'}]},
+            ]}>
+            <Text style={styles.boostText} numberOfLines={1}>
+              Doodle Boost!
+            </Text>
+          </Animated.View>
+        </View>
         <Animated.View
           style={{
             transform: [{translateY: v.y}, {rotate: anim.rot}],
@@ -662,11 +671,11 @@ const RunnerView = React.memo(
               {
                 borderColor: p.color,
                 backgroundColor: p.color + '33',
-                width: Math.max(box.w, box.h) * 1.08,
-                height: Math.max(box.w, box.h) * 1.08,
-                borderRadius: Math.max(box.w, box.h),
-                left: (box.w - Math.max(box.w, box.h) * 1.08) / 2,
-                top: (box.h - Math.max(box.w, box.h) * 1.08) / 2,
+                width: ring,
+                height: ring,
+                borderRadius: ring,
+                left: (box.w - ring) / 2,
+                top: (box.h - ring) / 2,
               },
             ]}
           />
@@ -676,57 +685,75 @@ const RunnerView = React.memo(
           style={[
             styles.dizzy,
             {
-              left: box.w / 2 - 26,
+              left: box.w / 2 - 28,
               opacity: v.stun,
               transform: [{rotate: anim.spin}],
             },
           ]}>
-          {[0, 1, 2].map((k) => (
-            <View
-              key={k}
-              style={[
-                styles.star,
-                {transform: [{rotate: `${k * 120}deg`}, {translateX: 20}]},
-              ]}
+          {/* one lane per 300 ms between the ink-blot steps: images mounting with the race feed F4 */}
+          <Later ms={150 + 300 * Math.round((top - TOP) / laneH)}>
+            <Image
+              source={require('../assets/art/dizzy.png')}
+              style={styles.dizzy}
             />
-          ))}
+          </Later>
         </Animated.View>
         <Animated.View
           style={[
             styles.roar,
             {
-              left: box.w * 0.62, // beside the head, so the top lane's pill isn't hidden under the HUD
-              top: box.h * 0.05,
+              left: box.w * 0.62, // ahead of the head; bottom 8 dp above the ability pop, top clear of the HUD
+              top: box.h - 66,
               backgroundColor: p.color,
               opacity: v.roar,
-              transform: [{scale: v.roar}, {rotate: '-8deg'}],
+              transform: [{scale: v.roar}, {rotate: '-4deg'}],
             },
           ]}>
           <Text style={styles.roarText}>ROAR!</Text>
         </Animated.View>
-        <Animated.View
-          style={[
-            styles.pop,
-            {
-              left: box.w * 0.62, // ahead of the feet, under the ROAR! pill, clear of "Doodle Boost!" behind
-              top: box.h - 22,
-              width: 44 + ABILITY[kind].pop.length * 10, // absolute children don't shrink-wrap on Vega
-              opacity: v.pop,
-              transform: [{scale: v.pop}, {rotate: '4deg'}],
-            },
-          ]}>
-          <Image source={ABILITY[kind].icon} style={styles.popIcon} />
-          <Text style={styles.popText} numberOfLines={1}>
-            {ABILITY[kind].pop}
-          </Text>
-        </Animated.View>
-        {place ? <Medal place={place} color={p.color} /> : null}
+        {/* absolute views don't shrink-wrap on Vega (they wrap at the parent's width): a wide absolute
+            wrapper, and the pill inside sized to its text by alignItems */}
+        <View style={[styles.callout, {left: box.w * 0.62, top: box.h - 22}]}>
+          <Animated.View
+            style={[
+              styles.pill,
+              styles.pop,
+              {opacity: v.pop, transform: [{scale: v.pop}, {rotate: '-2deg'}]},
+            ]}>
+            <Image source={ABILITY[kind].icon} style={styles.popIcon} />
+            <Text style={styles.popText} numberOfLines={1}>
+              {ABILITY[kind].pop}
+            </Text>
+          </Animated.View>
+        </View>
+        {place ? (
+          <Medal place={place} color={p.color} right={box.w * 0.38 + 4} />
+        ) : null}
       </Animated.View>
     );
   },
 );
 
-function Medal({place, color}: {place: number; color: string}) {
+/** Mounts its child after `ms`. */
+function Later({ms, children}: {ms: number; children: React.ReactElement}) {
+  const [on, setOn] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setOn(true), ms);
+    return () => clearTimeout(t);
+  }, [ms]);
+  return on ? children : null;
+}
+
+// 1st! sits left of the ROAR! slot (same height band), so the two never overlap
+function Medal({
+  place,
+  color,
+  right,
+}: {
+  place: number;
+  color: string;
+  right: number;
+}) {
   const label = PLACE[place] ?? `${place}th`;
   const v = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -742,6 +769,7 @@ function Medal({place, color}: {place: number; color: string}) {
       style={[
         styles.medal,
         {
+          right,
           backgroundColor: place === 1 ? '#ffc531' : color,
           width: 30 + label.length * 13, // absolute children don't shrink-wrap on Vega: "1st!" wrapped to "1s/t!" in 6 lanes
           transform: [{scale: v}],
@@ -916,57 +944,41 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: C.ink,
   },
-  boostText: {
-    position: 'absolute',
-    width: 130,
-    textAlign: 'right',
-    fontFamily: F.bold,
-    fontSize: 17,
-    color: '#13723D', // 5.6:1 on paper (the old #1E9E57 was 2.8:1 on the pink lane)
-  },
-  dizzy: {
-    position: 'absolute',
-    top: -14,
-    width: 52,
-    height: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  star: {
-    position: 'absolute',
-    width: 12,
-    height: 12,
-    borderRadius: 3,
-    backgroundColor: '#ffc531',
-    borderWidth: 2,
-    borderColor: C.ink,
-  },
-  roar: {
-    position: 'absolute',
-    width: 120,
-    alignItems: 'center',
-    borderRadius: 14,
-    borderWidth: 3,
-    borderColor: C.ink,
-  },
-  roarText: {fontFamily: F.bold, fontSize: 30, lineHeight: 38, color: C.ink},
-  pop: {
-    position: 'absolute',
-    flexDirection: 'row',
-    alignItems: 'center',
+  callout: {position: 'absolute', width: 260, alignItems: 'flex-start'}, // the pill inside shrink-wraps
+  calloutRight: {position: 'absolute', width: 200, alignItems: 'flex-end'},
+  pill: {
     backgroundColor: C.white,
     borderRadius: 14,
     borderWidth: 3,
     borderColor: C.ink,
+    paddingHorizontal: 10,
+  },
+  boostText: {
+    fontFamily: F.bold,
+    fontSize: 16,
+    lineHeight: 22,
+    color: '#13723D', // 5.6:1 on white
+  },
+  dizzy: {position: 'absolute', top: -30, width: 56, height: 56},
+  roar: {
+    position: 'absolute',
+    width: 96,
+    alignItems: 'center',
+    borderRadius: 14,
+    borderWidth: 3,
+    borderColor: C.ink,
+  },
+  roarText: {fontFamily: F.bold, fontSize: 24, lineHeight: 30, color: C.ink},
+  pop: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingLeft: 2,
-    paddingRight: 10,
   },
   popIcon: {width: 28, height: 28, marginRight: 2},
   popText: {fontFamily: F.bold, fontSize: 19, lineHeight: 28, color: C.ink},
   medal: {
     position: 'absolute',
     top: -16,
-    right: -26,
     borderRadius: 16,
     borderWidth: 3,
     borderColor: C.ink,
