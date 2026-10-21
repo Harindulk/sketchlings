@@ -107,7 +107,7 @@ are read by macOS `say` in drafts (marked `TTS` in the build output). Lines must
 | `vo/cutout.m4a` | doodle-cutout (7.5 s) | Our open-source library, doodle-cutout, turns a phone photo into a clean sticker. |
 | `vo/claude.m4a` | Claude (7 s) | Claude reads the drawing and decides how it plays: a name, stats, an ability, and where the eyes go. |
 | `vo/kpi.m4a` | KPI (7.5 s) | On the Vega Virtual Device it starts in under half a second, and the race loop needs about a millisecond per frame. |
-| `vo/deadlock.m4a` | deadlock (9 s) | Races sometimes froze at the start. The crash dump's thread stacks showed a watchdog deadlock. One task per frame: forty-two starts, zero freezes. |
+| `vo/deadlock.m4a` | deadlock (9 s) | Races sometimes froze at the start. The crash dump's thread stacks showed a watchdog deadlock. One task per frame, ink loaded during the countdown: fifty-two starts, zero freezes. |
 | `vo/impact.m4a` | impact (14 s) | It's for families with kids from four to ten. Screen time that starts with crayons, and the youngest can really win. About one and a half cents per creature. First names only, no accounts. |
 
 ## Shot list against the blueprint
@@ -130,7 +130,7 @@ Times are the built video's (2:50.5 total); "bp" is the blueprint's slot.
 | 1:57.5-2:05.0 | 2:02-2:10 | cutout | doodle-cutout steps, open source, MIT, 25 tests | VO |
 | 2:04.6-2:11.6 | 2:10-2:17 | claude | Claude's real JSON over the sprite, eyes landing | VO |
 | 2:11.2-2:18.7 | 2:17-2:25 | kpi | KPI card, measured on the VVD, TBD where unmeasured | VO |
-| 2:18.3-2:27.3 | (panel) | deadlock | ACR, three thread stacks, the fix, 42 starts / 0 freezes | VO |
+| 2:18.3-2:27.3 | (panel) | deadlock | ACR, three thread stacks, the fix, 52 starts / 0 freezes | VO |
 | 2:26.9-2:40.9 | 2:25-2:42 | impact | who it's for, youngest wins, Appstore, cost, privacy | VO |
 | 2:40.5-2:50.5 | 2:42-2:55 | end | joke, wordmark, repo, doodle-cutout (MIT), StarFun Games, music credit | CC0 sting |
 

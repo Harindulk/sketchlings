@@ -59,7 +59,7 @@
     {"id": "kpi", "bp": "2:17-2:25", "type": "card", "dur": 7.5, "in": "fade", "src": "cards/kpi.png",
      "cues": [{"src": "vo/kpi.m4a", "at": 0.3, "text": "On the Vega Virtual Device it starts in under half a second, and the race loop needs about a millisecond per frame."}]},
     {"id": "deadlock", "bp": "new", "type": "card", "dur": 9, "in": "fade", "src": "cards/deadlock.png",
-     "cues": [{"src": "vo/deadlock.m4a", "at": 0.3, "text": "Races sometimes froze at the start. The crash dump's thread stacks showed a watchdog deadlock. One task per frame: forty-two starts, zero freezes."}]},
+     "cues": [{"src": "vo/deadlock.m4a", "at": 0.3, "text": "Races sometimes froze at the start. The crash dump's thread stacks showed a watchdog deadlock. One task per frame, ink loaded during the countdown: fifty-two starts, zero freezes."}]},
     {"id": "impact", "bp": "2:25-2:42", "type": "card", "dur": 14, "in": "fade", "src": "cards/impact.png",
      "cues": [{"src": "vo/impact.m4a", "at": 0.4, "text": "It's for families with kids from four to ten. Screen time that starts with crayons, and the youngest can really win. About one and a half cents per creature. First names only, no accounts."}]},
     {"id": "end", "bp": "2:42-2:55", "type": "card", "dur": 10, "in": "fade", "src": "cards/end.png"}
