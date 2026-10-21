@@ -266,11 +266,14 @@ const cleanName = (s: string) =>
     .slice(0, 12);
 
 function joinView(): View {
-  let age = S.age;
+  // Only pre-fill when this phone is already a player in this room ("Change my name"). Otherwise the last
+  // person who used the phone (a smoke tester, an older sibling) would be one tap away from joining again.
+  const known = !!S.playerId;
+  let age = known ? S.age : null;
   const name = h('input', {
     class: 'text-input',
     id: 'name',
-    value: S.name,
+    value: known ? S.name : '',
     maxlength: 12,
     autocomplete: 'off',
     autocapitalize: 'words',
@@ -300,8 +303,9 @@ function joinView(): View {
   const form = h(
     'form',
     {class: 'stack'},
-    h('label', {class: 'field', for: 'name'}, h('span', null, 'Your first name'), name),
-    h('span', {class: 'legend', id: 'age-legend'}, 'How old are you?'),
+    h('label', {class: 'field', for: 'name'}, h('span', null, "Player's first name"), name),
+    // A parent often fills this in for a 4-year-old: "you" would read as the parent and cost the child their boost.
+    h('span', {class: 'legend', id: 'age-legend'}, 'How old is the player?'),
     ages,
     join,
   );
@@ -356,6 +360,19 @@ function connectingView(): View {
   };
 }
 
+/** Hand this phone to someone else in the same room. The old player stays in the game (and in the 6-player limit). */
+function switchPlayer() {
+  if (!confirm(`Switch to a new player on this phone? ${S.name}'s champion stays in the game.`)) return;
+  store.set(playerKey(S.room), '');
+  link.stop();
+  if (S.sprite) URL.revokeObjectURL(S.sprite.url);
+  Object.assign(S, {playerId: null, name: '', age: null, joined: false, joining: false, sketchling: null, redraw: false, step: 'intro', sprite: null, players: []});
+  pad = null;
+  render();
+}
+
+const switchBtn = () => h('button', {type: 'button', class: 'link-btn', onclick: switchPlayer}, `Not ${S.name}? Switch player`);
+
 const seenPlayers = new Set<string>();
 function playerChip(p: Player): HTMLElement {
   const dot = h('span', {class: 'dot'});
@@ -393,6 +410,7 @@ function lobbyView(): View {
         svg(drawIllo, 'illo'),
         h('p', {class: 'big-text'}, 'Grab paper and a ', h('strong', null, 'thick marker'), '. The game starts on the TV!'),
       ),
+      h('div', {class: 'center stack'}, switchBtn()),
     ),
     update,
   };
@@ -648,11 +666,12 @@ function cardView(): View {
     return h('div', {class: 'stat'}, h('span', null, label), pips);
   };
   const redraw = h('button', {type: 'button', class: 'link-btn', onclick: () => ((S.redraw = true), (S.step = 'intro'), render())}, 'Draw a new one');
+  const other = switchBtn();
   const update = () => {
     const text = S.phase === 'draw' ? 'Ready! Waiting for the others...' : S.phase === 'reveal' ? 'Look at the TV!' : '';
     banner.textContent = text;
     banner.hidden = !text;
-    redraw.hidden = S.phase !== 'draw';
+    redraw.hidden = other.hidden = S.phase !== 'draw';
   };
   update();
   return {
@@ -671,7 +690,7 @@ function cardView(): View {
         h('p', {class: 'bubble'}, `"${sk.catchphrase}"`),
         h('p', {class: 'byline'}, `Drawn by ${sk.artist || S.name}`),
       ),
-      h('div', {class: 'center stack'}, redraw),
+      h('div', {class: 'center stack', style: 'gap:0'}, redraw, other),
     ),
     update,
   };
