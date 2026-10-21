@@ -119,6 +119,38 @@ function sendInput(kind: InputKind) {
   link.send({t: 'input', kind, at: Date.now()});
 }
 
+// ---------------------------------------------------------------- keep the phone awake and on this page
+
+// Phones wait minutes between snapping and racing; a parent's phone that auto-locks can't be unlocked by a 5-year-old.
+// Wake Lock exists only on secure pages (the HTTPS tunnel, localhost); on the plain-HTTP LAN page set Auto-Lock to Never.
+let wake: WakeLockSentinel | null = null;
+let waking = false;
+function keepAwake() {
+  if (waking || (wake && !wake.released) || document.visibilityState !== 'visible' || !('wakeLock' in navigator)) return;
+  waking = true;
+  navigator.wakeLock
+    .request('screen')
+    .then((s) => void (wake = s))
+    .catch((err) => console.info('[sketchlings] no wake lock:', err?.name))
+    .finally(() => (waking = false));
+}
+document.addEventListener('visibilitychange', keepAwake); // the lock is released whenever the page is hidden (camera, lock)
+
+// A tab opened from a QR scan has no history, so Android's back swipe (easy to hit from the pad's edge) closes it.
+// Keep one extra entry to land on. Pushed during a tap, so Chrome doesn't skip it.
+function guardBack() {
+  if (!history.state?.sketchlings) history.pushState({sketchlings: 1}, '');
+}
+addEventListener('popstate', () => S.joined && guardBack());
+document.addEventListener(
+  'pointerdown',
+  () => {
+    keepAwake(); // some browsers only grant it after a tap
+    if (S.joined || S.joining) guardBack();
+  },
+  {passive: true},
+);
+
 // ---------------------------------------------------------------- scan pipeline
 
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -259,6 +291,8 @@ function joinView(): View {
     store.set('sketchlings.age', age);
     S.joining = true;
     link.connect();
+    keepAwake();
+    guardBack();
     render();
   });
   return {
@@ -711,5 +745,6 @@ function render() {
 if (S.room && S.playerId && S.name && S.age) {
   S.joining = true;
   link.connect();
+  keepAwake();
 }
 render();
