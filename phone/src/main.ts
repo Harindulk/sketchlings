@@ -140,8 +140,11 @@ function sendInput(kind: InputKind) {
 // Wake Lock exists only on secure pages (the HTTPS tunnel, localhost); on the plain-HTTP LAN page set Auto-Lock to Never.
 let wake: WakeLockSentinel | null = null;
 let waking = false;
+let lastTry = 0;
 function keepAwake() {
   if (waking || (wake && !wake.released) || document.visibilityState !== 'visible' || !('wakeLock' in navigator)) return;
+  if (Date.now() - lastTry < 3000) return; // refused (battery saver, policy): don't ask again on every tap of a race
+  lastTry = Date.now();
   waking = true;
   navigator.wakeLock
     .request('screen')
