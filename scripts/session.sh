@@ -96,6 +96,15 @@ settle() { # the emulator finishes a file after stop: wait until the newest chun
     sleep 1
   done
 }
+sound_check() { # a take of a Reveal or a race must carry the app's sound (23 Oct: a whole run recorded silent)
+  local v
+  sleep 3 # the emulator finishes the file
+  v=$(ffmpeg -nostdin -v info -i "$1" -af volumedetect -f null - 2>&1 | sed -n 's/.*mean_volume: \(-*[0-9.]*\) dB.*/\1/p')
+  [ -z "$v" ] && return 0
+  if awk -v v="$v" 'BEGIN { exit !(v < -45) }'; then # silent takes measured -59 dB, takes with sound -25 to -27
+    rlog "WARNING take $2 has no sound ($v dB). If it showed a Reveal or a race, the app's audio is off: relaunch the app (runsheet 7, the run-app line), then take it again"
+  else rlog "take $2: sound OK ($v dB)"; fi
+}
 record() { # chunk after chunk until $STATE/stop appears; a failed start (VVD down, recorder busy) is retried every second
   local take name f l out secs i fails=0 prev= full=0
   while [ ! -e "$STATE/stop" ]; do
@@ -132,6 +141,7 @@ record() { # chunk after chunk until $STATE/stop appears; a failed start (VVD do
       done
       "$ADB" -s "$SERIAL" emu screenrecord stop >/dev/null 2>&1
       rlog "stop  $name after $i s"
+      [ -n "$take" ] && sound_check "$f" "$take" &
       prev=$f
     else
       fails=$((fails + 1))

@@ -125,6 +125,17 @@ function append(bytes: Uint8Array) {
   });
 }
 
+function trim(before: number) {
+  return new Promise<void>((resolve) => {
+    const done = () => {
+      sb!.removeEventListener('updateend', done);
+      resolve();
+    };
+    sb!.addEventListener('updateend', done);
+    sb!.remove(0, before);
+  });
+}
+
 function finished() {
   if (!until) return;
   until = 0;
@@ -148,6 +159,13 @@ async function play(bytes: Uint8Array, my: number, voice: boolean) {
     busyUntil = Date.now() + 5000;
     audioStatus.last = voice ? 'voice' : 'narrator';
     const start = appended;
+    // Drop what has played: one SourceBuffer for the whole run filled up after an evening of clips, appendBuffer
+    // threw and the catch below silenced the rest of the session.
+    if (start > 60 && sb.buffered.length && sb.buffered.start(0) < start - 30) await trim(start - 30);
+    if (my !== seq) {
+      busyUntil = 0;
+      return;
+    }
     sb.timestampOffset = start;
     await append(bytes);
     const b = sb.buffered;
