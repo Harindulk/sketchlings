@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Caption or tag (transparent)</title><link rel="stylesheet" href="style.css">
+<!-- Used by build.mjs: text.html#<kind>|<who>|<text>, rendered at 1920x1080.
+     say: a spoken line, burned in at the bottom centre (who: the speaker, optional); low: the same, smaller, in the
+     band under a shrunk card (build.mjs).
+     tag: a short label at the top right (time compression, what a shot proves). -->
+<style>
+  .say { position: absolute; left: 50%; bottom: 92px; transform: translateX(-50%); max-width: 1500px; width: max-content; padding: 10px 36px 6px;
+    border-radius: 26px; border-width: 5px; box-shadow: 5px 6px 0 var(--ink); text-align: center; font-size: 50px; font-weight: 700; line-height: 1.15; }
+  .say .who { display: inline-block; margin-right: 14px; padding: 0 16px; border-radius: 99px; background: var(--purple); color: #fff; font-size: 38px;
+    font-weight: 800; vertical-align: 4px; }
+  .say.low { bottom: 10px; max-width: 1840px; padding: 4px 28px 0; font-size: 40px; line-height: 1.12; }
+  .tag { position: absolute; right: 36px; top: 30px; font-size: 40px; font-weight: 800; padding: 6px 30px 2px; border-width: 5px; box-shadow: 5px 6px 0 var(--ink); }
+</style></head>
+<body>
+  <script>
+    const [kind, who, ...rest] = decodeURIComponent(location.hash.slice(1)).split('|');
+    const el = document.createElement('div');
+    if (kind === 'tag') {
+      el.className = 'pill fill tag';
+      el.textContent = rest.join('|');
+    } else {
+      el.className = kind === 'low' ? 'say low sticker' : 'say sticker';
+      if (who) el.appendChild(Object.assign(document.createElement('span'), {className: 'who', textContent: who}));
+      el.appendChild(document.createTextNode(rest.join('|')));
+    }
+    document.body.appendChild(el);
+  </script>
+</body></html>

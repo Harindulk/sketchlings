@@ -20,7 +20,7 @@
   .fix ul { margin: 0; padding-left: 30px; }
   .stat { position: absolute; left: 210px; top: 950px; width: 1620px; height: 100px; padding: 0 34px; display: flex; align-items: center; gap: 24px; font-size: 52px; font-weight: 800; line-height: 1; border-radius: 30px; white-space: nowrap; }
   .stat b { color: var(--green); text-shadow: 3px 4px 0 var(--ink); font-size: 70px; }
-  .stat span { font-family: 'Patrick Hand'; font-size: 38px; font-weight: 400; color: var(--ink-soft); margin-left: auto; }
+  .stat span { font-family: 'Patrick Hand'; font-size: 38px; font-weight: 400; line-height: 1.05; color: var(--ink-soft); margin-left: auto; }
 </style></head>
 <body class="paper">
   <div class="page">
@@ -54,5 +54,5 @@ LCM_ANR_REASON: Lifecycle Callback
     <h3>The fix: starve it</h3>
     <ul class="hand"><li>One JS task per frame</li><li>Animated values native from birth</li><li>A silent race start</li><li>Ink blots mount lane by lane</li></ul>
   </div>
-  <div class="stat sticker"><div><b>52</b> race starts, <b>0</b> freezes</div><span>fixed builds: 42 at 4 lanes + 10 at 6 lanes after the blot fix</span></div>
+  <div class="stat sticker"><div><b>52</b> race starts, <b>0</b> freezes</div><span>VVD engineering observation, fixed builds:<br>42 at 4 lanes + 10 at 6 lanes after the blot fix</span></div>
 </body></html>

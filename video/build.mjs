@@ -1,8 +1,10 @@
 // Builds the Sketchlings demo video from edl.json: one clip per segment (footage, cards, split-screen takes,
 // overlays), joined with cuts and crossfades; voice/VO cues on the timeline; music ducked under speech;
 // two-pass loudnorm to -14 LUFS; 1080p30 H.264 + AAC. Missing footage becomes a placeholder slate so the whole
-// pipeline runs today. Run it through ./build.sh [out.mp4] (FINAL=1 refuses placeholders, KEEP=1 keeps out/tmp).
+// pipeline runs today. Run it through ./build.sh [out.mp4] (FINAL=1 refuses placeholders, KEEP=1 keeps out/tmp);
+// ./build.sh --slots lists every footage slot and whether its file is there.
 import {spawnSync} from 'node:child_process';
+import {createHash} from 'node:crypto';
 import {existsSync, mkdirSync, readFileSync, rmSync, statSync} from 'node:fs';
 import {dirname, extname, basename} from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -10,13 +12,18 @@ import {fileURLToPath} from 'node:url';
 process.chdir(dirname(fileURLToPath(import.meta.url)));
 const FINAL = process.env.FINAL === '1';
 const KEEP = process.env.KEEP === '1';
-const OUT = process.argv[2] || 'out/sketchlings.mp4';
+const SLOTS = process.argv[2] === '--slots';
+const OUT = (!SLOTS && process.argv[2]) || 'out/sketchlings.mp4';
 const E = JSON.parse(readFileSync('edl.json', 'utf8'));
 const {fps: FPS, width: W, height: H} = E;
 const TMP = 'out/tmp';
+const CACHE = 'out/cache'; // rendered slates, captions and tags, reused by later builds
 const fr = s => Math.round(s * FPS) / FPS; // whole frames, so cuts and crossfades land on frame boundaries
 const XF = fr(E.fade);
 const AFMT = 'aresample=48000,aformat=sample_fmts=fltp:channel_layouts=stereo';
+// Footage sound: VVD recordings have timestamp gaps, which made a segment's sound up to 8 % short (and -shortest then
+// cut the video's end); async fills the gaps with silence, so it stays in sync and full length.
+const LIVE_AFMT = AFMT.replace('aresample=48000', 'aresample=48000:async=1:first_pts=0');
 
 // ---------- helpers ----------
 
@@ -38,21 +45,37 @@ function find(src) {
   const base = src.slice(0, -extname(src).length);
   return ALT.map(e => base + e).find(ok) ?? null;
 }
+// A card is rendered again when its .html is newer than its .png, so an edit without cards/render.sh never ships old.
+// shortcut: only the card's own .html counts; after a style.css or img/ change, run cards/render.sh by hand.
 function card(png) {
-  if (!existsSync(png)) run('cards/render.sh', [basename(png, '.png')]);
+  const html = png.replace(/\.png$/, '.html');
+  if (!existsSync(png) || (existsSync(html) && statSync(html).mtimeMs > statSync(png).mtimeMs)) run('cards/render.sh', [basename(png, '.png')]);
   return png;
 }
-let slates = 0;
-function slate(label, src, w, h) {
-  const out = `${TMP}/slate-${++slates}.png`;
-  run('cards/render.sh', ['--slate', `${label}|${src}`, `${w},${h}`, out]);
+// A page that takes its text from the URL hash, rendered once per text and size into out/cache.
+function page(html, text, w, h) {
+  const key = createHash('sha1').update([text, w, h, readFileSync(`cards/${html}`), readFileSync('cards/style.css')].join('\0')).digest('hex');
+  const out = `${CACHE}/${basename(html, '.html')}-${key.slice(0, 16)}.png`;
+  if (!existsSync(out)) run('cards/render.sh', ['--hash', html, text, `${w},${h}`, out]);
   return out;
 }
+const slate = (label, src, w, h) => page('placeholder.html', `${label}|${src}`, w, h);
+// Overlays: {png} a card, {say, who} a spoken line burned in at the bottom, {tag} a label at the top right.
+const overlayPng = o => (o.png ? card(o.png) : page('text.html', o.tag !== undefined ? `tag||${o.tag}` : `${o.low ? 'low' : 'say'}|${o.who ?? ''}|${o.say}`, W, H));
 const mmss = s => `${Math.floor(s / 60)}:${(s % 60).toFixed(1).padStart(4, '0')}`;
 
 // ---------- plan: timeline, inputs, what is missing ----------
 
-const segs = E.segments.map(s => ({...s, dur: fr(s.dur)}));
+const sources = s => (s.type === 'split' ? [s.left, s.right] : s.type === 'clip' ? [s] : []);
+if (SLOTS) {
+  for (const s of E.segments) for (const v of sources(s)) {
+    const state = find(v.src) ? 'ok      ' : s.optional ? 'optional' : 'MISSING ';
+    console.log(`${state} ${s.id.padEnd(15)} ${v.src}\n         ${v.label}${(v.guide ?? s.guide) ? `\n         ${v.guide ?? s.guide}` : ''}`);
+  }
+  process.exit(0);
+}
+// An optional slot that was not filmed leaves the final cut (music must not start or end on one); drafts show its slate.
+const segs = E.segments.filter(s => !(FINAL && s.optional && sources(s).some(v => !find(v.src)))).map(s => ({...s, dur: fr(s.dur)}));
 let t = 0;
 segs.forEach((s, i) => {
   s.start = i === 0 ? 0 : t - (s.in === 'fade' ? XF : 0);
@@ -72,15 +95,20 @@ if (TOTAL > E.maxDuration) fail(`Timeline is ${TOTAL.toFixed(2)} s, over maxDura
 
 const missing = [];
 for (const s of segs) {
-  const vis = s.type === 'split' ? [s.left, s.right] : s.type === 'clip' ? [s] : [];
-  for (const v of vis) if (!find(v.src)) missing.push(`${s.id}: ${v.src}  (${v.label})`);
+  for (const v of sources(s)) if (!find(v.src)) missing.push(`${s.id}: ${v.src}  (${v.label})${s.optional ? ' [optional]' : ''}`);
   for (const c of s.cues ?? []) if (!find(c.src) && !c.optional) missing.push(`${s.id}: ${c.src}  (cue${c.text ? `: "${c.text}"` : ''})`);
+  for (const o of s.overlays ?? []) if (/TBD/.test(o.say ?? o.tag ?? '')) missing.push(`${s.id}: text to fill in: "${o.say ?? o.tag}"`);
+  for (const p of [s.type === 'card' && s.src, ...(s.overlays ?? []).map(o => o.png)].filter(Boolean)) {
+    const h = p.replace(/\.png$/, '.html');
+    if (existsSync(h) && /<b>TBD<\/b>/.test(readFileSync(h, 'utf8'))) missing.push(`${s.id}: ${h} still says TBD`);
+  }
 }
 for (const m of E.music) if (!find(m.src)) missing.push(`music: ${m.src}  (see music/CREDITS.md)`);
 if (FINAL && missing.length) fail(`FINAL=1 but inputs are missing:\n  ${missing.join('\n  ')}`);
 
 rmSync(TMP, {recursive: true, force: true});
 mkdirSync(TMP, {recursive: true});
+mkdirSync(CACHE, {recursive: true});
 mkdirSync(dirname(OUT), {recursive: true});
 
 // ---------- one clip per segment ----------
@@ -99,6 +127,7 @@ function buildSegment(s, i) {
   const still = (png, dd = d) => input(['-loop', '1', '-framerate', String(FPS), '-t', String(dd), '-i', png]);
   const fit = (w, h) => `scale=${w}:${h}:force_original_aspect_ratio=increase,crop=${w}:${h},setsar=1,fps=${FPS}`;
   // Footage (or its placeholder slate) fitted to w x h, exactly d seconds (a short clip holds its last frame).
+  // crop [x, y, w, h] zooms into the source first; speed > 1 plays it faster (silent, for a labelled time-compression).
   function visual(v, w, h, tag) {
     const p = find(v.src);
     if (!p) {
@@ -106,20 +135,27 @@ function buildSegment(s, i) {
       fl.push(`[${still(slate(v.label, v.src, w, h))}:v]${fit(w, h)},format=yuv420p[${tag}]`);
       return null;
     }
-    const k = input(['-ss', String(v.ss ?? 0), '-t', String(d), '-i', p]);
-    fl.push(`[${k}:v]${fit(w, h)},tpad=stop_mode=clone:stop_duration=${d},trim=duration=${d},setpts=PTS-STARTPTS,format=yuv420p[${tag}]`);
-    return v.liveDb !== undefined && hasAudio(p) ? {k, db: v.liveDb} : null;
+    const sp = v.speed ?? 1;
+    const k = input(['-ss', String(v.ss ?? 0), '-t', String(d * sp), '-i', p]);
+    const crop = v.crop ? `crop=${v.crop[2]}:${v.crop[3]}:${v.crop[0]}:${v.crop[1]},` : '';
+    fl.push(`[${k}:v]setpts=(PTS-STARTPTS)/${sp},${crop}${fit(w, h)},tpad=stop_mode=clone:stop_duration=${d},trim=duration=${d},setpts=PTS-STARTPTS,format=yuv420p[${tag}]`);
+    if (v.liveDb === undefined || sp !== 1 || !hasAudio(p)) return null;
+    // The VVD recorder writes its sound late (README): audioLag reads the sound from that many seconds further in.
+    return {k: v.audioLag ? input(['-ss', String((v.ss ?? 0) + v.audioLag), '-t', String(d), '-i', p]) : k, db: v.liveDb};
   }
 
-  let live = null;
-  if (s.type === 'card') fl.push(`[${still(card(s.src))}:v]${fit(W, H)},format=yuv420p[v0]`);
-  else if (s.type === 'clip') live = visual(s, W, H, 'v0');
+  let live = [];
+  // A card with narration shrinks into the top 88 %, so its caption sits in a band below and covers nothing.
+  const band = s.type === 'card' && (s.cues ?? []).some(c => c.text);
+  const even = x => Math.round(x / 2) * 2;
+  const shrink = `,scale=${even(W * 0.88)}:${even(H * 0.88)},pad=${W}:${H}:(ow-iw)/2:0:color=0x1F2A44`;
+  if (s.type === 'card') fl.push(`[${still(card(s.src))}:v]${fit(W, H)}${band ? shrink : ''},format=yuv420p[v0]`);
+  else if (s.type === 'clip') live = [visual(s, W, H, 'v0')];
   else if (s.type === 'split') {
     const [lx, ly, lw, lh] = E.split.left;
     const [rx, ry, rw, rh] = E.split.right;
     fl.push(`color=c=0xFBF7EE:s=${W}x${H}:r=${FPS}:d=${d}[bg]`);
-    live = visual(s.left, lw, lh, 'l');
-    visual(s.right, rw, rh, 'r');
+    live = [visual(s.left, lw, lh, 'l'), visual(s.right, rw, rh, 'r')]; // room sound and the VVD's own sound
     const fi = still(card('cards/split-frame.png'));
     fl.push(`[bg][l]overlay=${lx}:${ly}[sa]`, `[sa][r]overlay=${rx}:${ry}[sb]`, `[sb][${fi}:v]overlay=0:0[${s.clock ? 'sc' : 'v0'}]`);
     if (s.clock) {
@@ -133,6 +169,7 @@ function buildSegment(s, i) {
 
   // Cues go on the global timeline; a cue with note: true also puts the "synced in the edit" note on screen.
   const overlays = [...(s.overlays ?? [])];
+  if (s.type === 'clip' && (s.speed ?? 1) > 1) overlays.push({tag: `Sped up ${s.speed}x`, fade: 0}); // time compression is always on screen
   const status = [];
   for (const c of s.cues ?? []) {
     let file = find(c.src);
@@ -151,25 +188,30 @@ function buildSegment(s, i) {
     }
     if (file === c.src || find(c.src)) status.push(`cue ${basename(file)}`);
     cues.push({file, at: s.start + c.at, db: c.db ?? 0});
-    if (c.note) overlays.push({png: 'cards/note-synced.png', from: c.at, to: Math.min(d, c.at + durationOf(file))});
+    const end = Math.min(d, c.at + durationOf(file));
+    if (c.text) overlays.push({say: c.text, who: c.who, from: c.at, to: end, low: band}); // every spoken line is burned in
+    if (c.note) overlays.push({png: 'cards/note-synced.png', from: c.at, to: end});
   }
 
   let cur = 'v0';
   overlays.forEach((o, k) => {
     const from = o.from ?? 0;
     const to = Math.min(o.to ?? d, d);
-    const oi = still(card(o.png));
+    const fd = o.fade ?? 0.3; // 0: no fade, so a caption carries across a cut
+    const oi = still(overlayPng(o));
     fl.push(
-      `[${oi}:v]format=rgba,fade=t=in:st=${from}:d=0.3:alpha=1,fade=t=out:st=${Math.max(from, to - 0.3)}:d=0.3:alpha=1[o${k}]`,
+      `[${oi}:v]format=rgba${fd ? `,fade=t=in:st=${from}:d=${fd}:alpha=1,fade=t=out:st=${Math.max(from, to - fd)}:d=${fd}:alpha=1` : ''}[o${k}]`,
       `[${cur}][o${k}]overlay=0:0:enable='between(t,${from},${to})'[ov${k}]`,
     );
     cur = `ov${k}`;
   });
   fl.push(`[${cur}]format=yuv420p[vout]`);
+  live = live.filter(Boolean);
+  live.forEach((l, j) => fl.push(`[${l.k}:a]${LIVE_AFMT},volume=${l.db}dB,apad,atrim=duration=${d},asetpts=PTS-STARTPTS[la${j}]`));
   fl.push(
-    live
-      ? `[${live.k}:a]${AFMT},volume=${live.db}dB,apad,atrim=duration=${d},asetpts=PTS-STARTPTS[aout]`
-      : `anullsrc=r=48000:cl=stereo,atrim=duration=${d}[aout]`,
+    live.length === 0 ? `anullsrc=r=48000:cl=stereo,atrim=duration=${d}[aout]`
+      : live.length === 1 ? '[la0]anull[aout]'
+      : `[la0][la1]amix=inputs=2:normalize=0[aout]`,
   );
 
   const out = `${TMP}/seg-${String(i).padStart(2, '0')}.mkv`;
@@ -268,7 +310,7 @@ if (!KEEP) rmSync(TMP, {recursive: true, force: true});
 
 console.log('\n  start    dur   blueprint   segment     status');
 for (const {s, status} of report.sort((x, y) => x.s.start - y.s.start)) {
-  console.log(`  ${mmss(s.start).padStart(6)}  ${s.dur.toFixed(1).padStart(5)}   ${(s.bp ?? '').padEnd(10)}  ${s.id.padEnd(10)}  ${status}`);
+  console.log(`  ${mmss(s.start).padStart(6)}  ${s.dur.toFixed(1).padStart(5)}   ${(s.bp ?? '').padEnd(10)}  ${s.id.padEnd(15)}  ${status}`);
 }
 if (missing.length) console.log(`\nStill to drop in (${missing.length}):\n  ${missing.join('\n  ')}`);
 console.log(`\n${OUT}: ${dur.toFixed(2)} s (${mmss(dur)}), ${vinfo}, ${lufs.replace(/\s+/g, ' ')} integrated, ${(statSync(OUT).size / 1e6).toFixed(1)} MB`);

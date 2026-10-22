@@ -63,5 +63,19 @@ h1 .u { background: linear-gradient(transparent 70%, color-mix(in srgb, var(--u,
 /* Hand-drawn arrow, drawn with an inline SVG <use href="#arrow">. */
 svg.arrow { overflow: visible; }
 
+/* Edit labels over footage (transparent overlays): a sticker at the top centre, bold line + small hand line.
+   The bottom centre is for spoken-line captions (text.html). */
+.caption { position: absolute; left: 50%; top: 40px; transform: translateX(-50%) rotate(-1deg); padding: 14px 48px 10px; text-align: center; white-space: nowrap; }
+.caption b { display: block; font-size: 64px; font-weight: 800; line-height: 1.05; }
+.caption span { display: block; margin-top: 4px; font-family: 'Patrick Hand', cursive; font-size: 36px; color: var(--ink-soft); }
+/* Ability sticker: the TV's own ability icon and one big word (what you draw -> how it plays), top left over VVD footage. */
+.ab { position: absolute; left: 36px; top: 30px; display: flex; align-items: center; gap: 16px; padding: 6px 44px 10px 14px; white-space: nowrap; transform: rotate(-2deg); }
+.ab img { width: 190px; height: 190px; }
+.ab b { display: block; font-size: 120px; font-weight: 800; line-height: 0.9; letter-spacing: -1px; }
+.ab small { display: block; font-family: 'Patrick Hand', cursive; font-size: 46px; color: var(--ink-soft); }
+/* Drawn arrow inside a line of text (the fonts have no arrow glyph): <svg class="to" viewBox="0 0 60 40"><path d="M4 20 H50 M36 6 L52 20 L36 34"/></svg> */
+svg.to { display: inline-block; width: 1.1em; height: 0.72em; margin: 0 0.12em; vertical-align: 0; overflow: visible; }
+svg.to path { fill: none; stroke: var(--ink); stroke-width: 7; stroke-linecap: round; stroke-linejoin: round; }
+
 /* Placeholder slate for footage that has not been filmed yet. */
 body.slate { background: repeating-linear-gradient(135deg, #2a3553 0 40px, #26304b 40px 80px); color: #fff; }

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Records the Vega Virtual Device screen to clips/<name>.webm (1920x1080 VP9, 30 fps, no audio) with the
+# Records the Vega Virtual Device screen to clips/<name>.webm (1920x1080 VP9, 30 fps, plus the app's sound) with the
 # emulator's own recorder, then waits for the file and prints its length.
 #   ./capture.sh <name> <seconds>          e.g. ./capture.sh takeB-vvd 60   (1-180 s)
 # Ctrl-C stops the recording early. ADB=... and SERIAL=... override the defaults below.

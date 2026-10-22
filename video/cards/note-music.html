@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Music note (transparent)</title><link rel="stylesheet" href="style.css">
+<!-- Over gameplay that has music under it (kids-race in edl.json), so the music never passes for game audio.
+     Set RACE_HAS_SOUND to false if the TV's race is silent in the footage (README "Race sound"), then cards/render.sh note-music. -->
+<style>
+  .pill { position: absolute; left: 24px; bottom: 16px; font-size: 28px; padding: 2px 20px 0 14px; border-width: 4px; gap: 10px; background: #fffdf6; }
+</style></head>
+<body>
+  <div class="pill"><svg width="30" height="34" viewBox="0 0 30 34" aria-hidden="true"><path d="M11 26 V5 L27 2 V22" fill="none" stroke="#1F2A44" stroke-width="4" stroke-linejoin="round"/>
+    <ellipse cx="7" cy="27" rx="6" ry="5" fill="#3ddc84" stroke="#1F2A44" stroke-width="3"/><ellipse cx="23" cy="23" rx="6" ry="5" fill="#3ddc84" stroke="#1F2A44" stroke-width="3"/></svg>
+    <span id="t"></span></div>
+  <script>
+    const RACE_HAS_SOUND = true;
+    document.getElementById('t').textContent = 'Music added in the edit: "Happy Beat" (CC0). ' +
+      (RACE_HAS_SOUND ? "Race sounds are the app's own." : "Race sounds come from the phones; the TV race is silent.");
+  </script>
+</body></html>

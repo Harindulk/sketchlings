@@ -16,15 +16,15 @@
 <body class="paper">
   <div class="page">
     <h1>Claude <span class="u" style="--u: var(--purple)">reads the drawing</span></h1>
-    <div class="kicker">Claude vision decides how your drawing plays.</div>
+    <div class="kicker">Asked for 5-year-old-safe output; every field is checked and clamped.</div>
   </div>
   <div class="art sticker tilt-l"><span class="tape"></span><div class="sp" id="sp"><img id="img" alt=""></div><div class="by hand" id="by"></div></div>
   <div class="json sticker mono" id="json"><span class="tape"></span></div>
   <svg class="link" id="link" width="1920" height="1080" aria-hidden="true"></svg>
   <div class="facts">
     <span class="pill fill" style="--f: var(--purple); color: #fff">claude-opus-5-5 vision</span>
-    <span class="pill fill" style="--f: var(--yellow)">median 4.3 s</span>
-    <span class="pill fill" style="--f: var(--green)">offline fallback, no key needed</span>
+    <span class="pill fill" style="--f: var(--yellow)">4.7 s median, 60 runs</span>
+    <span class="pill fill" style="--f: var(--green)">offline fallback</span>
   </div>
   <script>
     // A real persona from GET http://localhost:8787/api/hall-of-fame (source "claude", 21 Oct 2026). To swap in a
