@@ -340,6 +340,8 @@ F4 itself is a platform bug the app can only starve, so keep the Mac quiet when 
 | same, `--guests 3` | demo, 6 lanes | **10** (1 checked on a Reveal card after an OCR misread, see 22 Oct; its race was seen running in the wait shots) | **0** |
 | same + fixed room (soak-only), `--live 6 --room BNDR` | live, 6 fake phones | **5** | **0** |
 | + Hall of Fame row window (final build, 22 Oct), `--guests 3` | demo, 6 lanes | **5** | **0** |
+| 23 Oct final build (Grown-ups, hold lease, FLY 1.0, chip fix), sound on, `--guests 2 --rounds 4` | demo, 6 lanes | **20** | **0** (0 crashes over 30 Reveal cards + 20 Results) |
+| same build, `--guests 1 --rounds 4` | demo, 5 lanes | **20** | **0** (0 crashes over 25 Reveal cards + 20 Results) |
 
 Final build: 20 race starts, 0 frozen; 42 since the fix. Sessions that lost keys to adb restarts (F6) or hit a VVD
 crash (F5) never reached a race and are not counted. Shots of every race (+4.5 s and +6 s) were checked by the soak
@@ -563,3 +565,60 @@ accepts the misread and reads twice). Live with 6 fake phones (`ROOM=BNDR` build
 
 **Hall of Fame freeze (F11, second part).** Reproduced with screenrecord running (2 of 13 visits), root-caused from
 an ACR as the F4 watchdog deadlock, fixed by mounting only the rows near the focus; 27 visits clean. Details in F11.
+
+## 23 Oct, 01:00-03:45 IST: final check before the kids' session
+
+Setup: VVD headless, sound-on release builds through `vbuild.sh`, Mac muted throughout. Server from `server/` with
+`.env` (Claude) and `SKETCHLINGS_FAIL_EVERY=4`; `server/data` backed up first and restored after (hall.json sha
+unchanged, 68 entries). Host busy: load 12-16, 11-11.5 of 12 GB swap in use, a Unity build running.
+These are VVD observations, not Fire TV numbers.
+
+**Fixed tonight (tv/):**
+- *AI personas choice is not saved.* Legacy `AsyncStorage` (react-native-kepler) said `setItem` worked, but `getItem`
+  read back `null` after a relaunch, whether the app was force-stopped or closed with Back (checked with an on-screen
+  debug line). The storage code is gone: the choice is off at every launch, and Grown-ups says "Until the app closes."
+  The run sheet already has the grown-up turn it on after each launch.
+- *Lobby chip stuck grey or stuck bright.* A phone that dropped and rejoined (same playerId; the server's players
+  frame said `connected: true`) stayed greyed on the TV, and a drop did not grey it. A debug overlay showed every
+  players frame arriving in order; the `opacity` on the chip's `Animated.View` (native-driven scale) was simply not
+  redrawn. Moved to a plain wrapper View: drop greys it, rejoin brightens it (checked on the VVD).
+- *Long creature names cut off.* "Whooshy Lemon" showed as "Whooshy Lem..." on the Reveal. `fitFont` now assumes
+  0.62 em a character (was 0.54); short names keep 60 dp.
+- Grown-ups cards: buttons moved down 10 dp so the focus scale no longer covers the last line of text.
+- `vbuild.sh` `ROOM=` hook follows `tvHello(code.current)`.
+
+**Grown-ups (D-pad only):** Up from any Home tile reaches the button; Down returns to Start party. Focus starts on a
+wrong answer; a wrong answer and Back both go Home with focus on Grown-ups. Right answer opens it; the switch flips
+and the Lobby shows "AI personas: on" / "off. Grown-ups can turn them on."; the server logs `[consent] room …: AI
+personas off` only for off. Clear Hall of Fame: Keep returns focus to Clear; Delete all said "Done: 68 creatures
+deleted." (server: `[hall] cleared by the TV: 68 creatures`), then the empty hall shows "No Sketchlings yet". Data
+restored from the copy.
+
+**D-pad/Back audit:** Home, How to play (Got it! and Back), Grown-ups, Lobby (live and demo), Reveal, Race, Results,
+Hall of Fame, Demo party: focus visible on every screen, first focus on the main action, no traps. Back: Reveal,
+Race and Results in a live party go to the Lobby (room kept, same code); the first Back on a live Lobby with players
+shows "Press Back again to end the party" for 4 s; demo screens go Home. Right from Grown-ups does nothing (nothing
+there); Down leaves.
+
+**Two rounds, fake phones** (copy of fake-phones.mjs: one ability change, one drop and rejoin in the Lobby, one
+held pad): room GCNT, 4 phones: Claude personas 4.8-5.2 s, 1 injected failure fell back to offline in 29 ms,
+upload->voices 13.3-13.5 s with 3 at once; the ability change came back `chosenBy: artist` and the Reveal said
+"Zoe's pick →"; the rejoin kept the same playerId. Race 1, Play again, race 2, Lobby (same code), Back twice, Hall of
+Fame "Race again" pick, new room with 3 phones + the guest: Reveal, race 3, Results. Server lines per race:
+`[net] race rtt ms` (0-1 ms median, localhost) and `[race] inputs` (4.5-4.9 taps/s, hold 7.0 s for the held pad).
+
+**Real phone page** (phone/dist from the server, chrome-headless-shell with `--mute-audio`, 390x844 mobile, 3
+phones, LAN join URL read from the TV's QR): name, age, photo through the file input (the sample marker-drawing photo
+plus two crayon drawings photographed on paper, made in a canvas), preview, card, one ability change ("You picked"),
+one page reload in the Lobby (card back, chip bright), Reveal, two races (taps, a 3 s hold, jumps, ROAR), Results
+on every phone. All checks pass, twice (AI on, and AI off after the new doodle-cutout went into phone/dist). Shots in
+a temp folder (`phones/`, `phones2/`). Not a real phone, not real Wi-Fi.
+
+**Soak, race audio on:** 40 race starts (20 at 6 lanes, 20 at 5), 0 frozen, 0 app crashes, 0 new ACRs (17 before
+and after). Loop 54-59 Hz, median 59, JS 0.2-0.3 ms/frame (4-lane demo race, overlay read 8 times). Hall of Fame:
+15 visits (OK, Right, Down, Down, Back) with `adb emu screenrecord` running, 0 flagged. The race narration stays.
+
+**`scripts/session.sh --lan`, once for real:** start (VVD found, app launched, server, live view at 25-29 fps, chunk
+recording), `take zz-test-take` (chunk ended, take started, `video/clips/zz-test-take.webm` link made; VP9 + Vorbis),
+stop (server, live view and its Chrome window gone; 8 s + 13 s files listed). Test files deleted.
+

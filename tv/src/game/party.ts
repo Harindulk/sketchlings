@@ -2,10 +2,7 @@
 // Lobby state lives in React state (changes a few times a minute); race inputs bypass React entirely
 // and go straight to listeners so taps never trigger re-renders.
 import {useCallback, useEffect, useRef, useState} from 'react';
-import {
-  AsyncStorage,
-  useKeplerAppStateManager,
-} from '@amazon-devices/react-native-kepler';
+import {useKeplerAppStateManager} from '@amazon-devices/react-native-kepler';
 import type {
   HelloTv,
   InputKind,
@@ -55,7 +52,9 @@ export function fetchHall(ms = 3000): Promise<Sketchling[]> {
   const ctrl = new AbortController();
   const timeout = setTimeout(() => ctrl.abort(), ms);
   return fetch(`${HTTP_BASE}/api/hall-of-fame`, {signal: ctrl.signal})
-    .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+    .then((r) =>
+      r.ok ? r.json() : Promise.reject(new Error(String(r.status))),
+    )
     .then((list: unknown) => {
       if (!Array.isArray(list)) throw new Error('bad hall of fame');
       return list.filter((s) => s && s.id && s.spriteUrl) as Sketchling[];
@@ -65,27 +64,12 @@ export function fetchHall(ms = 3000): Promise<Sketchling[]> {
 
 export const isGuest = (p: Player) => p.id.startsWith('guest-');
 
-// The grown-ups' "AI personas" choice (Grown-ups screen): off until a grown-up turns it on, kept across launches
-// (Vega's AsyncStorage, SQLite-backed). Read at every hello, so a live party picks it up on its next connect.
+// The grown-ups' "AI personas" choice (Grown-ups screen): off at every launch until a grown-up turns it on. Not
+// saved: Vega's legacy AsyncStorage said it saved, but read back null after a relaunch on the VVD (23 Oct).
+// Read at every hello, so a live party picks it up on its next connect.
 export const consent = {aiPersonas: false};
-const CONSENT_KEY = 'sketchlings.aiPersonas';
-export function loadConsent() {
-  try {
-    AsyncStorage.getItem(CONSENT_KEY).then(
-      (v) => (consent.aiPersonas = v === 'on'),
-      () => {},
-    );
-  } catch {
-    // no storage module: the choice lasts until the app closes
-  }
-}
 export function setAiPersonas(on: boolean) {
   consent.aiPersonas = on;
-  try {
-    AsyncStorage.setItem(CONSENT_KEY, on ? 'on' : 'off').catch(() => {});
-  } catch {
-    // as above
-  }
 }
 
 /** Every TV hello carries aiPersonas: a server restart recreates the room, and an absent flag means on. */

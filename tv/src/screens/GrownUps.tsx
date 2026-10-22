@@ -96,6 +96,7 @@ export function GrownUps({
             cardStyle={ai && styles.on}>
             <Text style={styles.btnText}>AI personas: {ai ? 'ON' : 'OFF'}</Text>
           </FocusButton>
+          <Text style={styles.status}>Until the app closes.</Text>
         </View>
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Hall of Fame</Text>
@@ -164,7 +165,7 @@ const styles = StyleSheet.create({
   hint: {fontFamily: F.semi, fontSize: 18, color: C.inkSoft, marginTop: 40},
   card: {
     width: 400,
-    height: 300,
+    height: 310,
     marginHorizontal: 14,
     padding: 18,
     backgroundColor: C.white,
@@ -174,11 +175,11 @@ const styles = StyleSheet.create({
   },
   cardTitle: {fontFamily: F.bold, fontSize: 30, lineHeight: 38, color: C.ink},
   body: {fontFamily: F.semi, fontSize: 18, lineHeight: 23, color: C.inkSoft},
-  btn: {width: 300, height: 56, marginTop: 16, alignSelf: 'center'},
+  btn: {width: 300, height: 56, marginTop: 26, alignSelf: 'center'}, // room for the focus scale
   btnText: {fontFamily: F.bold, fontSize: 22, lineHeight: 30, color: C.ink},
   on: {backgroundColor: '#3ddc84'},
   danger: {backgroundColor: '#ff5a5f'},
-  askRow: {flexDirection: 'row', justifyContent: 'space-around', marginTop: 16},
+  askRow: {flexDirection: 'row', justifyContent: 'space-around', marginTop: 26},
   askBtn: {width: 150, height: 56},
   status: {
     fontFamily: F.semi,
