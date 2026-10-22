@@ -71,7 +71,7 @@ Demo party tries the relay's Hall of Fame for 3 seconds, then uses the bundled s
 - The race is a pure TypeScript simulation ([`race.ts`](tv/src/game/race.ts), Jest-tested). Each frame writes positions into native-driver `Animated` values, only when a value changed. Phone taps reach the race through listeners, not React state, so six players tapping cause no re-renders.
 - Animation graphs are built once and memoised; googly-eye pupils ride a spring.
 - The media stack loads lazily, so it costs nothing at launch.
-- The Hall of Fame mounts rows only as the focus nears them (9 cards at first, 3 more per row), so a full hall never mounts 74 cards in one go.
+- The Hall of Fame mounts rows as the focus reaches them (9 cards at first, 3 more per row; rows already shown stay), so a full hall never mounts 74 cards in one go.
 
 **VVD engineering observations (not Fire TV hardware KPIs).** Measured on the Vega Virtual Device, headless, on an Apple-silicon host with no Fire TV hardware. Amazon's own docs list the VVD as "Not supported for performance testing" ([Run Your App Overview](https://developer.amazon.com/docs/vega/0.24/run-apps-overview.html)), so the targets are for hardware and not comparable. Performance on hardware is not yet verified.
 
