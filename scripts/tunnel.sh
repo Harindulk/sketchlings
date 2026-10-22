@@ -2,6 +2,7 @@
 # Runs the server behind a temporary public HTTPS link (Cloudflare quick tunnel), so phones get a secure page
 # and mic "shout" works (getUserMedia needs a secure context). The link exists only while this script runs.
 # The TV still talks to the server over the LAN / 10.0.2.2. Ctrl-C stops the tunnel and the server.
+# Port 8787 only (the TV's HOST in tv/src/config.ts uses it too).
 set -euo pipefail
 cd "$(dirname "$0")/.."
 # scripts/session.sh --no-ai (a consent form said No to AI): no key, so no drawing goes to Claude, even when run by hand

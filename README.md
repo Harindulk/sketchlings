@@ -34,7 +34,7 @@ cd ~/sketchlings/tv && npm install                 # plain install, no .npmrc (F
 scripts/vbuild.sh release --run                    # builds in a mirror folder, installs and launches on the VVD
 ```
 
-`--run` installs the arm64 package (`build/aarch64-release/`), which suits an Apple-silicon Mac. On an x86_64 host, install `build/x86_64-release/*.vpkg` with `vega run-app` instead (not tested).
+`--run` installs the arm64 package (`build/aarch64-release/`), which suits an Apple-silicon Mac. On an x86_64 host, install the x86_64 package from the build mirror (`$TMPDIR/sketchlings-vbuild/sketchlings/tv/build/x86_64-release/*.vpkg`) with `vega run-app` instead (not tested).
 
 On Home press **Right** once to reach **Demo party**, then **OK**. In the Lobby, wait until it says **Everyone is ready!** (about 7 s), then press **OK** on **Start the show! (4)**. In the race: **OK** = run, **Up** = jump, **Play/Pause** = ROAR, **Menu** = performance overlay, **Back** = up one level.
 
@@ -119,14 +119,14 @@ The relay logs the server side of the chain for every scan: `[scan] <player> upl
 
 **Built with Amazon Devices Builder Tools.** The ADBT steering doc ([`CLAUDE.md`](CLAUDE.md)) and Vega skills ran inside Claude Code. The media-player skill pointed at missing `[wants]` services as the cause of silent playback, which is where audio setup went wrong; the performance skill led to the KPI Visualizer numbers above; the ADBT docs for RN 0.83 listed `AsyncStorage` as supported (on the VVD it did not keep a value across a relaunch, FRICTION_LOG #25). ADBT's `symbolicate_acr` failed on the VVD (FRICTION_LOG #11), which is why we wrote `acr-stacks.py`, and its `analyze_perfetto_traces` couldn't find the Vega Perf CLI, so the cool-start traces were not analysed (#24).
 
-**Tests** (run on 23 Oct): **149 automated tests**. 79 for the relay over real HTTP and WebSocket (`cd server && bun test`; 3 skip without ffmpeg or the voice model), 42 for doodle-cutout (`cd packages/doodle-cutout && bun test`), 20 Jest tests for the race simulation, hold to run, ability balance, Demo party, Clear Hall of Fame and the voice player (`cd tv && npx jest`), 8 for the phone app: hold to run, name rules and race sounds (`cd phone && bun test`). The phone app is also typechecked (`cd phone && npm run typecheck`). On top of the unit tests, on 23 Oct: two full party rounds on the VVD with fake phones and the real phone page in a headless browser, and a D-pad check of every TV screen.
+**Tests** (run on 23 Oct): **149 automated tests**. 79 for the relay over real HTTP and WebSocket (`cd server && bun test`; 2 skip without the voice model, 3 without ffmpeg too), 42 for doodle-cutout (`cd packages/doodle-cutout && bun test`), 20 Jest tests for the race simulation, hold to run, ability balance, Demo party, Clear Hall of Fame and the voice player (`cd tv && npx jest`), 8 for the phone app: hold to run, name rules and race sounds (`cd phone && bun test`). The phone app is also typechecked (`cd phone && npm run typecheck`). On top of the unit tests, on 23 Oct: two full party rounds on the VVD with fake phones and the real phone page in a headless browser, and a D-pad check of every TV screen.
 
 ## Design
 
 - **One loop, no dead ends.** Home → Lobby → draw and snap → Reveal → Doodle Dash → Results → Play again, or the Lobby and the Hall of Fame. Back always goes up one level, and focus returns to the Home tile you came from. In a live party Back never drops the room by accident: Reveal, Race and Results go back to the Lobby with the same code, and on a Lobby with players the first Back only asks "Press Back again to end the party".
 - **Each input does what it is best at.** Paper for creating. The phone for snapping and racing: a giant multi-touch pad (tap fast or hold to run), swipe up to jump, a ROAR button that greys and refills for its 4 s cooldown, and race sounds on the phone with a speaker toggle. The remote for menus, and for Demo party.
 - **Joining is one scan.** A QR code plus a 4-letter room code; a first name and an age group, no accounts. Room codes have no vowels, so they never spell words. Names are cut to the first word, and the draw screen says "no names on the paper!".
-- **Made for ages 4 to 10.** Big buttons, little reading. Fairness you can see: "+40% boost" for little kids and "+20%" for big kids, plus a Doodle Boost for whoever falls behind.
+- **Made for ages 4 to 10.** Big buttons, little reading. The phone's age groups are Little kid (up to 7), Big kid (8 to 12) and Grown-up, so older siblings and parents can race too. Fairness you can see: "+40% boost" for little kids and "+20%" for big kids, plus a Doodle Boost for whoever falls behind.
 - **What you draw changes how you play.** Wings fly over ink blots, wheels roll faster on flat ground, long legs jump higher, a big body's ROAR knocks blots away. The Lobby, How to play and the phone tell kids this before they draw, and the race pops WINGS!, WHEELS!, SPRINGS! or BIG ROAR! when it helps. Simulated, not playtested: with identical inputs in the real race engine, the drawn ability lifts a little kid's wins in a family race from 7% with no ability to between 10% and 21%, and the catch-up boost does not cancel it ([FAIRNESS.md](docs/FAIRNESS.md#ability-simulation-does-what-you-draw-change-the-race)). Claude gave 11 of 12 test images the same ability in all 5 runs, and an AI review rated 11 of 12 a fitting ability (no child's drawing yet, [ABILITY_AUDIT.md](docs/ABILITY_AUDIT.md)).
 - **Characters, not sprites.** Each drawing tears out of the paper, gets googly eyes on its own drawn eyes and introduces itself in its own voice. Every voiced line is also on screen as a caption.
 - **Grown-ups have their own corner.** A small Grown-ups button on Home (press Up) sits behind a times-table parent gate with four number buttons; focus starts on a wrong answer, so mashing OK never opens it. Inside: the AI personas switch and Clear Hall of Fame (asks first).
@@ -195,6 +195,7 @@ The relay logs the server side of the chain for every scan: `[scan] <player> upl
 | Bun | 1.4.3 | the relay |
 | ffmpeg | Homebrew | creature voices (optional) |
 | adb (Android SDK platform-tools) | 37.0.1 | headless VVD keys and screenshots |
+| cloudflared | Homebrew | the HTTPS tunnel for mic shouting (optional) |
 
 Tested on macOS 27.0.1, Apple silicon. Not tested on Ubuntu or on Fire TV hardware.
 
@@ -210,14 +211,14 @@ bun run start            # listens on 0.0.0.0:8787 and prints the phone join add
 
 - No key: every creature comes from the offline persona generator. No voice model or no ffmpeg: creatures are silent. Everything else works.
 - Start it from `server/`: Bun only loads `.env` from the current folder, and shell variables win. Other settings (`SKETCHLINGS_MODEL`, `ANTHROPIC_WORKSPACE_ID`, `PUBLIC_URL`, `PORT`, `SKETCHLINGS_FAIL_EVERY`): [`server/README.md`](server/README.md).
-- For mic shouting, start `scripts/tunnel.sh` instead: it runs the relay behind a temporary Cloudflare HTTPS link, and phones join through it.
-- For a filmed playtest, `scripts/session.sh` starts the relay, the tunnel, the TV app, a live view and chunked VVD recording in one go ([run sheet](docs/playtest/runsheet.md)).
+- For mic shouting, start `scripts/tunnel.sh` (from the repo root) instead: it runs the relay behind a temporary Cloudflare HTTPS link, and phones join through it.
+- For a filmed playtest, `scripts/session.sh` (from the repo root) starts the relay, the tunnel, the TV app, a live view and chunked VVD recording in one go ([run sheet](docs/playtest/runsheet.md)).
 
 **2. Phone app (Vite).** `cd phone && npm install && npm run build`. The relay serves `phone/dist` at `/j/<ROOM>`; phones install nothing.
 
 **3. TV app.** Build and launch as in "Try it in 2 minutes", then choose **Start party**. To use Claude personas, first open **Grown-ups** (press Up on Home), answer the sum and turn AI personas on. On a real Fire TV (not tested), set `HOST` in `tv/src/config.ts` to the Mac's LAN IP and rebuild.
 
-**4. Play.** Phones on the same Wi-Fi scan the QR code (or type the 4-letter room code), enter a first name and pick Little kid, Big kid or Grown-up. Draw with a thick marker, tap **Snap my drawing** (or **Draw on screen instead**), check the creature card (change the ability if you like), then race: tap or hold to run, swipe up to jump, press ROAR. No phones to hand? `node tv/scripts/fake-phones.mjs <ROOM> 3` adds simulated players that upload drawings and race.
+**4. Play.** Phones on the same Wi-Fi scan the QR code (or type the 4-letter room code), enter a first name and pick Little kid, Big kid or Grown-up. Draw with a thick marker, tap **Snap my drawing** (or **Draw on screen instead**), check the creature card (change the ability if you like), then race: tap or hold to run, swipe up to jump, press ROAR. No phones to hand? `node tv/scripts/fake-phones.mjs <ROOM> 3` (from the repo root; the room code is on the TV's Lobby) adds simulated players that upload drawings and race. Ctrl-C stops them.
 
 ## Architecture
 
