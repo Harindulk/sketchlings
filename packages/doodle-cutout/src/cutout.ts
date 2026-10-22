@@ -422,14 +422,19 @@ export function cutout(img: ImageLike, options: CutoutOptions = {}): CutoutResul
   for (let i = 0; i < n; i++) score[i] -= Math.min(thin[i], lines);
 
   // 3. Threshold. Hysteresis keeps faint crayon that touches confident ink; the paper noise
-  //    floor (median + 4 sigma of the score) stops grain from leaking in.
+  //    floor (median + 4 sigma of the score) stops grain from leaking in. Thick faint ink must reach
+  //    half the threshold. Thin strokes (pencil or pink wings, antennae) only need to clear the noise
+  //    floor, so a dark marker body, which pushes the threshold up, does not erase them.
   const [p16, p50] = percentiles(score, [0.16, 0.5]);
   const noiseFloor = p50 + 4 * Math.max(0.005, p50 - p16);
   let t: number;
   if (o.threshold === 'auto') t = Math.max(clamp(otsu(score), 0.12, 0.4), noiseFloor + 0.05);
   else t = clamp(o.threshold, 0.01, 1);
   const weak = Math.min(t, Math.max(0.06, t * 0.5, noiseFloor));
-  const ink = hysteresis(score, w, h, t, weak);
+  const thinWeak = Math.min(weak, Math.max(0.06, noiseFloor + 0.03));
+  const grow = new Float32Array(n);
+  for (let i = 0; i < n; i++) grow[i] = score[i] >= weak || 2 * thin[i] > score[i] + Math.min(thin[i], lines) ? score[i] : 0;
+  const ink = hysteresis(grow, w, h, t, thinWeak);
 
   // 4. Drop specks and what surrounds the sheet (table, fingers, the paper's edge), unless nothing is left.
   let cleaned = o.removeBorderBlobs ? dropSurroundings(ink, bg[1], w, h, Math.max(2, Math.round(long * 0.012)), o.backgroundRadius, o.minSpeckArea) : null;
