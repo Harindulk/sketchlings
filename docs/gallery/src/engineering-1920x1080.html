@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Sketchlings engineering</title><link rel="stylesheet" href="gallery.css">
+<style>
+  .title { left: 200px; top: 40px; font-size: 88px; }
+  .badge { right: 56px; top: 132px; font-size: 34px; background: var(--blue); }
+  .sub { left: 206px; top: 142px; font-size: 40px; }
+  .card { position: absolute; top: 236px; width: 820px; height: 760px; padding: 30px 36px 24px; border-radius: 34px; }
+  .k1 { left: 196px; } .k2 { left: 1056px; }
+  .card h2 { margin: 0; font-size: 58px; line-height: 1; font-weight: 800; }
+  .card .what { margin-top: 6px; font-size: 32px; font-weight: 700; color: var(--ink-soft); line-height: 1.1; }
+  .row { display: flex; gap: 18px; margin-top: 18px; }
+  .row .k { flex: none; width: 112px; font-size: 26px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; padding-top: 5px; color: var(--ink-soft); }
+  .row .v { font-size: 32px; line-height: 1.12; }
+  .mono { font-size: 0.86em; }
+  .res { position: absolute; left: 36px; right: 36px; bottom: 26px; padding: 14px 24px 12px; border-radius: 22px; background: color-mix(in srgb, var(--green) 30%, #fff); border: 4px solid var(--ink); }
+  .res b { display: block; font-size: 50px; font-weight: 800; line-height: 1.05; }
+  .res span { display: block; font-size: 30px; color: var(--ink-soft); line-height: 1.15; }
+  .foot { left: 200px; top: 1022px; }
+</style></head>
+<body class="paper">
+  <h1 class="abs title">Two Vega bugs, <span class="u" style="--u-c: var(--red)">root-caused</span></h1>
+  <div class="abs pill fill badge"><span class="dot" style="--d: #fff"></span>Vega Virtual Device observations</div>
+  <div class="abs kicker sub">Read from every thread's stack in the crash dumps.</div>
+
+  <div class="card sticker k1"><span class="tape" style="--t: var(--red)"></span>
+    <h2>Race-start freeze</h2>
+    <div class="what">a deadlock inside Vega's JS-thread watchdog</div>
+    <div class="row"><div class="k">Seen</div><div class="v hand">About 1 race start in 4 froze on "3", then the app was killed as AppNotResponding.</div></div>
+    <div class="row"><div class="k">Cause</div><div class="v hand">The JS thread blocks in <span class="mono">send()</span> to the watchdog while holding its mutex; the watchdog's loop, the only reader, waits for that mutex.</div></div>
+    <div class="row"><div class="k">6 lanes</div><div class="v hand">About 66 ink-blot images mounting at race start set it off again: 3 of 7 starts froze.</div></div>
+    <div class="row"><div class="k">Fix</div><div class="v hand">One JS task per frame, animated values native from birth, blots mount lane by lane.</div></div>
+    <div class="res"><b>52 race starts, 0 freezes</b><span>on the fixed builds; then 30 more with race audio back on, 0 freezes</span></div>
+  </div>
+
+  <div class="card sticker k2"><span class="tape" style="--t: var(--blue)"></span>
+    <h2>Media player crash</h2>
+    <div class="what">a SIGSEGV in libW3CMedia</div>
+    <div class="row"><div class="k">Seen</div><div class="v hand">The app dropped to the launcher as a creature's voice line ended and the next began.</div></div>
+    <div class="row"><div class="k">Cause</div><div class="v hand">Each clip got a new MediaSource. Swapping it detached the old source while its pipeline was still finishing, and a libW3CMedia thread then used it.</div></div>
+    <div class="row"><div class="k">Proof</div><div class="v hand">Five crash reports with the same 6-frame stack.</div></div>
+    <div class="row"><div class="k">Fix</div><div class="v hand">One AudioPlayer and one long-lived MediaSource for the whole session.</div></div>
+    <div class="res"><b>0 crashes in 73 screens</b><span>of Reveal and Results; on the old code, 5 crashes in 216 clips</span></div>
+  </div>
+
+  <div class="abs src foot">Both written up with platform suggestions in FRICTION_LOG.md (#1, #5). Not yet run on Fire TV hardware.</div>
+</body></html>

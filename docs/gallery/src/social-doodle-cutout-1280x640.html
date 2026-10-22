@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>doodle-cutout social preview</title><link rel="stylesheet" href="gallery.css">
+<style>
+  .title { left: 130px; top: 40px; font-size: 104px; }
+  .sub { left: 136px; top: 150px; font-size: 42px; white-space: nowrap; }
+  .ph { left: 136px; top: 246px; width: 400px; padding: 12px 12px 12px; transform: rotate(-2deg); }
+  .sp { left: 600px; top: 238px; width: 344px; height: 316px; border-radius: 22px; border: 5px solid var(--ink);
+    background: repeating-conic-gradient(#e4e4e4 0 25%, #fff 0 50%) 0 0 / 28px 28px; box-shadow: 8px 10px 0 rgba(31, 42, 68, 0.22); }
+  .sp img { position: absolute; left: 22px; top: 18px; width: 290px; }
+  .pills { left: 990px; top: 244px; width: 250px; display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
+  .pills .pill { font-size: 27px; border-width: 4px; padding: 2px 18px 0; }
+  .note { left: 140px; top: 572px; font-size: 26px; }
+  .repo { right: 40px; top: 574px; font-size: 30px; font-weight: 700; color: var(--ink-soft); }
+</style></head>
+<body class="paper small">
+  <h1 class="abs title">doodle-<span class="u" style="--u-c: var(--blue)">cutout</span></h1>
+  <div class="abs kicker sub">A phone photo of a drawing on paper, cut out into a clean sticker.</div>
+  <div class="photo ph"><img src="../../../packages/doodle-cutout/examples/monster-photo.png" alt=""></div>
+  <svg class="arrow" style="left: 538px; top: 380px" width="60" height="40"><path d="M4 20 H50 M36 6 L52 20 L36 34"/></svg>
+  <div class="abs sp"><img src="../../../packages/doodle-cutout/examples/monster-sprite.png" alt=""></div>
+  <div class="abs pills">
+    <span class="pill fill" style="--f: #dcf8e8">zero dependencies</span>
+    <span class="pill fill" style="--f: #dff3ff">TypeScript</span>
+    <span class="pill fill" style="--f: #efe2ff">runs in the browser</span>
+    <span class="pill fill" style="--f: #fff4d1">42 tests</span>
+    <span class="pill fill" style="--f: #ffe3e4">MIT</span>
+  </div>
+  <div class="abs src note">example: a synthetic test photo</div>
+  <div class="abs mono repo">github.com/Harindulk/doodle-cutout</div>
+</body></html>
