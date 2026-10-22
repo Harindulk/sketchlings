@@ -44,7 +44,7 @@ Setup: MacBook (Apple silicon, 16 GB), macOS 27.0.1, Node 26.12, Bun 1.4.3, Vega
 
 **What worked well.**
 - Headless mode (`vega virtual-device start --no-gui --timeout 300`) boots in about 10 s.
-- It is an Android emulator underneath, so `adb emu screenrecord screenshot|start|stop` works, including a full-HD recording of the app.
+- It is an Android emulator underneath, so `adb emu screenrecord screenshot|start|stop` works, including a full-HD recording of the app with its sound.
 - The app reaches the host at `10.0.2.2` over HTTP and WebSocket with no extra setup.
 - Scripts can press remote keys through `inputd-cli` (`adb shell inputd-cli button_press KEY_ENTER`), so walkthroughs and soak tests can be automated without a window.
 
@@ -52,10 +52,10 @@ Setup: MacBook (Apple silicon, 16 GB), macOS 27.0.1, Node 26.12, Bun 1.4.3, Vega
 - The window crashes on boot on macOS 27 (#2). Headless, the emulator's own hang detector kills the VVD whenever the host stalls for 15 s, even with no app running (#3).
 - On the headless VVD, `requestAnimationFrame` fires about 7,600 times a second instead of once per frame (#4).
 - Audio work can stall the game or hang the JS thread (#5), and a rotated view in a rounded, clipped card froze the renderer with no error (#6).
-- Screenshots and recording are undocumented. The SDK's own adb-like tool, `vda`, has no `emu` command, so you need `adb` from Android SDK platform-tools. The recording has no audio (#10).
+- Screenshots and recording are undocumented. The SDK's own adb-like tool, `vda`, has no `emu` command, so you need `adb` from Android SDK platform-tools (#10). The recording does carry the sound, but nothing says so, and how far it lags the picture varies (about 0.2 to 1.5 s, #9).
 - Remote keys: there is no `vega` command. The docs' `inputd-cli` page uses `vega exec` and says a VVD needs developer mode first, but `adb shell inputd-cli` worked without it (#13).
 - The VVD clock ran about 2 h 11 min behind the Mac, so absolute phone-to-TV latency couldn't be measured (#18).
-- Audio reaches the Mac's speakers (macOS shows an audio-out assertion for the VVD's process while clips play), but nothing on the Mac could record it, so we couldn't prove the output is non-silent (#9).
+- `AsyncStorage` said it saved a setting, but read back `null` after a relaunch, with no error (#25).
 
 **Onboarding.** The first boot (`vega virtual-device start --timeout 240`) ended in "Deadline reached (240s) but virtual device unresponsive." The crash was only visible in `virtual_device.err`. The headless boot worked on the next try.
 
@@ -90,11 +90,12 @@ Setup: MacBook (Apple silicon, 16 GB), macOS 27.0.1, Node 26.12, Bun 1.4.3, Vega
 **What worked well.**
 - D-pad focus needed only the stock pieces (`TVFocusGuideView`, `hasTVPreferredFocus`). Our own focus code is just the look (scale, glow and wobble) and a Hall of Fame list that scrolls to follow focus.
 - Declaring Alexa voice targets takes one `aria-label` per button plus the `kva` category. Voice selection can't be tested on the VVD, so we haven't seen it work.
-- Native-driver `Animated` values created with `useNativeDriver: true` from the start make a race with no React render per frame straightforward. The race ran at 55 to 62 loops a second with 0.3 to 0.5 ms of JS per frame with 6 lanes on the VVD (in-app overlay, 21 Oct).
+- Native-driver `Animated` values created with `useNativeDriver: true` from the start make a race with no React render per frame straightforward. On the VVD the race loop ran at 55 to 62 ticks a second with 0.3 to 0.5 ms of JS per frame with 6 lanes (21 Oct), and 54 to 59 with race audio on 23 Oct (in-app overlay; the loop is timer-driven, not vsync).
 - Bundled OFL fonts work without `expo-font`. On Vega the `fontFamily` is the font file name (for example `Baloo2-ExtraBold`).
 
 **What needs work.**
-- The JS-thread watchdog can deadlock the JS thread when it churns many small tasks (#1). The fix is in the platform; app developers need to know to keep JS tasks per frame low until then.
+- The JS-thread watchdog can deadlock the JS thread when it churns many small tasks (#1): at race start, and on 22 Oct again when a Hall of Fame screen mounted 74 image cards at once. The fix is in the platform; app developers need to know to keep JS tasks per frame low, and to avoid mounting bursts, until then.
+- `AsyncStorage` is listed as supported for RN 0.83, but on the VVD a saved value was gone after a relaunch, so the grown-ups' AI choice can't be remembered (#25).
 - `adjustsFontSizeToFit` does nothing (#19).
 - Custom fonts on RN 0.83 are undocumented: the `expo-font` page lists only RN 0.72, and the family name doesn't work as `fontFamily` (#21).
 
@@ -108,7 +109,7 @@ Setup: MacBook (Apple silicon, 16 GB), macOS 27.0.1, Node 26.12, Bun 1.4.3, Vega
 
 **What needs work.**
 - Even a 2-second clip needs eight `[wants]` services in `manifest.toml`. Without `com.amazon.audio.system` the log shows "Unable connect to 'com.amazon.audio.system'. Missing the permissions", and the media docs say missing services fail silently (#9).
-- Replacing a playing clip slowed the game to 0 to 15 frames a second on the VVD, `ended` never fired for the replaced clip, one crash report shows the JS thread blocked on a mutex inside `libW3CMedia.so`, and another a SIGSEGV in `libkepler_media_player.so` (#5). Since then the race plays no audio at all. On 21 Oct, with sound on, three more ACRs show a SIGSEGV in `libW3CMedia.so` at Reveal and Results; the cause was assigning a new MediaSource for each clip while the previous pipeline was still draining; one long-lived MediaSource for the session fixed it (0 crashes in 193 clips, #5).
+- Replacing a playing clip slowed the game to 0 to 15 frames a second on the VVD, `ended` never fired for the replaced clip, one crash report shows the JS thread blocked on a mutex inside `libW3CMedia.so`, and another a SIGSEGV in `libkepler_media_player.so` (#5). On 21 Oct, with sound on, three more ACRs show a SIGSEGV in `libW3CMedia.so` at Reveal and Results; the cause was assigning a new MediaSource for each clip while the previous pipeline was still draining; one long-lived MediaSource for the session fixed it (0 crashes in 193 clips, and none over 95 Reveal and Results screens on 23 Oct, #5). With that, short race clips came back on 22 Oct (3-2-1-GO, ROAR): 70 race starts with race audio, 0 frozen.
 - A short sound-effect API, or a documented recipe for short clips, would help games.
 
 ### 4c. `@amazon-devices/react-native-qrcode-svg` 3.0.0 with `@amazon-devices/react-native-svg`
@@ -135,7 +136,7 @@ Setup: MacBook (Apple silicon, 16 GB), macOS 27.0.1, Node 26.12, Bun 1.4.3, Vega
 
 ## 5. Vega performance tools (Perf CLI 0.24.0)
 
-**What I used it for.** Cool-start latency with the KPI Visualizer (`vega exec perf kpi-visualizer --app-name com.starfungames.sketchlings.main --kpi cool-start-latency --iterations 3`), with `useReportFullyDrawn` (above) marking fully drawn. A performance overlay of my own in the race (Menu key: loop rate, JS time per frame, input latency, audio state). On 21 Oct, measured on the Vega Virtual Device, headless, Apple-silicon host: cool start again with 10 runs (time to first frame 665 ms mean, min 631, max 719, on a loaded host), and attempts at warm start, memory, foreground memory and UI fluidity. Only cool start produced numbers. Also measured on the VVD: app memory with `vega exec perf activity-monitor` instead (124-284 MiB: 124 on Home, 233 at most after three races, 284 after the Hall of Fame and six 6-lane races), and from my overlay the race loop (55-62 Hz with 6 lanes) and phone input applied in 6-9 ms. Not measurable on the VVD: warm start, the KPI Visualizer's memory and foreground-memory KPIs, UI fluidity and focus response (#24, below).
+**What I used it for.** Cool-start latency with the KPI Visualizer (`vega exec perf kpi-visualizer --app-name com.starfungames.sketchlings.main --kpi cool-start-latency --iterations 3`), with `useReportFullyDrawn` (above) marking fully drawn. A performance overlay of my own in the race (Menu key: loop rate, JS time per frame, input latency, audio state). On 21 Oct, measured on the Vega Virtual Device, headless, Apple-silicon host: cool start again with 10 runs (time to first frame 665 ms mean, min 631, max 719, on a loaded host), and attempts at warm start, memory, foreground memory and UI fluidity. Only cool start produced numbers. Also measured on the VVD: app memory with `vega exec perf activity-monitor` instead (124-284 MiB: 124 on Home, 233 at most after three races, 284 after the Hall of Fame and six 6-lane races), and from my overlay the race loop (55-62 ticks a second with 6 lanes; it is timer-driven, so not a display rate) and phone input applied in 6-9 ms. Not measurable on the VVD: warm start, the KPI Visualizer's memory and foreground-memory KPIs, UI fluidity and focus response (#24, below).
 
 **What worked well.**
 - One command gave a report with n, min, mean, max, standard deviation and confidence interval per KPI: on 20 Oct (3 runs) time to first frame 408 ms mean (min 192, max 553), time to fully drawn 409 ms mean, JS bundle load 17.6 ms; on 21 Oct (10 runs, loaded host) 665 ms, 665 ms and 8.5 ms. The targets are under 1.5 s and under 8 s.
@@ -158,7 +159,7 @@ Setup: MacBook (Apple silicon, 16 GB), macOS 27.0.1, Node 26.12, Bun 1.4.3, Vega
 
 **What worked well.**
 - Structured outputs make the answer one JSON object that the relay validates against a schema, with no prompt tricks.
-- Measured over 11 real scans on 21 Oct: median latency about 4.3 s (3.7 to 5.3 s; the first, cold call 7.2 s), 2.4k to 2.7k tokens in and 210 to 255 out, about $0.015 per creature at list price. Fast enough that a child is still holding the phone when the creature appears.
+- Measured over 60 calls on 22 Oct (12 test images of 9 drawings, none by a child; `notes/bench-persona.md`): median latency 4.7 s (p90 5.9 s, 3.7 to 8.3 s; the first call 8.0 s), 2.4k to 2.7k tokens in and 210 to 280 out, about $0.016 per creature at list price (median $0.0159). All 60 answered, with no schema fallbacks and no word-guard hits, and 11 of 12 images got the same ability in all 5 runs. Fast enough that a child is still holding the phone when the creature appears.
 - Names were repetitive ("Bobble ..." five times) until the request listed the names already taken in the room and the recent Hall of Fame. After that: Zippy Sprinkle, Sunny Jellybean, Captain Bleep, Mister Fizzwhistle, Wiggle Muffin, Peachy Plum.
 
 **What needs work.**
@@ -170,13 +171,13 @@ Setup: MacBook (Apple silicon, 16 GB), macOS 27.0.1, Node 26.12, Bun 1.4.3, Vega
 
 **Onboarding.** The request shape and the timeout were first checked against a local mock API, then worked against the real API once the workspace header was added.
 
-**Would I build with it again?** Yes. A scan stays well under the 6 to 8 s I set as the limit for kids, and the cost per creature is low enough for a yearly family pass ([IMPACT.md](IMPACT.md)).
+**Would I build with it again?** Yes. The median scan stays under the 6 to 8 s I set as the limit for kids (5 of 60 calls took over 6 s). The cost per creature fits a yearly family pass only for paying households; carrying free households needs a cheaper model or a higher price ([IMPACT.md](IMPACT.md#unit-economics)).
 
 ---
 
 ## Other tools (not Amazon)
 
 - **Bun 1.4.3.** Ran the relay, its tests and the mock server with no build step. Snags: it loads `.env` only from the current folder, and shell variables win over `.env`; in the bundled types, `ws.send()` returns a number, so a one-line arrow handler fails the typecheck; it aborts with "panic: A C++ exception occurred" when a process that loaded onnxruntime exits, so the voice model runs in a child process.
-- **Kokoro-82M via `kokoro-js` 1.2.1.** Fully offline after a one-time download of about 330 MB. Every test clip, including the most pitch-shifted ones, was transcribed correctly by a speech-to-text check. A creature's three lines take about 4.3 s on an M5 MacBook. `bun install` reports two blocked postinstalls (onnxruntime-node, protobufjs), which can stay blocked.
-- **adb (Android SDK platform-tools 37.0.1).** Needed for VVD screenshots, recording and key presses. With the Unity Editor open, its adb 36.0.0 and ours kill each other's server, dropping key presses mid-test; using Unity's adb while it is open avoids it.
+- **Kokoro-82M via `kokoro-js` 1.2.1.** Fully offline after a one-time download of about 330 MB. Every test clip, including the most pitch-shifted ones, was transcribed correctly by a speech-to-text check. A creature's three lines take 4-7 s on an M5 MacBook, made on the relay and played on the TV. `bun install` reports two blocked postinstalls (onnxruntime-node, protobufjs), which can stay blocked.
+- **adb (Android SDK platform-tools 37.0.1).** Needed for VVD screenshots, recording and key presses. With the Unity Editor open (or a Unity batch job running), its adb 36.0.0 and ours kill each other's server, dropping key presses mid-test; quit Unity first, or use Unity's adb while it runs.
 - **Vite and TypeScript.** No friction recorded.

@@ -1383,3 +1383,15 @@ body.racing #app {
 .powers .age[aria-pressed='true'] {
   transform: rotate(-1deg);
 }
+
+/* A picked age doesn't tilt the other way, which pinched the gap to its neighbours. */
+.ages .age[aria-pressed='true'] {
+  transform: none;
+}
+
+/* The shortest phones: keep "Use my drawing" on screen under the drawpad. */
+@media (max-height: 680px) {
+  .pad-wrap {
+    width: 64%;
+  }
+}

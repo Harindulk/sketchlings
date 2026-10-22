@@ -6,7 +6,7 @@
 
 ## How it was checked
 
-- **Abilities:** 5 real Claude calls per image (`claude-opus-5-5`, effort low) through `generatePersona` in `server/src/persona.ts`, 22 Oct 2026. That is 60 calls in all. Raw results are in `notes/bench-persona.md`.
+- **Abilities:** 5 real Claude calls per image (`claude-opus-5-5`, effort low) through `generatePersona` in `server/src/persona.ts`, 22 Oct 2026. That is 60 calls in all: median 4.7 s, about $0.016 each. Raw results are in `notes/bench-persona.md`.
 - **The rule each verdict is checked against** is the one in the persona prompt:
   - **fly:** wings;
   - **roll:** wheels, or a round ball-like body without legs;
@@ -54,5 +54,5 @@
 - **Thin wings lost in the cut-out:** untested. No image in the set has thin wings.
 - **Wheels together with long legs:** untested. No image has wheels.
 - **Eye positions:** whether the returned eyes sit on the drawn eyes was not checked.
-- **Real children's drawings:** untested. This is the biggest gap. Scan real drawings and re-run `server/scripts/bench-persona.ts`, then repeat this audit on them.
-- **Letting the child correct the ability on the phone:** not covered here.
+- **Real children's drawings:** untested in this set. This is the biggest gap. Scan real drawings and re-run `server/scripts/bench-persona.ts`, then repeat this audit on them. From the 23 Oct session: TBD.
+- **Letting the child correct the ability on the phone:** built on 23 Oct, not audited here. The creature card on the phone has four big buttons (Walker, Hopper, Flyer, Roller). A pick changes the creature's ability before the race, the phone then says "You picked", and the TV's Reveal says "<artist>'s pick". Picking the drawing's own kind again restores the drawing's feature. Checked with fake phones and the real phone page in a headless browser, not with a child.

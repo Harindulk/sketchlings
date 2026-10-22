@@ -230,13 +230,13 @@ console.log(`|---|${engines.map(() => "---").join("|")}|`);
 for (const k of KINDS) console.log(`| ${k} | ${C.map((rs) => pct(winsOf(rs, k), n)).join(" | ")} |`);
 for (const rs of C) assert.equal(KINDS.reduce((s, k) => s + winsOf(rs, k), 0), n, "every race has one winner");
 
-// D. What-if only: a slower fly, in a temp copy of the engine. The game keeps FLY_SPEED 1.03.
-console.log("\nD. What if fly were slower? Doodle Boost on. What-if only: the game is unchanged (fly 1.03).\n");
+// D. What-if only: a slower fly, in a temp copy of the engine. The game keeps FLY_SPEED 1.0 (it was 1.03 until 23 Oct).
+console.log("\nD. What if fly were slower? Doodle Boost on. What-if only: the game is unchanged (fly 1.0).\n");
 console.log(`| Fly speed | ${KINDS.map((k) => `${k} wins (one of each)`).join(" | ")} | Little kid with fly: youngest wins | change vs none (points) |`);
 console.log(`|---|${KINDS.map(() => "---").join("|")}|---|---|`);
 for (const speed of ["1.03", "1", "0.97", "0.95"]) {
-  const today = speed === "1.03"; // reuse B and C
-  const E = today ? game : await engineWith("const FLY_SPEED = 1.03;", `const FLY_SPEED = ${speed};`);
+  const today = speed === "1"; // reuse B and C
+  const E = today ? game : await engineWith("const FLY_SPEED = 1.0;", `const FLY_SPEED = ${speed};`);
   const each = today ? C[0] : series({ E, ages: FAMILY, oneOfEach: true }, n);
   const fly = today ? B[0][1] : series({ E, ages: FAMILY, ability: "fly" }, n);
   const none = today ? B[0][0] : series({ E, ages: FAMILY, ability: "none" }, n);

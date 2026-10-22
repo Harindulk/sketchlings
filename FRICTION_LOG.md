@@ -32,6 +32,7 @@ Real problems hit while building a React Native for Vega app, worst first. Every
 | 22 | Installer: no telemetry opt-out at install, scripted mode undocumented | Vega SDK installer | Low |
 | 23 | The headless VVD renders in software and keeps ~7 host cores busy while an app animates | Vega Virtual Device 0.24 | Medium-high |
 | 24 | KPI Visualizer can't measure warm start (Fire TV launcher hard-coded) or memory and UI fluidity (Appium required) on the VVD; ADBT `analyze_perfetto_traces` can't find the Perf CLI | Vega Perf CLI (`kpi-visualizer`), Amazon Devices Builder Tools MCP | Medium |
+| 25 | `AsyncStorage` says a value was saved, but reads back nothing after a relaunch on the VVD | React Native for Vega (`AsyncStorage` in `react-native-kepler`), on the VVD | Medium |
 
 ---
 
@@ -59,11 +60,13 @@ Real problems hit while building a React Native for Vega app, worst first. Every
   - Race start was the worst moment: many tiny JS tasks at once, on a VVD whose virtual CPUs stall when the Mac is loaded. The 20 Oct freezes happened with the Mac under heavy load (on 21 Oct the 16 GB Mac had 16 of 17 GB swap in use and a load average over 30).
   - **What did not reproduce it** (21 Oct, healthy VVD): a 7,600/s `requestAnimationFrame` chain; a 7,500/s `setTimeout(0)` chain, also with 240 native-animated views spinning; 470/s native `Animated` listener events; a listener that calls `setValue` on another value; single long JS tasks of 0.5, 2 and 5 s. All kept running. A 10 s task was killed correctly by the watchdog after about 8 s ("Thread 'JSReactThread' (18) detected to be unresponsive"). So the trigger needs the watchdog's loop thread to be starved while the JS thread churns tasks.
   - A 6th ACR from 20 Oct (13:22, `LCM_ANR_REASON: Thread Monitor`) is a different hang inside the media library: see #5.
+  - **22 Oct: the same deadlock outside the race.** With `adb emu screenrecord` running, the Hall of Fame froze on 2 of 13 visits (0 of 11 without recording). The JS thread was stopped, not just the picture: a visit that would fetch the Hall of Fame sent no request. The ACR written later (`crash_1792683444`, `LCM_ANR_REASON: Lifecycle Callback`) shows the same three stacks as the table above. The likely trigger: 74 cards (network images plus animated focus nodes) mounting in one commit, like the 66 ink blots at race start (below). So the bug is not specific to the race: any burst of JS work on a starved host can feed it.
 - **Severity:** Critical. The app hangs for good, the family loses the game, and the watchdog built to catch hangs misses it. The app can make it unlikely but can't rule it out.
 - **Workaround:** starve the bug of wake-ups instead of patching symptoms (`tv/src/screens/Race.tsx`, 21 Oct):
   - the frame loop is exactly one `setTimeout` task per frame (see #4);
   - race values are native from birth (`new Animated.Value(v, {useNativeDriver: true})`), so the ~40 attach animations and their callbacks at race start are gone;
-  - the race is silent: no w3cmedia work during the race, and a creature line still queued when the race mounts is dropped. Captions carry every line.
+  - no audio work per frame: race mount drops a creature line still queued and pauses the one playing; since 22 Oct the only race sounds are ~0.6 s narrator clips ("Three!", "Two!", "One!", "Go!", "ROAR!") on the one long-lived media source (#5), played when the count changes or a ROAR starts. Captions carry every line;
+  - the Hall of Fame mounts only the rows near the focus (9 cards at first, 3 more per row of scrolling), not all 74 at once: 42 visits with `screenrecord` running on 22-23 Oct, 0 frozen.
 
   Soak test since the fix (`tv/scripts/soak.mjs` checks screenshots at +4.5 s and +6 s after each race start for a stuck countdown or a still screen):
 
@@ -75,7 +78,14 @@ Real problems hit while building a React Native for Vega app, worst first. Every
   | Final, 4 simulated phones | Live | 10 | 0 |
   | 6 lanes (Hall of Fame guests), before the blot fix | Demo | 7 | **3** |
   | + ink blots mount one lane per 300 ms during 3-2-1, 20 Hz loop until GO | Demo, 6 lanes | 10 | 0 |
-  | **Total since the fix** (4-6 lanes) | | **59** | **3**, all on the 6-lane build before the blot fix |
+  | #19/#20 build `4c25958`, sound on outside the race, and `MUTE=1` | Demo, 6 lanes | 31 | 0 |
+  | One MediaSource audio (#5); a 6 s Reveal voice ran into the first countdown | Demo, 5 lanes | 21 | 1 |
+  | + race mount pauses the playing clip (`d301384`) | Demo, 4-6 lanes | 35 | 0 |
+  | Race audio: 3-2-1-GO, ROAR, photo finish (22 Oct) | Demo 5-6 lanes; live, 6 fake phones | 30 | 0 |
+  | 23 Oct build `d8a8f4e` (Grown-ups screen, hold expiry, fly speed), race audio | Demo, 5-6 lanes | 40 | 0 |
+  | **Total since the fix** (4-6 lanes) | | **216** | **4**: 3 on the 6-lane build before the blot fix, 1 with a Reveal voice in the countdown |
+
+  Since the last fix (`d301384`): 105 starts, 0 frozen. Zero in 105 still allows a freeze rate of up to about 3% at 95% confidence. The Reveal-audio change after `d8a8f4e` (`258959b`: the Lobby warms the voice player, a new Reveal card cuts the last line) was not soaked.
 
   With 6 lanes the freeze came back (3 of 7 starts, 21 Oct, Mac at load 14-20 with 11-14 GB swap in use; this time no ACR was written and Back did not kill the app). A 6-lane build without the ink-blot images ran 8 of 8, so the trigger was ~66 blot images mounting in the same instant as the race (81 image loads within 0.3 ms in the log): a burst of native-to-JS callbacks, each one a watchdog message, on an already starved host (#23). Spreading the blots over the countdown (one lane every 300 ms) and running the loop at 20 Hz until GO ran 10 of 10 six-lane starts clean on the same loaded Mac.
 
@@ -117,7 +127,7 @@ Real problems hit while building a React Native for Vega app, worst first. Every
 - **Expected:** about 60 callbacks a second, in step with the display.
 - **Actual:** a bare chain fires about **7,600 times a second** (21 Oct). Inside the busier race build on 20 Oct it was about 1,250 a second. The race ran about 10 times too fast and starved JS timers, so the countdown never advanced. A bare `setTimeout(0)` chain runs about 7,500 times a second, so it is no frame clock either.
 - **Severity:** High. The game was unplayable until worked around, and nothing in the logs points at the cause.
-- **Workaround:** no `requestAnimationFrame` in the race. The loop is one `setTimeout` per frame that subtracts the frame's own work: `setTimeout(tick, Math.max(1, 16 - spent))`. It also keeps the JS task count low, which matters for #1. The in-app overlay read 57 to 65 frames a second with 0.1 to 1.2 ms of JS per frame on 20 Oct. The loop is not vsync-aligned, so we will move back to `requestAnimationFrame` once it is tested on Fire TV hardware.
+- **Workaround:** no `requestAnimationFrame` in the race. The loop is one `setTimeout` per frame that subtracts the frame's own work: `setTimeout(tick, Math.max(1, 16 - spent))`. It also keeps the JS task count low, which matters for #1. The in-app overlay read 57 to 65 ticks a second with 0.1 to 1.2 ms of JS per frame on 20 Oct, and 54 to 59 (median 59) with race audio on 23 Oct. Because the loop is driven by a timer, not the display, a reading above 60 is possible. We will move back to `requestAnimationFrame` once it is tested on Fire TV hardware.
 - **Suggestion:** tie `requestAnimationFrame` to a virtual vsync in headless mode, or document the difference. Expose the display refresh rate to apps. We could not check the VVD window (#2) or hardware.
 
 ## 5. Audio work stalls or hangs the JS thread on the VVD
@@ -132,12 +142,12 @@ Real problems hit while building a React Native for Vega app, worst first. Every
   - An ACR from a soak on 21 Oct (18:55 UTC) is a SIGSEGV inside `libkepler_media_player.so` on the media thread. During another hang (#6), w3cmedia kept logging "No Time update even in Playing state: 0.951" every 250 ms: a player stuck mid-clip.
   - Race starts with narration playing froze more often in #1.
   - On 21 Oct, with sound on (build `4c25958`), three ACRs are a SIGSEGV at `libW3CMedia.so + 0x63e844` on thread 0: one while pressing Next through the Reveal cards every 1.4 s, two as Results opened (the narrator's "winner is", then the creature's win line). The app drops to the launcher. None with `MUTE=1`.
-  - **Root cause of the SIGSEGV (21 Oct, F13 in `notes/tv.md`):** each clip assigned a new `MediaSource` to the player's `srcObject`, and the next queued line started straight from the `ended` handler. That detaches the old source and its SourceBuffer while the old pipeline is still finishing; a long-lived libW3CMedia thread then dereferences it. Five ACRs (three from the morning, two from a repro) share the same 6-frame stack, read from the core dumps' thread stacks with symbol names, and the device log shows `ended` → source swap → `DetachMediaSource` → the old pipeline still posting → SIGSEGV within 120 ms. **Fix:** one `AudioPlayer`, one `MediaSource` and one SourceBuffer for the whole session; each clip is appended after the last and played from its start, paused when it ends; `hush()` also stops a playing clip so the race stays silent. Repro on the old code: 5 crashes in 216 clips; after the fix 0 in 193 clips, and 0 crashes over 73 Reveal/Results screens with 0 race-start freezes in 35 starts (sound on). **Suggestion:** reassigning `srcObject` while the previous source is draining must not crash the native player; document a supported pattern for short sequential clips (or ship a sound-effect/voice API that doesn't need MSE).
+  - **Root cause of the SIGSEGV (21 Oct, F13 in `notes/tv.md`):** each clip assigned a new `MediaSource` to the player's `srcObject`, and the next queued line started straight from the `ended` handler. That detaches the old source and its SourceBuffer while the old pipeline is still finishing; a long-lived libW3CMedia thread then dereferences it. Five ACRs (three from the morning, two from a repro) share the same 6-frame stack, read from the core dumps' thread stacks with symbol names, and the device log shows `ended` → source swap → `DetachMediaSource` → the old pipeline still posting → SIGSEGV within 120 ms. **Fix:** one `AudioPlayer`, one `MediaSource` and one SourceBuffer for the whole session; each clip is appended after the last and played from its start, paused when it ends; `hush()` also stops a playing clip so the countdown starts on a quiet player. Repro on the old code: 5 crashes in 216 clips; after the fix 0 in 193 clips, and 0 crashes over 73 Reveal/Results screens with 0 race-start freezes in 35 starts (sound on). Since then: 0 crashes in the 22 Oct race-audio soaks, and 0 over 95 Reveal cards and Results screens on 23 Oct. **Suggestion:** reassigning `srcObject` while the previous source is draining must not crash the native player; document a supported pattern for short sequential clips (or ship a sound-effect/voice API that doesn't need MSE).
 - **Severity:** High. It can hang or crash the app, and the cause isn't obvious.
 - **Workaround:**
   - Never interrupt a playing clip: lines are queued, and a narrator line is dropped while a creature voice plays. A safety cap clears the "busy" state if `ended` never arrives (`tv/src/audio.ts`).
-  - Since 21 Oct the race plays no audio at all. Voices play only on Reveal and Results, one clip at a time, and every voiced line is also on screen as a caption.
-  - Build with `MUTE=1` (`tv/scripts/vbuild.sh`) for automated runs.
+  - From 21 to 22 Oct the race played no audio. Since 22 Oct it plays short narrator clips on the same source, only on a count change or a ROAR start, never per frame (70 race starts with race audio, 0 frozen). Creature voices play only on Reveal and Results, one clip at a time, and every voiced line is also on screen as a caption.
+  - Build with `MUTE=1` (`tv/scripts/vbuild.sh`) for silent runs; since the fix it is no longer needed for stability.
   - We don't know whether Fire TV hardware is affected.
 - **Suggestion:** never block the JS thread on a media-library mutex. Fire `ended` (or an abort event) for a replaced clip. Document how to switch clips safely. Add a short sound-effect API for games, so a game doesn't need a full media pipeline for a 1-second "ROAR".
 
@@ -184,7 +194,7 @@ Real problems hit while building a React Native for Vega app, worst first. Every
   - Without `com.amazon.audio.system` in `[wants]` the log shows "Unable connect to 'com.amazon.audio.system'. Missing the permissions". The media docs say missing `[wants]` services give silent failures.
   - Eight services are needed in the end, even for a 2-second clip: `mediametrics.service`, `mediabuffer.service`, `mediatransform.service`, `audio.stream`, `audio.control`, `audio.system`, `media.server` and `media.playersession.service` (all `com.amazon.*`).
   - With all eight, `MediaSource.isTypeSupported` returns true, and `appendBuffer`, `endOfStream` and `play()` succeed for bundled and server clips. Narrator clips fire `ended`.
-  - On 21 Oct we confirmed the VVD's audio reaches the Mac: while the app plays clips, macOS `coreaudiod` holds an "audio-out BuiltInSpeakerDevice" assertion created for the VVD's process (`pmset -g assertions`). We could not prove the samples are non-silent: nothing on the Mac could capture the VVD's output, and `screenrecord` has no audio track (#10).
+  - On 21 Oct we confirmed the VVD's audio reaches the Mac: while the app plays clips, macOS `coreaudiod` holds an "audio-out BuiltInSpeakerDevice" assertion created for the VVD's process (`pmset -g assertions`). On 22 Oct a `screenrecord` webm carried the sound: a Vorbis 44.1 kHz stereo track with the countdown clips in it, in step with the picture within about 0.2 s (#10). How far the sound lags the picture varies between recordings (from about 0.2 s to about 1.5 s on 21-23 Oct), so a video edit has to measure it each time.
 - **Severity:** Medium. Voices are a core feature, and failures are quiet.
 - **Workaround:** declare all eight services (`tv/manifest.toml`). The app loads w3cmedia lazily, logs `isTypeSupported`, falls back from MSE to URL mode if appending throws (never needed on the VVD), and turns sound off for the session on the first failure so the game never blocks. Narrator clips are bundled as base64 strings in a TypeScript module, so they play without reading binary assets from the package.
 - **Suggestion:** a build-time check that warns when w3cmedia is a dependency but its services are missing from `[wants]`. A runtime error that names the missing service. A short "play a sound effect" recipe for games. State clearly whether the VVD supports audio output, and how to hear or capture it.
@@ -195,10 +205,10 @@ Real problems hit while building a React Native for Vega app, worst first. Every
 - **Task attempted:** capture screenshots and a full-length video of the app for the hackathon demo.
 - **Steps taken:** looked for a `vega` command (`vega device --help` lists none for capture) and checked the docs. No page in the Vega 0.24 docs index has screenshots or screen recording in its title or summary. Then used the emulator console through `adb` from Android SDK platform-tools: `adb -s emulator-5554 emu screenrecord screenshot <dir>`, and `... emu screenrecord start <file.webm>` / `stop`. We did not try the Appium route the docs describe for UI tests.
 - **Expected:** a `vega` command for screenshots and recording.
-- **Actual:** the docs only mention "Dump Render Tree" and "Dump Rendered Text" in the window's context menu, which doesn't exist headless (#2). The bundled emulator warns that it doesn't support `ScreenRecording`, yet `adb emu screenrecord` works, including a full-HD recording, but the recording has no audio track. The SDK ships its own adb-like tool, `vda`, but `vda help` lists no `emu` (emulator console) command, so a separate `adb` is needed.
+- **Actual:** the docs only mention "Dump Render Tree" and "Dump Rendered Text" in the window's context menu, which doesn't exist headless (#2). The bundled emulator warns that it doesn't support `ScreenRecording`, yet `adb emu screenrecord` works, including a full-HD recording with the VVD's sound (a Vorbis 44.1 kHz stereo track; on 22 Oct the countdown clips were in it, in step with the picture). We first missed the sound track and thought it had none. The SDK ships its own adb-like tool, `vda`, but `vda help` lists no `emu` (emulator console) command, so a separate `adb` is needed.
 - **Severity:** Medium. Video is required for the submission, and the working route is undocumented.
-- **Workaround:** install Android SDK platform-tools for `adb`. `tv/scripts/remote.sh shot <out.png>` wraps the screenshot command. For sound, record the room's speakers separately.
-- **Suggestion:** add `vega device screenshot` and `vega device record` (with audio), or add `emu` to `vda` and document the `screenrecord` route.
+- **Workaround:** install Android SDK platform-tools for `adb`. `tv/scripts/remote.sh shot <out.png>` wraps the screenshot command, and `scripts/session.sh` wraps recording.
+- **Suggestion:** add `vega device screenshot` and `vega device record`, or add `emu` to `vda` and document the `screenrecord` route, including that it records sound.
 
 ## 11. ADBT `symbolicate_acr` fails on the VVD
 
@@ -296,7 +306,7 @@ Real problems hit while building a React Native for Vega app, worst first. Every
 - **Expected:** the font shrinks until the name fits, as on iOS.
 - **Actual:** no effect. Long names were cut off with "...".
 - **Severity:** Low. Easy to work around once you notice.
-- **Workaround:** `fitFont(text, width, max)` in `tv/src/components/Bits.tsx` picks the size from the text length (Baloo 2 bold is about 0.54 em per character).
+- **Workaround:** `fitFont(text, width, max)` in `tv/src/components/Bits.tsx` picks the size from the text length. It first assumed 0.54 em per character for Baloo 2 bold, which still cut "Whooshy Lemon" on the Reveal on 23 Oct; 0.62 em fits.
 - **Suggestion:** implement `adjustsFontSizeToFit`, or list it as unsupported in the Vega docs.
 
 ## 20. qrcode-svg needs a `TextEncoder` polyfill in the app
@@ -359,12 +369,23 @@ Real problems hit while building a React Native for Vega app, worst first. Every
 - **Workaround:** app memory from `vega exec perf activity-monitor` (its "Memory Application" column, about 2 samples a second, no Appium): 124-284 MiB. Race loop rate and input latency from the app's own overlay. Warm start, UI fluidity and focus response stay unmeasured until Fire TV hardware or an Appium setup; the traces were not analysed.
 - **Suggestion:** read the launcher from the device (or take a `--launcher` flag), and fail at once with a clear message instead of retrying. Measure memory without Appium, as `activity-monitor` already does. If Appium is required, bundle it or list it as a prerequisite with an install step. Have `analyze_perfetto_traces` find the Perf CLI from the Vega SDK install (or accept its path).
 
+## 25. `AsyncStorage` says a value was saved, but reads back nothing after a relaunch on the VVD
+
+- **Tool / version:** `AsyncStorage` from `@amazon-devices/react-native-kepler` 4.0.1+rn0.83.0 (the legacy AsyncStorage), on the Vega Virtual Device (headless), Vega SDK 0.24.12112.
+- **Task attempted:** remember a grown-up's "AI personas on/off" choice across app launches, so the parent gate doesn't have to be passed every time.
+- **Steps taken:** the ADBT docs for RN 0.83 say `AsyncStorage` is supported and SQLite-backed, with no manifest entry needed. Called `setItem` when the switch changed and `getItem` at launch. Then closed the app with Back, and separately force-stopped it, and relaunched. An on-screen debug line showed what `getItem` returned.
+- **Expected:** `getItem` returns the saved value after a relaunch.
+- **Actual:** `setItem` resolved with no error, but after either kind of relaunch `getItem` returned `null`. No error and nothing in the logs. Not checked on Fire TV hardware.
+- **Severity:** Medium. A setting is lost silently, and for a consent setting the safe fallback (off) is the only option.
+- **Workaround:** the storage code is gone. The AI personas switch is off at every launch, the Grown-ups screen says "Until the app closes.", the Lobby always shows "AI personas: on" or "off", and the playtest run sheet tells the grown-up to turn it on after each launch.
+- **Suggestion:** make `AsyncStorage` persist on the VVD, or fail loudly when it can't. Document where its data lives, whether the VVD keeps it across app restarts, and which storage API Vega recommends for small settings.
+
 ## What worked well
 
 - One-line installer: the SDK and the VVD in about 10 minutes (5.4 GB).
 - The helloWorld template built on Node 26 the first time (`npm install` about 1 minute, `npm run build:release` about 1 minute).
 - `vega run-app` installs and launches in seconds.
-- The headless VVD boots in about 10 s, and because it is an Android emulator underneath, `adb` tools work on it, including full-HD recording.
+- The headless VVD boots in about 10 s, and because it is an Android emulator underneath, `adb` tools work on it, including full-HD recording with sound.
 - The app reaches the host at `10.0.2.2` over HTTP and WebSocket with no setup. `vega device start-port-forwarding` is there too.
 - D-pad focus needed only stock components (`TVFocusGuideView`, `hasTVPreferredFocus`). Declaring Alexa on-screen voice targets takes one `aria-label` per button plus the `com.amazon.category.kva` category (we could not test voice on the VVD).
 - `useReportFullyDrawn` plus the KPI Visualizer measured cool start in one command: TTFF 408 ms mean on the VVD over 3 runs on 20 Oct (665 ms over 10 runs on a loaded host on 21 Oct), against a 1.5 s target.
@@ -379,4 +400,4 @@ Real problems hit while building a React Native for Vega app, worst first. Every
 - **Bun 1.4.3.** It aborts with "panic: A C++ exception occurred" when a process that loaded onnxruntime exits, so the Kokoro voice model runs in a child process that kills itself when the server goes away. It loads `.env` only from the current folder, and shell variables win over `.env`. In `bun-types`, `ws.send()` returns a number, so a one-line arrow `websocket.message` handler fails the typecheck.
 - **kokoro-js 1.2.1 / onnxruntime-node.** `bun install` reports two blocked postinstalls (onnxruntime-node, protobufjs); they can stay blocked. On an M5 MacBook, fp32 was faster than q8 (3.7 s vs 4.9 s for the same line).
 - **Anthropic SDK and API.** The SDK reads `ANTHROPIC_BASE_URL` and `ANTHROPIC_AUTH_TOKEN` from the environment by default; developer tooling on this Mac had set a local proxy, so the client sets `baseURL` and `authToken: null` explicitly. Structured outputs ignore `minimum`, `maximum` and `maxLength`, so stats are an integer enum and lengths are clamped on the server. An API key that isn't scoped to a workspace needs an `anthropic-workspace-id` header (`ANTHROPIC_WORKSPACE_ID` in `server/.env`), or the API answers 400.
-- **adb.** The Homebrew adb 37.0.1 we installed for #10 and #13 and the Unity Editor's adb 36.0.0 kill each other's server on every switch ("daemon not running; starting now", "device offline"), which dropped key presses mid-test. Workaround: point `remote.sh` at Unity's adb (`ADB=...`) while Unity is open.
+- **adb.** The Homebrew adb 37.0.1 we installed for #10 and #13 and the Unity Editor's adb 36.0.0 kill each other's server on every switch ("daemon not running; starting now", "device offline"), which dropped key presses mid-test. A Unity batch job in the background does it too: on 23 Oct the VVD went "offline" in adb for about a minute. Workaround: quit Unity (or restart the Mac) before a session; while Unity must run, point the scripts at Unity's adb (`ADB=...`). Our scripts now all use the adb on `PATH`, and preflight fails while a second adb server is running.
