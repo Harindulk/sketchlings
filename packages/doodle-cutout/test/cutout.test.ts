@@ -274,6 +274,57 @@ describe('cutout', () => {
     expectNear(opaqueArea(r), Math.PI * 267 * 327 + 2 * 14 * 190, Math.PI * 267 * 327 * 0.08); // body + legs
   });
 
+  // A dark marker bug with thin, light wings and antennae touching it: the marker pushes the threshold up,
+  // which used to erase the wings.
+  const bug = (s: Scene, wing: [number, number, number], thickness: number) =>
+    s
+      .strokeEllipse(384, 560, 150, 190, 14)
+      .disc(330, 500, 18)
+      .disc(438, 500, 18)
+      .strokeEllipse(190, 470, 80, 120, thickness, wing)
+      .strokeEllipse(578, 470, 80, 120, thickness, wing)
+      .stroke([[340, 380], [300, 250], [280, 200]], thickness, wing)
+      .stroke([[428, 380], [468, 250], [488, 200]], thickness, wing)
+      .render({shadow: 0.3, noise: 0.02, seed: 4});
+  const expectWings = (r: CutoutResult) => {
+    expectNear(r.bbox.x, 109, 4); // left wing, not the body (232)
+    expectNear(r.bbox.width, 551, 8);
+    expect(r.bbox.y).toBeLessThan(205); // antenna tips
+    for (const [x, y] of [[190, 470], [578, 470], [384, 560]]) expect(alphaAt(r, ...sp(r, x, y, margin()))).toBe(255); // both wings filled
+  };
+
+  test('thin pink wings and pencil antennae next to a dark marker body are kept', () => {
+    expectWings(cutout(bug(new Scene(768, 1024), [0.95, 0.55, 0.72], 2)));
+    expectWings(cutout(bug(new Scene(768, 1024), [0.55, 0.55, 0.58], 2)));
+  });
+
+  test('on lined paper, thin wings a little darker than the lines are kept', () => {
+    const s = new Scene(768, 1024);
+    for (let y = 40; y < 1024; y += 32) s.stroke([[0, y], [768, y]], 2, [0.55, 0.72, 0.92]);
+    s.stroke([[90, 0], [90, 1024]], 2, [0.92, 0.55, 0.55]);
+    expectWings(cutout(bug(s, [0.55, 0.55, 0.58], 3)));
+  });
+
+  test('a creature coloured in over 50-65% of the photo comes out whole, not empty or inverted', () => {
+    for (const [fraction, color] of [[0.5, RED_CRAYON], [0.65, [0.25, 0.45, 0.85]]] as const) {
+      const ry = Math.sqrt((fraction * 768 * 1024) / Math.PI / 0.75);
+      const rx = ry * 0.75;
+      const photo = new Scene(768, 1024)
+        .fillEllipse(384, 512, rx, ry, color as [number, number, number], 0.8, 12)
+        .strokeEllipse(384, 512, rx, ry, 10)
+        .disc(384 - rx * 0.35, 512 - ry * 0.3, 26)
+        .disc(384 + rx * 0.35, 512 - ry * 0.3, 26)
+        .render({shadow: 0.35, angle: 0.7, noise: 0.02, seed: 13});
+      const r = cutout(photo);
+      expectNear(r.bbox.width, 2 * rx + 10, 10);
+      expectNear(r.bbox.height, 2 * ry + 10, 10);
+      expectNear(opaqueArea(r), Math.PI * (rx + 5) * (ry + 5), Math.PI * rx * ry * 0.06);
+      expect(alphaAt(r, ...sp(r, 384, 512))).toBe(255);
+      expect(alphaAt(r, ...sp(r, 384, 700))).toBe(255);
+      expect(alphaAt(r, ...sp(r, 384 - rx + 20, 512 - ry + 20))).toBe(0); // the paper corner of its box
+    }
+  });
+
   test('a hard-edged shadow across the drawing does not break it', () => {
     const scene = new Scene(W, H).strokeEllipse(200, 150, 90, 70, 6);
     for (let y = 0; y < H; y++) {

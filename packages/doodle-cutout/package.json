@@ -1,7 +1,7 @@
 {
   "name": "doodle-cutout",
-  "version": "0.1.0",
-  "description": "Turn a phone photo of a drawing on paper into a clean transparent sticker sprite. Zero dependencies, browser + Node/Bun.",
+  "version": "0.2.0",
+  "description": "Cut a drawing out of a phone photo of paper: a clean transparent sticker sprite. Classic image processing, zero dependencies, browser (main thread or Web Worker), Node and Bun.",
   "keywords": [
     "drawing",
     "doodle",
@@ -12,10 +12,20 @@
     "sticker",
     "image-processing",
     "computer-vision",
+    "morphology",
+    "web-worker",
     "kids"
   ],
   "license": "MIT",
   "author": "StarFun Games",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Harindulk/doodle-cutout.git"
+  },
+  "homepage": "https://github.com/Harindulk/doodle-cutout#readme",
+  "bugs": {
+    "url": "https://github.com/Harindulk/doodle-cutout/issues"
+  },
   "type": "module",
   "sideEffects": false,
   "main": "./dist/index.js",
@@ -28,7 +38,8 @@
   },
   "files": [
     "dist",
-    "src"
+    "src",
+    "CHANGELOG.md"
   ],
   "engines": {
     "node": ">=18"
@@ -37,18 +48,13 @@
     "build": "rm -rf dist && tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "bun test",
-    "demo": "bun scripts/demo.ts",
-    "prepublishOnly": "npm run typecheck && bun test && npm run build"
+    "bench": "bun scripts/bench.ts",
+    "demo": "bun examples/demo.html",
+    "images": "bun scripts/demo.ts",
+    "prepare": "npm run build",
+    "prepublishOnly": "npm run typecheck && bun test"
   },
   "devDependencies": {
     "typescript": "^7.0.2"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/Harindulk/doodle-cutout.git"
-  },
-  "homepage": "https://github.com/Harindulk/doodle-cutout#readme",
-  "bugs": {
-    "url": "https://github.com/Harindulk/doodle-cutout/issues"
   }
 }
