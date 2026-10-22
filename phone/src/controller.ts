@@ -14,6 +14,7 @@ export interface Racer {
 const SWIPE_PX = 45;
 const SWIPE_MS = 450;
 const SHOUT_COOLDOWN_MS = 1500;
+const ROAR_MS = 4000; // the TV takes one ROAR every 4 s (ROAR_COOLDOWN in tv/src/game/race.ts)
 
 export function boostLabel(age: AgeGroup): string {
   const pct = Math.round((AGE_BOOST[age] - 1) * 100);
@@ -62,11 +63,22 @@ export function raceView(racer: () => Racer, send: (kind: InputKind) => void): {
     buzz(25);
     flash('JUMP!');
   };
+  // A ROAR the TV would ignore isn't sent or shown: the button greys and refills for 4 s instead.
+  let roarAt = -ROAR_MS;
   const roar = () => {
+    const now = performance.now();
+    if (now - roarAt < ROAR_MS) return;
+    roarAt = now;
     send('shout');
     sfx(sound.roar);
     buzz([30, 40, 30]);
     flash('ROAR!');
+    roarBtn.classList.add('cooling');
+    roarBtn.setAttribute('aria-disabled', 'true');
+    setTimeout(() => {
+      roarBtn.classList.remove('cooling');
+      roarBtn.removeAttribute('aria-disabled');
+    }, ROAR_MS);
   };
 
   // A finger kept down runs on its own; the pad ticks and counts 4 a second, as the TV does.
@@ -131,6 +143,7 @@ export function raceView(racer: () => Racer, send: (kind: InputKind) => void): {
     b.addEventListener('contextmenu', (e) => e.preventDefault());
     return b;
   };
+  const roarBtn = actionBtn('roar', icons.roar, 'ROAR', roar);
 
   const onKey = (e: KeyboardEvent) => {
     if (e.repeat || (e.target instanceof HTMLElement && e.target.closest('button'))) return;
@@ -142,11 +155,7 @@ export function raceView(racer: () => Racer, send: (kind: InputKind) => void): {
   };
   document.addEventListener('keydown', onKey);
 
-  const mic = micControl(() => {
-    send('shout');
-    buzz([30, 40, 30]);
-    flash('ROAR!');
-  });
+  const mic = micControl(roar);
 
   const speaker = h('button', {type: 'button', class: 'sound-btn', 'aria-label': 'Sound', 'aria-pressed': String(sound.soundOn())}, svg(icons.speaker));
   speaker.addEventListener('click', () => {
@@ -174,7 +183,7 @@ export function raceView(racer: () => Racer, send: (kind: InputKind) => void): {
     h('h1', {class: 'sr-only', tabindex: '-1'}, 'Race! Tap to run'),
     h('div', {class: 'racer'}, avatar, who, boost),
     pad,
-    h('div', {class: 'actions'}, actionBtn('jump', icons.up, 'JUMP', jump), actionBtn('roar', icons.roar, 'ROAR', roar)),
+    h('div', {class: 'actions'}, actionBtn('jump', icons.up, 'JUMP', jump), roarBtn),
     h('div', {class: 'extras'}, speaker, mic.el),
   );
   return {

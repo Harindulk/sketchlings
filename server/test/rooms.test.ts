@@ -31,6 +31,8 @@ describe('frame validation', () => {
     for (const bad of ['short', 'k'.repeat(65), 5]) expect(typeof parseClientMsg(JSON.stringify({t: 'hello', role: 'phone', room: 'BCDF', name: 'Mia', key: bad}))).toBe('string');
     expect(parseClientMsg('{"t":"ability","kind":"fly"}')).toEqual({t: 'ability', kind: 'fly'});
     expect(parseClientMsg('{"t":"clearHall"}')).toEqual({t: 'clearHall'});
+    expect(parseClientMsg('{"t":"removePlayer","playerId":"p1"}')).toEqual({t: 'removePlayer', playerId: 'p1'});
+    expect(parseClientMsg('{"t":"deleteCreature","id":"c1","x":1}')).toEqual({t: 'deleteCreature', id: 'c1'});
   });
 
   test('rejects malformed frames with a reason', () => {
@@ -57,6 +59,10 @@ describe('frame validation', () => {
       '{"t":"hello","role":"tv","aiPersonas":"no"}',
       '{"t":"ability"}',
       '{"t":"ability","kind":"swim"}',
+      '{"t":"removePlayer"}',
+      '{"t":"removePlayer","playerId":5}',
+      '{"t":"deleteCreature"}',
+      '{"t":"deleteCreature","id":null}',
     ]) {
       expect(typeof parseClientMsg(bad)).toBe('string');
     }

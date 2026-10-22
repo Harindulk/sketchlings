@@ -12,13 +12,15 @@ const TIME_LIMIT = 75;
 const AFTER_FIRST = 10; // seconds the others get after the winner crosses
 const DOODLE_BOOST_GAP = 150; // trailing by more than this (dp) starts the Doodle Boost
 // Abilities (what you draw changes how you play), balanced in test/race.spec.ts so every kind can win:
-const FLY_SPEED = 1.03; // fly: floats over ink blots (never stunned), light and quick
+const FLY_SPEED = 1.0; // fly: floats over ink blots (never stunned); 1.03 won 37% of one-of-each races (docs/FAIRNESS.md)
 const ROLL_AFTER = 1.5; // roll: after this long on flat ground (no jump, no stun)...
 const ROLL_SPEED = 1.1; // ...it zooms
 const HOP_HEIGHT = 1.3; // hop: higher...
 const HOP_TIME = 1.45; // ...and longer jumps, so a badly timed jump still clears a blot...
 const HOP_SPEED = 1.07; // ...and covers more ground while in the air
 const KNOCK_RANGE = 420; // walk: ROAR knocks the ink blots this far ahead out of its lane
+const HOLD_LEASE = 1.5; // a hold the phone stops re-sending (every 0.5 s) ends, so a lost 'release' can't run a racer alone
+const HOLD_AFTER_TAP = 0.25; // a hold counts only between taps: hold + taps = max(taps, 4/s), not the sum
 
 export interface RunnerInit {
   id: string;
@@ -42,6 +44,8 @@ export interface Runner {
   roarT: number; // seconds of ROAR left
   roarCd: number; // seconds until the next ROAR is allowed
   holding: boolean;
+  holdAt: number; // race time of the last 'hold'
+  lastTap: number; // race time of the last 'tap'
   boost: number; // Doodle Boost multiplier (1 = none)
   nextBlot: number;
   finishedAt: number; // race time, -1 while running
@@ -94,6 +98,8 @@ export function createRace(inits: RunnerInit[], seed = Date.now()): Race {
       roarT: 0,
       roarCd: 0,
       holding: false,
+      holdAt: -9,
+      lastTap: -1,
       boost: 1,
       nextBlot: 0,
       finishedAt: -1,
@@ -129,12 +135,14 @@ export function input(race: Race, id: string, kind: InputKind) {
   switch (kind) {
     case 'tap':
       r.energy = Math.min(160, r.energy + tapPower(r));
+      r.lastTap = race.t;
       break;
     case 'jump':
       if (r.jumpT < 0 && r.stunT <= 0) r.jumpT = 0;
       break;
     case 'hold':
       r.holding = true;
+      r.holdAt = race.t;
       break;
     case 'release':
       r.holding = false;
@@ -164,7 +172,11 @@ export function step(race: Race, dt: number) {
   const leaderX = Math.max(...race.runners.map((r) => r.x));
   for (const r of race.runners) {
     if (r.bot) botThink(race, r, dt);
-    if (r.holding) r.energy = Math.min(160, r.energy + tapPower(r) * 4 * dt); // holding = 4 taps/s, for the littlest
+    const held =
+      r.holding &&
+      race.t - r.holdAt < HOLD_LEASE &&
+      race.t - r.lastTap > HOLD_AFTER_TAP;
+    if (held) r.energy = Math.min(160, r.energy + tapPower(r) * 4 * dt); // holding = 4 taps/s, for the littlest
     r.energy *= Math.exp(-1.6 * dt);
     r.roarCd = Math.max(0, r.roarCd - dt);
     r.roarT = Math.max(0, r.roarT - dt);

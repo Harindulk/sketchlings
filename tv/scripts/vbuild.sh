@@ -18,7 +18,7 @@ if [ "${MUTE:-0}" = 1 ]; then sed -i '' 's/export const SOUND = true/export cons
 # ROOM=BNDR: soak-only build whose TV asks for that room code (soak.mjs --live N --room BNDR; Vision can't read the tiles)
 # AUDIOSOAK=1: test-only build that runs src/AudioSoak.tsx (Reveal/Results audio on a loop) instead of the game
 if [ "${AUDIOSOAK:-0}" = 1 ]; then sed -i '' "s#import { App } from './src/App';#import { AudioSoak as App } from './src/AudioSoak';#" "$DEST/sketchlings/tv/index.js"; grep -q AudioSoak "$DEST/sketchlings/tv/index.js"; fi
-if [ -n "${ROOM:-}" ]; then sed -i '' "s/\.\.\.(code.current ? {room: code.current} : {}),/room: code.current ?? '$ROOM',/" "$DEST/sketchlings/tv/src/game/party.ts"; grep -q "?? '$ROOM'" "$DEST/sketchlings/tv/src/game/party.ts"; fi
+if [ -n "${ROOM:-}" ]; then sed -i '' "s/sock.send(tvHello(code.current));/sock.send(tvHello(code.current ?? '$ROOM'));/" "$DEST/sketchlings/tv/src/game/party.ts"; grep -q "?? '$ROOM'" "$DEST/sketchlings/tv/src/game/party.ts"; fi
 source ~/vega/env
 cd "$DEST/sketchlings/tv"
 if [ "$TYPE" = debug ]; then npm run build:debug; else npm run build:release; fi

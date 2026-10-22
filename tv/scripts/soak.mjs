@@ -18,7 +18,7 @@ import {fileURLToPath} from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const {PNG} = createRequire(import.meta.url)(join(HERE, '../node_modules/pngjs'));
-const ADB = process.env.ADB || '/Applications/Unity/Hub/Editor/6000.6.0f1/PlaybackEngines/AndroidPlayer/SDK/platform-tools/adb';
+const ADB = process.env.ADB || 'adb'; // the PATH adb (Homebrew), as vega uses: two adb versions kill each other's server
 const DEV = process.env.DEV || 'emulator-5554';
 const APP = 'com.starfungames.sketchlings.main';
 

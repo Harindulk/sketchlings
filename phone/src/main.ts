@@ -5,6 +5,7 @@ import {
   PLAYER_COLORS,
   type AgeGroup,
   type InputKind,
+  type MoveStyle,
   type Phase,
   type Player,
   type ServerMsg,
@@ -12,8 +13,9 @@ import {
 } from '../../shared/protocol';
 import {boostLabel, raceView} from './controller';
 import {drawPad} from './drawpad';
+import {cleanName} from './name';
 import {Link, type LinkStatus} from './net';
-import {debugImage, decodeImage, processImage, upload, type Sprite} from './scan';
+import {debugImage, decodeImage, PAD_OPTIONS, processImage, upload, type Sprite} from './scan';
 import {fanfare, unlock} from './sound';
 import {buzz, drawIllo, h, icons, logo, mascot, medal, store, svg} from './ui';
 
@@ -44,6 +46,8 @@ const S = {
   source: 'camera' as 'camera' | 'pad',
   sprite: null as Sprite | null,
   scanMessage: '',
+  asked: null as MoveStyle | null, // an ability change sent, waiting for the server's answer
+  abilityError: '',
 };
 
 // ---------------------------------------------------------------- network
@@ -59,10 +63,16 @@ const link = new Link(
 );
 
 function gotSketchling(sk: Sketchling) {
-  if (sk.id === S.sketchling?.id) return;
+  if (sk.id === S.sketchling?.id) {
+    S.sketchling = sk; // same creature, maybe a new ability
+    if (S.asked === sk.ability?.kind) S.asked = null;
+    return;
+  }
   S.sketchling = sk;
   S.redraw = false;
   S.step = 'intro';
+  S.asked = null;
+  S.abilityError = '';
   buzz([20, 60, 20]);
 }
 
@@ -75,7 +85,8 @@ function onMessage(m: ServerMsg) {
         // The server forgot us (it restarted), so we're a new player: the old champion isn't ours any more.
         S.sketchling = null;
         S.redraw = false;
-        S.step = 'intro';
+        // The preview, pad and retake screens are this phone's own: keep the photo. An upload under the old id goes again.
+        if (S.step === 'alive') S.step = S.sprite ? 'preview' : 'intro';
       }
       noRoomSince = 0;
       S.joined = true;
@@ -98,6 +109,7 @@ function onMessage(m: ServerMsg) {
     case 'phase':
       S.phase = m.phase;
       S.phaseData = m.data ?? {};
+      S.abilityError = ''; // a refusal from just before the race shouldn't greet the child after it
       break;
     case 'sketchling':
       if (m.sketchling.playerId === S.playerId) gotSketchling(m.sketchling);
@@ -113,6 +125,10 @@ function onMessage(m: ServerMsg) {
     case 'error':
       if (m.code === 'bad_message') {
         console.warn('[sketchlings] server:', m.message);
+        if (S.asked) {
+          S.asked = null;
+          S.abilityError = "Oops, that didn't work. Try again!";
+        }
         break;
       }
       if (m.code === 'no_room' && S.joined && Date.now() - (noRoomSince ||= Date.now()) < 30_000) {
@@ -188,10 +204,11 @@ async function makeSprite(getImage: () => Promise<ImageData>) {
   S.step = 'cutting';
   S.scanMessage = '';
   render();
+  const options = S.source === 'pad' ? PAD_OPTIONS : undefined;
   try {
     // Keep the scissors on screen a moment: it reads as "magic" rather than a flicker.
     const t0 = performance.now();
-    const [sprite] = await Promise.all([getImage().then(processImage).finally(() => console.info(`[sketchlings] decode + cutout ${Math.round(performance.now() - t0)} ms`)), delay(900)]);
+    const [sprite] = await Promise.all([getImage().then((img) => processImage(img, options)).finally(() => console.info(`[sketchlings] decode + cutout ${Math.round(performance.now() - t0)} ms`)), delay(900)]);
     if (S.sprite) URL.revokeObjectURL(S.sprite.url);
     S.sprite = sprite;
     S.step = sprite ? 'preview' : 'empty';
@@ -262,17 +279,6 @@ const AGES: {id: AgeGroup; label: string; sub: string}[] = [
   {id: 'big', label: 'Big kid', sub: '8 to 12'},
   {id: 'grownup', label: 'Grown-up', sub: '13 and up'},
 ];
-
-const cleanName = (s: string) =>
-  (
-    s
-      .normalize('NFC')
-      .replace(/[^\p{L}\p{M}\u200C\u200D' -]/gu, '') // keep ZWNJ/ZWJ: Sinhala needs the ZWJ in Sri- names
-      .replace(/\s+/g, ' ')
-      .trim()
-      .split(' ')
-      .find((w) => /\p{L}/u.test(w)) ?? '' // first name only, skipping a lone '-' or "'"
-  ).slice(0, 12);
 
 function joinView(): View {
   // Only pre-fill when this phone is already a player in this room ("Change my name"). Otherwise the last
@@ -665,6 +671,27 @@ function failedView(): View {
 const MOVES: Record<string, string> = {walk: 'Walker', hop: 'Hopper', fly: 'Flyer', roll: 'Roller'};
 // Emoji old enough (Emoji 11 or earlier: Android 9, iOS 12.1) to show on older phones too.
 const ABILITY_EMOJI: Record<string, string> = {walk: '🦖', hop: '🐸', fly: '🦋', roll: '🛹'};
+const KINDS: MoveStyle[] = ['walk', 'hop', 'fly', 'roll'];
+
+let askTimer = 0;
+/** The child changes their creature's ability; the server answers with the same sketchling, changed, or an error. */
+function pickAbility(kind: MoveStyle) {
+  buzz(10);
+  S.abilityError = '';
+  if (kind !== (S.asked ?? S.sketchling?.ability?.kind)) {
+    if (link.send({t: 'ability', kind})) {
+      S.asked = kind;
+      clearTimeout(askTimer);
+      askTimer = window.setTimeout(() => {
+        if (!S.asked) return;
+        S.asked = null;
+        S.abilityError = "The TV didn't answer. Try again!";
+        render();
+      }, 6000);
+    } else S.abilityError = "Can't reach the TV right now. Try again in a moment!";
+  }
+  render();
+}
 
 function cardView(): View {
   const sk = S.sketchling!;
@@ -681,12 +708,30 @@ function cardView(): View {
     return h('div', {class: 'stat'}, h('span', null, label), pips);
   };
   const redraw = h('button', {type: 'button', class: 'link-btn', onclick: () => ((S.redraw = true), (S.step = 'intro'), render())}, 'Draw a new one');
-  const other = switchBtn();
+  // The server keeps the feature to 4 words and the label to 5. Before the race the child can pick another power.
+  const ability = h('p', {class: 'ability'});
+  const buttons = KINDS.map((kind) =>
+    h('button', {type: 'button', class: 'age', onclick: () => pickAbility(kind)}, h('span', {'aria-hidden': 'true'}, ABILITY_EMOJI[kind]), h('small', null, MOVES[kind])),
+  );
+  const oops = h('p', {class: 'note', role: 'alert'});
+  const picker = h('div', {class: 'stack center'}, h('p', {class: 'note'}, 'Want a different power? Tap one!'), h('div', {class: 'powers', role: 'group', 'aria-label': 'Powers'}, ...buttons), oops);
   const update = () => {
     const text = S.phase === 'draw' ? 'Ready! Waiting for the others...' : S.phase === 'reveal' ? 'Look at the TV!' : '';
     banner.textContent = text;
     banner.hidden = !text;
-    redraw.hidden = other.hidden = S.phase !== 'draw';
+    redraw.hidden = S.phase !== 'draw';
+    const a = S.sketchling?.ability;
+    if (a) {
+      const picked = a.chosenBy === 'artist' && a.kind !== a.original?.kind; // the same kind again keeps the drawing's feature
+      ability.replaceChildren(
+        h('span', {class: 'ability-icon', 'aria-hidden': 'true'}, ABILITY_EMOJI[a.kind] ?? '✨'),
+        h('span', null, picked ? 'You picked' : `I saw ${a.feature}`, h('strong', null, h('span', {'aria-hidden': 'true'}, '→ '), a.label)),
+      );
+    }
+    buttons.forEach((b, i) => b.setAttribute('aria-pressed', String(KINDS[i] === (S.asked ?? a?.kind))));
+    oops.textContent = S.abilityError;
+    oops.hidden = !S.abilityError;
+    picker.hidden = !a || !(S.phase === 'lobby' || S.phase === 'draw' || S.phase === 'reveal'); // the server refuses it later
   };
   update();
   return {
@@ -700,20 +745,14 @@ function cardView(): View {
         h('div', {class: 'art'}, img),
         title(sk.name, 'char-name'),
         h('p', {class: 'char-title'}, sk.title),
-        // Why it plays the way it does: the server keeps the feature to 4 words and the label to 5.
-        sk.ability
-          ? h(
-              'p',
-              {class: 'ability'},
-              h('span', {class: 'ability-icon', 'aria-hidden': 'true'}, ABILITY_EMOJI[sk.ability.kind] ?? '✨'),
-              h('span', null, `I saw ${sk.ability.feature}`, h('strong', null, h('span', {'aria-hidden': 'true'}, '→ '), sk.ability.label)),
-            )
-          : h('span', {class: 'tag'}, MOVES[sk.move] ?? sk.move),
+        // Why it plays the way it does.
+        sk.ability ? ability : h('span', {class: 'tag'}, MOVES[sk.move] ?? sk.move),
         h('div', {class: 'stats'}, stat('Speed', sk.stats.speed, 0), stat('Jump', sk.stats.jump, 1), stat('Power', sk.stats.power, 2)),
         h('p', {class: 'bubble'}, `"${sk.catchphrase}"`),
         h('p', {class: 'byline'}, `Drawn by ${sk.artist || S.name}`),
       ),
-      h('div', {class: 'center stack', style: 'gap:0'}, redraw, other),
+      picker,
+      h('div', {class: 'center stack', style: 'gap:0'}, redraw),
     ),
     update,
   };
@@ -805,8 +844,12 @@ function screenKey(): string {
       return 'lobby';
     case 'draw':
       return S.sketchling && !S.redraw ? 'card' : `scan:${S.step}`;
-    case 'reveal':
+    case 'reveal': {
+      // The TV reveals only the creatures that were ready at Start; a late one joins the next race.
+      const order = S.phaseData.order;
+      if (Array.isArray(order) && !order.includes(S.playerId)) return 'watch';
       return S.sketchling ? 'card' : 'tv';
+    }
     case 'race': {
       // Only players who had a champion when the race started are in it; the TV ignores anyone else's taps.
       const racers = S.phaseData.racers;

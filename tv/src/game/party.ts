@@ -2,8 +2,12 @@
 // Lobby state lives in React state (changes a few times a minute); race inputs bypass React entirely
 // and go straight to listeners so taps never trigger re-renders.
 import {useCallback, useEffect, useRef, useState} from 'react';
-import {useKeplerAppStateManager} from '@amazon-devices/react-native-kepler';
+import {
+  AsyncStorage,
+  useKeplerAppStateManager,
+} from '@amazon-devices/react-native-kepler';
 import type {
+  HelloTv,
   InputKind,
   Phase,
   Player,
@@ -11,7 +15,7 @@ import type {
   Sketchling,
 } from '../../../shared/protocol';
 import {MAX_PLAYERS, PLAYER_COLORS} from '../../../shared/protocol';
-import {HTTP_BASE, WS_URL} from '../config';
+import {HOST, HTTP_BASE, WS_URL} from '../config';
 import {demoPlayers} from './demo';
 
 export type PartyMode = 'live' | 'demo';
@@ -61,6 +65,78 @@ export function fetchHall(ms = 3000): Promise<Sketchling[]> {
 
 export const isGuest = (p: Player) => p.id.startsWith('guest-');
 
+// The grown-ups' "AI personas" choice (Grown-ups screen): off until a grown-up turns it on, kept across launches
+// (Vega's AsyncStorage, SQLite-backed). Read at every hello, so a live party picks it up on its next connect.
+export const consent = {aiPersonas: false};
+const CONSENT_KEY = 'sketchlings.aiPersonas';
+export function loadConsent() {
+  try {
+    AsyncStorage.getItem(CONSENT_KEY).then(
+      (v) => (consent.aiPersonas = v === 'on'),
+      () => {},
+    );
+  } catch {
+    // no storage module: the choice lasts until the app closes
+  }
+}
+export function setAiPersonas(on: boolean) {
+  consent.aiPersonas = on;
+  try {
+    AsyncStorage.setItem(CONSENT_KEY, on ? 'on' : 'off').catch(() => {});
+  } catch {
+    // as above
+  }
+}
+
+/** Every TV hello carries aiPersonas: a server restart recreates the room, and an absent flag means on. */
+function tvHello(room?: string) {
+  const hello: HelloTv = {
+    t: 'hello',
+    role: 'tv',
+    aiPersonas: consent.aiPersonas,
+    ...(room ? {room} : {}),
+  };
+  return JSON.stringify(hello);
+}
+
+/** Grown-ups screen: delete the server's Hall of Fame. Home has no socket, so this opens one and says hello as the
+ *  TV (a throwaway room the server purges later). Resolves with how many creatures went. */
+export function clearHall(ms = 8000): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const sock = new WebSocket(WS_URL);
+    const end = () => {
+      clearTimeout(timer);
+      sock.onclose = null; // settled: our own close is not a failure
+      sock.close();
+    };
+    const fail = (why: string) => {
+      end();
+      reject(new Error(why));
+    };
+    const timer = setTimeout(
+      () => fail(`Can't reach the party server at ${HOST}.`),
+      ms,
+    );
+    sock.onopen = () => sock.send(tvHello());
+    sock.onmessage = (ev) => {
+      let msg: ServerMsg;
+      try {
+        msg = JSON.parse(String(ev.data));
+      } catch {
+        return;
+      }
+      if (msg.t === 'room') sock.send('{"t":"clearHall"}');
+      else if (msg.t === 'error') fail(msg.message);
+      else if (msg.t === 'hallCleared') {
+        end();
+        resolve(msg.removed);
+      }
+    };
+    sock.onerror = () => {}; // onclose follows
+    sock.onclose = () => fail(`Can't reach the party server at ${HOST}.`);
+  });
+}
+
 /** Hall of Fame creatures picked for "Race again" join the party as bot-run guest racers (up to MAX_PLAYERS). */
 export function withGuests(s: PartyState, guests: Sketchling[]): PartyState {
   if (!guests.length) return s;
@@ -109,13 +185,7 @@ export function useParty(mode: PartyMode | null) {
       ws.current = sock;
       sock.onopen = () => {
         failures = 0;
-        sock.send(
-          JSON.stringify({
-            t: 'hello',
-            role: 'tv',
-            ...(code.current ? {room: code.current} : {}),
-          }),
-        );
+        sock.send(tvHello(code.current));
       };
       sock.onmessage = (ev) => {
         let msg: ServerMsg;
@@ -245,7 +315,7 @@ function scriptDemo(
     ...s,
     conn: 'open',
     code: 'DEMO',
-    joinUrl: 'https://github.com/starfungames/sketchlings',
+    joinUrl: 'https://github.com/Harindulk/sketchlings',
   }));
   players.forEach((p, i) => {
     const t = 900 + i * 900;

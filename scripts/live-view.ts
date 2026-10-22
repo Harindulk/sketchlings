@@ -10,8 +10,8 @@ import { homedir } from "node:os";
 import type { ServerWebSocket } from "bun";
 
 const PORT = 8799, CONSOLE = 5554, GRPC = 8554;
-// Unity's adb by default: two adb versions on one Mac kill each other's server (FRICTION_LOG).
-const ADB = process.env.ADB ?? "/Applications/Unity/Hub/Editor/6000.6.0f1/PlaybackEngines/AndroidPlayer/SDK/platform-tools/adb";
+// The PATH adb (Homebrew), as vega, preflight and tv/scripts/remote.sh use: two adb versions kill each other's server (FRICTION_LOG).
+const ADB = process.env.ADB || "adb";
 const KEYS: Record<string, string> = { up: "KEY_UP", down: "KEY_DOWN", left: "KEY_LEFT", right: "KEY_RIGHT", select: "KEY_ENTER", back: "KEY_BACK", menu: "KEY_MENU", playpause: "KEY_PLAYPAUSE" };
 let keyChain = Promise.resolve(); // one press at a time, in order
 function press(name: unknown) {
@@ -19,8 +19,8 @@ function press(name: unknown) {
   if (!key) return;
   keyChain = keyChain.then(async () => {
     const p = Bun.spawn([ADB, "-s", `emulator-${CONSOLE}`, "shell", "inputd-cli", "button_press", key], { stdout: "ignore", stderr: "ignore" });
-    await p.exited;
-  }).catch(() => {});
+    if (await p.exited) console.log(`${key} not sent: is emulator-${CONSOLE} online in \`${ADB} devices\`?`);
+  }).catch((e) => console.log(`${key} not sent: ${(e as Error).message}`));
 }
 const RUNNING = `${homedir()}/Library/Caches/TemporaryItems/avd/running`; // where the emulator advertises its gRPC port
 

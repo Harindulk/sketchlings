@@ -54,6 +54,33 @@ describe('Doodle Dash sim', () => {
     expect(mum.v).toBeGreaterThan(kid.v);
     expect(TRACK).toBeGreaterThan(0);
   });
+
+  it('hold is a floor (4 taps/s), not added on top of taps', () => {
+    const race = createRace([{id: 'both', stats}, {id: 'taps', stats}, {id: 'hold', stats}, {id: 'four', stats}], 5);
+    race.blots = [[], [], [], []];
+    for (let i = 0; i < 180; i++) {
+      if (i % 10 === 0) ['both', 'taps'].forEach((id) => input(race, id, 'tap')); // 6 taps/s
+      if (i % 15 === 0) input(race, 'four', 'tap'); // 4 taps/s
+      if (i % 30 === 0) ['both', 'hold'].forEach((id) => input(race, id, 'hold')); // the phone re-sends every 0.5 s
+      step(race, 1 / 60);
+    }
+    const [both, taps, hold, four] = race.runners;
+    expect(both.x).toBeCloseTo(taps.x, 5);
+    expect(hold.x / four.x).toBeGreaterThan(0.95);
+    expect(hold.x / four.x).toBeLessThan(1.05);
+  });
+
+  it('a hold the phone stops re-sending runs out (lost release)', () => {
+    const race = createRace([{id: 'lost', stats}, {id: 'kept', stats}], 6);
+    race.blots = [[], []];
+    for (let i = 0; i < 240; i++) {
+      if (i === 0) input(race, 'lost', 'hold'); // its release never arrives
+      if (i % 30 === 0) input(race, 'kept', 'hold');
+      step(race, 1 / 60);
+    }
+    expect(race.runners[0].energy).toBeLessThan(5);
+    expect(race.runners[1].energy).toBeGreaterThan(30);
+  });
 });
 
 describe('abilities (what you draw changes how you play)', () => {

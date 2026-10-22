@@ -9,7 +9,7 @@ import {FocusButton} from '../components/FocusButton';
 import {Sprite} from '../components/Sprite';
 import type {PartyMode, PartyState, ScanStatus} from '../game/party';
 import {ABILITY, ABILITY_TIP, abilityOf} from '../game/ability';
-import {isGuest, racersOf} from '../game/party';
+import {consent, isGuest, racersOf} from '../game/party';
 import {HOST} from '../config';
 import {C, F} from '../theme';
 
@@ -18,9 +18,10 @@ interface Props {
   state: PartyState;
   onStart: (racers: Player[]) => void;
   onDemo: () => void;
+  leaving?: boolean; // Back was pressed once in a live party: a second Back drops the room
 }
 
-export function Lobby({mode, state, onStart, onDemo}: Props) {
+export function Lobby({mode, state, onStart, onDemo, leaving}: Props) {
   const racers = racersOf(state);
   const ready = racers.length > 0;
   const offline = mode === 'live' && state.conn === 'offline';
@@ -36,13 +37,22 @@ export function Lobby({mode, state, onStart, onDemo}: Props) {
         {state.joinUrl && !offline ? (
           <>
             <View style={styles.qrBox}>
-              <QRCode
-                value={state.joinUrl}
-                size={176}
-                color={C.ink}
-                backgroundColor={C.white}
-                ecl="M"
-              />
+              {mode === 'demo' ? (
+                // no QR: a demo has nothing for a phone to join
+                <View style={styles.demoNote}>
+                  <Text style={styles.demoNoteText}>
+                    No phones needed. In the race, the remote plays player 1.
+                  </Text>
+                </View>
+              ) : (
+                <QRCode
+                  value={state.joinUrl}
+                  size={176}
+                  color={C.ink}
+                  backgroundColor={C.white}
+                  ecl="M"
+                />
+              )}
             </View>
             <Text style={styles.scan}>
               {mode !== 'demo'
@@ -72,9 +82,11 @@ export function Lobby({mode, state, onStart, onDemo}: Props) {
               {offline ? 'Server not found' : 'Connecting…'}
             </Text>
             <Text style={styles.waitText}>
-              {offline
-                ? `Can't reach the party server at ${HOST}. Start it on your computer, or play a Demo party.`
-                : `Opening a room on ${HOST}`}
+              {!offline
+                ? `Opening a room on ${HOST}`
+                : state.players.length
+                ? `Can't reach the party server at ${HOST}. Trying again…`
+                : `Can't reach the party server at ${HOST}. Start it on your computer, or play a Demo party.`}
             </Text>
           </View>
         )}
@@ -87,6 +99,13 @@ export function Lobby({mode, state, onStart, onDemo}: Props) {
             {state.players.length}/{MAX_PLAYERS}
           </Text>
         </Text>
+        {mode === 'live' && (
+          <Text style={styles.ai}>
+            {consent.aiPersonas
+              ? 'AI personas: on'
+              : 'AI personas: off.\nGrown-ups can turn them on.'}
+          </Text>
+        )}
         <View style={styles.grid}>
           {slots.map((p, i) => (
             <PlayerChip
@@ -98,7 +117,8 @@ export function Lobby({mode, state, onStart, onDemo}: Props) {
           ))}
         </View>
         <View style={styles.actions}>
-          {offline && (
+          {offline && !state.players.length && (
+            // not with players: a server blip must not put focus (and the next OK) on a button that drops their room
             <FocusButton
               label="Demo party"
               color="#2bb3ff"
@@ -129,6 +149,14 @@ export function Lobby({mode, state, onStart, onDemo}: Props) {
           )}
         </View>
       </View>
+      {leaving && (
+        <View style={styles.leave}>
+          <Text style={styles.waitTitle}>Press Back again to end the party</Text>
+          <Text style={styles.waitText}>
+            Every phone will need to scan a new code.
+          </Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -265,6 +293,14 @@ const styles = StyleSheet.create({
     transform: [{rotate: '-2deg'}],
   },
   qrBox: {padding: 8, backgroundColor: C.white},
+  demoNote: {width: 176, height: 176, justifyContent: 'center'},
+  demoNoteText: {
+    fontFamily: F.bold,
+    fontSize: 22,
+    lineHeight: 28,
+    color: C.ink,
+    textAlign: 'center',
+  },
   scan: {fontFamily: F.semi, fontSize: 18, color: C.inkSoft, marginTop: 6},
   tip: {
     fontFamily: F.bold,
@@ -305,6 +341,27 @@ const styles = StyleSheet.create({
   },
   right: {position: 'absolute', left: 430, top: 24, right: 48, bottom: 24},
   playersTitle: {fontFamily: F.bold, fontSize: 32, color: C.ink},
+  ai: {
+    position: 'absolute',
+    right: 0,
+    top: 6,
+    fontFamily: F.semi,
+    fontSize: 16,
+    lineHeight: 20,
+    color: C.inkSoft,
+    textAlign: 'right',
+  },
+  leave: {
+    position: 'absolute',
+    left: 200,
+    right: 200,
+    top: 180,
+    padding: 20,
+    backgroundColor: C.white,
+    borderWidth: 4,
+    borderColor: '#D9363E',
+    borderRadius: 24,
+  },
   count: {fontFamily: F.semi, fontSize: 24, color: C.inkSoft},
   grid: {
     flexDirection: 'row',

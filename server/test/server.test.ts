@@ -2,7 +2,7 @@ import {afterAll, describe, expect, spyOn, test} from 'bun:test';
 import {existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
-import type {Sketchling} from '../../shared/protocol';
+import type {Player, Sketchling} from '../../shared/protocol';
 import {ABILITY_LABEL, MOVES} from '../src/ability';
 import type {Claude} from '../src/persona';
 import {ARTIST_FEATURE} from '../src/rooms';
@@ -268,8 +268,9 @@ describe('clear Hall of Fame', () => {
     const log = spyOn(console, 'log');
     const p = await party(app);
     const sk = await p.scan();
+    expect((await p.tv.next('sketchling')).sketchling.voice).toEqual({intro: `/voice/${sk.id}/intro.m4a`}); // the intro first
     const voiced = (await p.tv.next('sketchling')).sketchling as Sketchling;
-    expect(voiced.voice?.intro).toBe(`/voice/${sk.id}/intro.m4a`);
+    expect(voiced.voice?.winLine).toBe(`/voice/${sk.id}/winLine.m4a`);
     const scanLines = log.mock.calls.map(c => String(c[0])).filter(l => l.startsWith(`[scan] ${p.playerId}`));
     expect(scanLines).toHaveLength(2);
     expect(scanLines[0]).toMatch(/ upload->sketchling \d+ ms source=offline$/);
@@ -295,6 +296,166 @@ describe('clear Hall of Fame', () => {
 
     expect((await p.scan()).source).toBe('offline'); // the party carries on
     expect(((await (await fetch(`${app.http}/api/hall-of-fame`)).json()) as Sketchling[])).toHaveLength(1);
+    await p.close();
+    app.stop();
+  });
+});
+
+const fakeTts: Tts = {clip: async (_text, _v, out) => (writeFileSync(out, 'm4a'), 1000)};
+const hallOf = async (app: ReturnType<typeof startTestServer>) => (await (await fetch(`${app.http}/api/hall-of-fame`)).json()) as Sketchling[];
+/** Scan, then wait for both voice frames (the intro alone, then every line) on the TV and the phone. */
+const scanVoiced = async (p: Awaited<ReturnType<typeof party>>) => {
+  const sk = await p.scan();
+  for (let i = 0; i < 2; i++) await Promise.all([p.tv.next('sketchling'), p.mia.next('sketchling')]);
+  return sk;
+};
+/** The next `players` frame that matches `ok` (earlier ones are dropped). */
+const playersUntil = async (c: Awaited<ReturnType<typeof connect>>, ok: (players: Player[]) => boolean) => {
+  for (;;) {
+    const {players} = await c.next('players');
+    if (ok(players)) return players as Player[];
+  }
+};
+
+describe('the public tunnel (Cloudflare headers)', () => {
+  const cf = {'cf-connecting-ip': '203.0.113.7', 'cf-ray': '8d1f2a3b4c5d6e7f-LHR'};
+
+  test('no hall and no voices; sprites only for creatures in a live room. The LAN gets everything', async () => {
+    const app = startTestServer({tts: async () => fakeTts});
+    const p = await party(app);
+    const old = await scanVoiced(p);
+    const live = await scanVoiced(p); // a redraw: the first creature is now only in the hall
+    const get = (path: string, headers?: Record<string, string>) => fetch(app.http + path, {headers}).then(r => r.status);
+
+    expect(await hallOf(app)).toHaveLength(2);
+    expect(await get('/api/hall-of-fame', cf)).toBe(404);
+    expect(await get('/api/hall-of-fame', {'cf-ray': cf['cf-ray']})).toBe(404); // either header is enough
+    expect(await get(live.spriteUrl, cf)).toBe(200); // the phone's own creature
+    expect(await get(old.spriteUrl, cf)).toBe(404);
+    expect(await get(old.spriteUrl)).toBe(200);
+    expect(await get(`/voice/${live.id}/intro.m4a`, cf)).toBe(404);
+    expect(await get(`/voice/${live.id}/intro.m4a`)).toBe(200);
+    for (const path of ['/health', `/j/${p.code}`]) expect(await get(path, cf)).not.toBe(404); // phones still join
+
+    // uploads through the tunnel still work
+    const res = await fetch(`${app.http}/api/rooms/${p.code}/players/${p.playerId}/sketch`, {method: 'POST', headers: cf, body: encodePng(40, 40, drawBlob(40, 40, [200, 60, 60]))});
+    expect(res.status).toBe(202);
+    await p.tv.next('sketchling');
+    await p.close();
+    app.stop();
+  });
+
+  test('a TV hello through the tunnel is refused, even from a socket that joined as a phone first', async () => {
+    const app = startTestServer();
+    const tv = await connect(app.wsUrl);
+    tv.send({t: 'hello', role: 'tv'});
+    const {code} = await tv.next('room');
+    const fakeTv = await connect(app.wsUrl, cf);
+    fakeTv.send({t: 'hello', role: 'tv', room: code});
+    expect(await fakeTv.next('error')).toMatchObject({code: 'bad_message', message: 'A TV must connect over the Wi-Fi, not the public link.'});
+    const ph = await connect(app.wsUrl, cf);
+    ph.send({t: 'hello', role: 'phone', room: code, name: 'Mia'});
+    await ph.next('joined');
+    ph.send({t: 'hello', role: 'tv', room: code});
+    expect((await ph.next('error')).code).toBe('bad_message');
+    ph.send({t: 'clearHall'});
+    expect((await ph.next('error')).code).toBe('bad_message');
+    expect(app.hub.rooms.get(code)!.tv).toBeDefined(); // the real TV kept its room
+    tv.send({t: 'phase', phase: 'draw'}); // and still runs it
+    expect((await ph.next('phase')).phase).toBe('draw');
+    await Promise.all([tv.close(), fakeTv.close(), ph.close()]);
+    app.stop();
+  });
+});
+
+describe('the TV removes a player or deletes one creature', () => {
+  test('removePlayer: the slot, the phone (it cannot come back as that player) and every creature they drew', async () => {
+    const app = startTestServer({tts: async () => fakeTts});
+    const log = spyOn(console, 'log');
+    const p = await party(app);
+    const first = await scanVoiced(p);
+    const second = await scanVoiced(p);
+    const leo = await connect(app.wsUrl);
+    leo.send({t: 'hello', role: 'phone', room: p.code, name: 'Leo'});
+    const {playerId: leoId} = await leo.next('joined');
+
+    p.mia.send({t: 'removePlayer', playerId: leoId}); // phones can't
+    expect((await p.mia.next('error')).code).toBe('bad_message');
+    p.tv.send({t: 'removePlayer', playerId: 'nobody'});
+    expect(await p.tv.next('error')).toMatchObject({code: 'bad_message', message: 'No such player in this party.'});
+
+    const closed = new Promise<CloseEvent>(r => p.mia.ws.addEventListener('close', r));
+    p.tv.send({t: 'removePlayer', playerId: p.playerId});
+    expect(await p.mia.next('error')).toEqual({t: 'error', code: 'removed', message: "You've left this party. Thanks for playing!"});
+    expect((await closed).reason).toBe('removed');
+    await playersUntil(p.tv, ps => ps.length === 1 && ps[0]!.id === leoId);
+    await playersUntil(leo, ps => ps.length === 1 && ps[0]!.id === leoId);
+    expect(app.hub.rooms.get(p.code)!.slots.has(p.playerId)).toBe(false);
+    expect(await hallOf(app)).toEqual([]);
+    for (const sk of [first, second]) {
+      expect((await fetch(app.http + sk.spriteUrl)).status).toBe(404);
+      expect(existsSync(join(app.dataDir, 'voice', sk.id))).toBe(false);
+    }
+    const lines = log.mock.calls.map(c => String(c[0]));
+    log.mockRestore();
+    expect(lines).toContain(`[room] ${p.code}: the TV removed a player and their 2 creature(s)`);
+    expect(lines.filter(l => l.startsWith('[room]')).join()).not.toContain('Mia'); // no name in the log
+
+    const back = await connect(app.wsUrl); // the same phone reconnecting with its playerId
+    back.send({t: 'hello', role: 'phone', room: p.code, name: 'Mia', playerId: p.playerId});
+    expect((await back.next('error')).code).toBe('removed');
+    const fresh = await connect(app.wsUrl); // a grown-up can still let them rejoin as someone new
+    fresh.send({t: 'hello', role: 'phone', room: p.code, name: 'Mia'});
+    expect((await fresh.next('joined')).playerId).not.toBe(p.playerId);
+    await Promise.all([p.tv.close(), leo.close(), back.close(), fresh.close()]);
+    app.stop();
+  });
+
+  test('removePlayer during a scan: the creature never reaches the hall and its drawing is deleted', async () => {
+    let answer = () => {};
+    const create = () => new Promise(r => (answer = () => r({stop_reason: 'end_turn', content: [{type: 'text', text: '{}'}]})));
+    const app = startTestServer({claude: {model: 'test-model', client: {beta: {messages: {create}}}} as unknown as Claude});
+    const p = await party(app);
+    const res = await fetch(`${app.http}/api/rooms/${p.code}/players/${p.playerId}/sketch`, {method: 'POST', body: encodePng(40, 40, drawBlob(40, 40, [60, 60, 200]))});
+    const {id} = (await res.json()) as {id: string};
+    await p.tv.next('scan'); // processing
+    expect(existsSync(join(app.dataDir, 'sprites', `${id}.png`))).toBe(true);
+    p.tv.send({t: 'removePlayer', playerId: p.playerId});
+    expect((await p.mia.next('error')).code).toBe('removed');
+    answer();
+    await Bun.sleep(50);
+    expect(await hallOf(app)).toEqual([]);
+    expect(existsSync(join(app.dataDir, 'sprites', `${id}.png`))).toBe(false);
+    expect(p.tv.queue.filter(m => m.t === 'sketchling')).toEqual([]);
+    await p.tv.close();
+    app.stop();
+  });
+
+  test('deleteCreature: one hall entry with its sprite and voice; a live player who has it is left without a creature', async () => {
+    const app = startTestServer({tts: async () => fakeTts});
+    const p = await party(app);
+    const old = await scanVoiced(p);
+    const live = await scanVoiced(p);
+
+    p.mia.send({t: 'deleteCreature', id: old.id}); // phones can't
+    expect((await p.mia.next('error')).code).toBe('bad_message');
+    p.tv.send({t: 'deleteCreature', id: old.id});
+    expect(await p.tv.next('creatureDeleted')).toEqual({t: 'creatureDeleted', id: old.id, removed: 1});
+    expect((await hallOf(app)).map(s => s.id)).toEqual([live.id]);
+    expect((await fetch(app.http + old.spriteUrl)).status).toBe(404);
+    expect(existsSync(join(app.dataDir, 'voice', old.id))).toBe(false);
+    expect((await fetch(app.http + live.spriteUrl)).status).toBe(200);
+
+    p.tv.send({t: 'deleteCreature', id: live.id});
+    expect(await p.tv.next('creatureDeleted')).toEqual({t: 'creatureDeleted', id: live.id, removed: 1});
+    const last: Player[] = p.tv.queue.filter(m => m.t === 'players').at(-1).players; // sent before the answer
+    expect(last).toEqual([expect.objectContaining({id: p.playerId, connected: true})]);
+    expect(last[0]!.sketchling).toBeUndefined();
+    expect(await hallOf(app)).toEqual([]);
+    p.tv.send({t: 'deleteCreature', id: live.id}); // already gone
+    expect(await p.tv.next('creatureDeleted')).toEqual({t: 'creatureDeleted', id: live.id, removed: 0});
+
+    expect((await p.scan()).source).toBe('offline'); // the player can draw again
     await p.close();
     app.stop();
   });

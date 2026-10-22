@@ -270,7 +270,11 @@ function AbilityBadge({
   v: Animated.Value;
 }) {
   const a = abilityOf(s);
-  const feature = a.feature.charAt(0).toUpperCase() + a.feature.slice(1);
+  // the child changed it on the phone (a later sketchling frame, same id): say so instead of a drawn feature
+  const picked = a.chosenBy === 'artist' && a.kind !== a.original?.kind;
+  const feature = picked
+    ? `${s.artist ? `${s.artist}'s` : "Artist's"} pick`
+    : a.feature.charAt(0).toUpperCase() + a.feature.slice(1);
   return (
     <Animated.View
       style={[

@@ -6,7 +6,7 @@ import {execFileSync} from 'node:child_process';
 import {mkdirSync} from 'node:fs';
 import {join} from 'node:path';
 
-const ADB = process.env.ADB || '/Applications/Unity/Hub/Editor/6000.6.0f1/PlaybackEngines/AndroidPlayer/SDK/platform-tools/adb';
+const ADB = process.env.ADB || 'adb'; // the PATH adb (Homebrew), as vega uses: two adb versions kill each other's server
 const APP = 'com.starfungames.sketchlings.main';
 const args = process.argv.slice(2);
 const minutes = Number(args.find((a) => /^\d+$/.test(a)) ?? 15);

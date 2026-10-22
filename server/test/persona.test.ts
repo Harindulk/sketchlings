@@ -160,7 +160,7 @@ describe('kid-safety guard', () => {
     }
   };
 
-  test('an unsuitable word in any text field gives that field the fallback and logs it', () => {
+  test('an unsuitable word in any text field gives the fallback and logs it', () => {
     let p!: ReturnType<typeof sanitizePersona>;
     const logs = warnings(() => {
       p = sanitizePersona(
@@ -182,6 +182,27 @@ describe('kid-safety guard', () => {
     expect(logs).toContain('[persona] unsafe word in catchphrase -> offline');
     expect(logs).toContain('[persona] unsafe word in ability -> offline');
     expect(logs.length).toBe(7);
+  });
+
+  test('one bad or empty line takes all six from the fallback, so a card never mixes two creatures', () => {
+    const good = {
+      name: 'Sir Wobbleton',
+      title: 'the Brave Potato',
+      personality: 'Loves naps in the sun.',
+      catchphrase: 'Wobble on!',
+      intro: 'Here comes Sir Wobbleton, the Brave Potato!',
+      winLine: 'Wobbly high fives!',
+      move: 'hop',
+    };
+    const lines = ['name', 'title', 'personality', 'catchphrase', 'intro', 'winLine'] as const;
+    expect(sanitizePersona(good, fallback)).toMatchObject(good);
+    for (const bad of [{intro: 'Here comes Sir Wobbleton, faster than Sonic!'}, {winLine: ''}, {catchphrase: '🐸'}, {personality: undefined}]) {
+      let p!: ReturnType<typeof sanitizePersona>;
+      warnings(() => (p = sanitizePersona({...good, ...bad}, fallback)));
+      for (const k of lines) expect(p[k]).toBe(fallback[k]);
+      expect(p.intro).toContain(fallback.name);
+      expect(p.move).toBe('hop'); // the rest stays per field
+    }
   });
 
   test('game words and words that only contain a listed word pass', () => {
@@ -239,7 +260,7 @@ describe('generatePersona', () => {
     const p = await generatePersona(
       b,
       size,
-      fake(reply(JSON.stringify({name: 'Captain Squiggle', title: 'the Moon Jelly', stats: {speed: 5, jump: 5, power: 5}, move: 'fly', colors: ['#3366ff']}))),
+      fake(reply(JSON.stringify({name: 'Captain Squiggle', title: 'the Moon Jelly', personality: 'Floats around humming.', catchphrase: 'Squiggle on!', intro: 'Here comes Captain Squiggle!', winLine: 'Moon power!', stats: {speed: 5, jump: 5, power: 5}, move: 'fly', colors: ['#3366ff']}))),
     );
     expectValid(p);
     expect(p.source).toBe('claude');
@@ -259,6 +280,17 @@ describe('generatePersona', () => {
     expect(params.output_config.format.schema.properties.ability.properties.feature.type).toBe('string');
     expect(params.system).toMatch(/FEATURE YOU CAN SEE/);
     expect(params.system).toMatch(/fly: wings/);
+  });
+
+  test('every call gets its own time limit that also covers the response body', async () => {
+    const signals: AbortSignal[] = [];
+    const spy = fake(async (_p?: unknown, opts?: {signal?: AbortSignal}) => (signals.push(opts!.signal!), {stop_reason: 'end_turn', content: [{type: 'text', text: '{}'}]})) as never;
+    await generatePersona(b, size, spy);
+    await generatePersona(b, size, spy);
+    expect(signals).toHaveLength(2);
+    expect(signals[0]).toBeInstanceOf(AbortSignal);
+    expect(signals[0]).not.toBe(signals[1]);
+    expect(signals.map(s => s.aborted)).toEqual([false, false]);
   });
 
   test('tells the model which names are taken so a family gets different names', async () => {

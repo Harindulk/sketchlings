@@ -4,7 +4,7 @@
 #   scripts/remote.sh shot <out.png>                                           screenshot
 # Keys go through the dev-mode `inputd-cli` on the device; screenshots through the emulator console.
 set -euo pipefail
-ADB=${ADB:-$(command -v adb || echo /Applications/Unity/Hub/Editor/6000.6.0f1/PlaybackEngines/AndroidPlayer/SDK/platform-tools/adb)}
+ADB=${ADB:-adb} # the PATH adb (Homebrew), as vega uses: two adb versions kill each other's server
 DEV=${DEV:-emulator-5554}
 cmd=$1; shift || true
 case "$cmd" in

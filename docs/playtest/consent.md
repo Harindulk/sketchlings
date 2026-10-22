@@ -110,7 +110,7 @@ Harindu's contact (to ask a question or withdraw): _____________________________
 
 - One form per child before they play, signed or a written reply with all four choices. No form, no play, on camera or off. Copy each child's ticks into the Children table of the results sheet before the session starts.
 - Write your contact on page 1 (in "Saying no") and the place in "What will happen" before printing or sending.
-- Any **No** for AI: start the server with the key empty (`runsheet.md` 3.3), so no drawing that day goes to Claude, the teachers' included. The banner must say "Personas: offline generator". Consent off on the server stops Claude only: the drawing still reaches the Mac and the Hall of Fame, as the form says.
+- Any **No** for AI: start the session with `scripts/session.sh --no-ai` (`runsheet.md` 3.2), so no drawing that day goes to Claude, the teachers' included; every later start stays off too. The banner must say "Personas: offline generator", and the TV's Grown-ups switch stays off. Consent off on the server stops Claude only: the drawing still reaches the Mac and the Hall of Fame, as the form says.
 - **No** for the name: the child plays as "Artist" (an adult may type it; that is not help). Leave the name and age out of every caption for that child.
 - **No** for voice: mute or cut that child's voice in the edit (the sheet's clock times help find it). **No** for face: no frame where that child's face can be seen; cut it, don't rely on a blur.
 - The written results use "Child A, 6" or "a 6-year-old", never names (`results-sheet.md`).

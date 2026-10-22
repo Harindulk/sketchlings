@@ -1,4 +1,4 @@
-import React, {useCallback, useEffect, useMemo, useState} from 'react';
+import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {BackHandler, Dimensions, StyleSheet, View} from 'react-native';
 import {useKeplerAppStateManager} from '@amazon-devices/react-native-kepler';
 import type {Player, ResultsData, Sketchling} from '../../shared/protocol';
@@ -6,7 +6,8 @@ import {hush, prefetch} from './audio';
 import {ScreenIn} from './components/Bits';
 import {Paper} from './components/Paper';
 import type {PartyMode} from './game/party';
-import {racersOf, useParty, withGuests} from './game/party';
+import {loadConsent, racersOf, useParty, withGuests} from './game/party';
+import {GrownUps} from './screens/GrownUps';
 import {HallOfFame} from './screens/HallOfFame';
 import {Home, HomeChoice} from './screens/Home';
 import {HowTo} from './screens/HowTo';
@@ -23,7 +24,8 @@ type Screen =
   | 'race'
   | 'results'
   | 'hof'
-  | 'howto';
+  | 'howto'
+  | 'grownups';
 
 // Layout is authored for Vega's 960x540 dp canvas; scale if a device reports something else.
 const {width: DW, height: DH} = Dimensions.get('window');
@@ -37,7 +39,14 @@ export const App = () => {
   const [round, setRound] = useState(0);
   const [guests, setGuests] = useState<Sketchling[]>([]); // Hall of Fame "Race again" picks for the next party
   const [lastTile, setLastTile] = useState<HomeChoice>('start'); // focus returns to it on Home
+  const [leaving, setLeaving] = useState(false); // Back on a live Lobby with players: the first press only asks
   const party = useParty(mode);
+  useEffect(loadConsent, []);
+  useEffect(() => {
+    if (!leaving) return;
+    const t = setTimeout(() => setLeaving(false), 4000);
+    return () => clearTimeout(t);
+  }, [leaving]);
   const appState = useKeplerAppStateManager();
   useEffect(() => {
     // backgrounded (Home button, another app): stop the voice lines; the AudioPlayer stays (F7: no deinit)
@@ -69,15 +78,19 @@ export const App = () => {
       })),
     [racers, sketchlings],
   );
+  const liveRef = useRef(liveRacers);
+  liveRef.current = liveRacers;
 
   const goHome = useCallback(() => {
     hush();
     if (mode) setGuests([]); // the guests raced in this party (leaving the Hall of Fame keeps them)
+    setLeaving(false);
     setMode(null);
     setScreen('home');
   }, [mode]);
   const goLobby = useCallback(() => {
     hush();
+    setLeaving(false);
     setScreen('lobby');
   }, []);
 
@@ -102,9 +115,14 @@ export const App = () => {
   }, [screen, liveRoom, sendPhase, racers, order, round]);
 
   // Back: up one level; on Home let the system close the app.
+  const players = party.state.players.length;
   useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
       if (screen === 'home') return false;
+      if (screen === 'lobby' && mode === 'live' && players && !leaving) {
+        setLeaving(true); // leaving drops the room: the phones would all need the new code
+        return true;
+      }
       if (
         (screen === 'reveal' || screen === 'race' || screen === 'results') &&
         mode === 'live'
@@ -114,7 +132,7 @@ export const App = () => {
       return true;
     });
     return () => sub.remove();
-  }, [screen, mode, goHome, goLobby]);
+  }, [screen, mode, players, leaving, goHome, goLobby]);
 
   const choose = (c: HomeChoice) => {
     setLastTile(c);
@@ -127,7 +145,10 @@ export const App = () => {
     setRacers(rs);
     setScreen('reveal');
   };
-  const toRace = useCallback(() => setScreen('race'), []);
+  const toRace = useCallback(() => {
+    setRacers(liveRef.current); // an ability the artist changed during the Reveal races too
+    setScreen('race');
+  }, []);
   const finish = useCallback((o: string[]) => {
     setOrder(o);
     setScreen('results');
@@ -147,6 +168,7 @@ export const App = () => {
         <Lobby
           mode={mode ?? 'live'}
           state={partyState}
+          leaving={leaving}
           onStart={start}
           onDemo={() => {
             setMode('demo');
@@ -174,7 +196,8 @@ export const App = () => {
           racers={liveRacers}
           order={order}
           onAgain={again}
-          onHome={goHome}
+          onHome={mode === 'live' ? goLobby : goHome} // a live room stays open: leave it from the Lobby
+          homeLabel={mode === 'live' ? 'Lobby' : 'Home'}
         />
       );
       break;
@@ -194,6 +217,9 @@ export const App = () => {
       break;
     case 'howto':
       body = <HowTo onDone={goHome} />;
+      break;
+    case 'grownups':
+      body = <GrownUps onDone={goHome} onCleared={() => setGuests([])} />;
       break;
     default:
       body = <Home onChoose={choose} initial={lastTile} />;

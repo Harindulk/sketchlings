@@ -157,10 +157,10 @@ const LIMITS = {
 /** Validate + clamp untrusted persona JSON (e.g. model output); any bad field falls back to `fallback`. */
 export function sanitizePersona(raw: unknown, fallback: Persona): Omit<Persona, 'source'> {
   const o = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
-  const text = {} as Record<keyof typeof LIMITS, string>;
-  for (const [k, [w, c]] of Object.entries(LIMITS) as [keyof typeof LIMITS, readonly [number, number]][]) {
-    text[k] = kidSafe(k, cleanText(o[k], w, c)) ?? fallback[k];
-  }
+  const keys = Object.keys(LIMITS) as (keyof typeof LIMITS)[];
+  const got = keys.map(k => kidSafe(k, cleanText(o[k], LIMITS[k][0], LIMITS[k][1])));
+  // All six lines or none: the intro and winLine name the creature, so mixing would put two names on one card.
+  const text = Object.fromEntries(keys.map((k, i) => [k, got.every(Boolean) ? got[i] : fallback[k]])) as Record<keyof typeof LIMITS, string>;
   const st = (o.stats && typeof o.stats === 'object' ? o.stats : {}) as Record<string, unknown>;
   const num = (v: unknown, d: number) => (typeof v === 'number' && Number.isFinite(v) ? v : typeof v === 'string' && v.trim() && Number.isFinite(+v) ? +v : d);
   const stats = balanceStats({
@@ -375,6 +375,7 @@ async function askClaude(claude: Claude, png: Uint8Array, f: Features, taken: st
   const fallback = SUPPORTS_DEFAULT_FALLBACK.test(claude.model)
     ? {betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' as const}
     : {};
+  // The client's own timeout stops at the headers; this signal also covers the body. A new one per call.
   const res = await claude.client.beta.messages.create({
     model: claude.model,
     max_tokens: 4096,
@@ -393,7 +394,7 @@ async function askClaude(claude: Claude, png: Uint8Array, f: Features, taken: st
         ],
       },
     ],
-  });
+  }, {signal: AbortSignal.timeout(TIMEOUT_MS)});
   // Opus 5.5 list price ($4 in / $20 out per MTok) — logged so the README's cost-per-creature is measured, not guessed.
   const u = res.usage;
   if (u) console.log(`[persona] tokens in=${u.input_tokens} out=${u.output_tokens} ≈ $${((u.input_tokens * 4 + u.output_tokens * 20) / 1e6).toFixed(4)}`);

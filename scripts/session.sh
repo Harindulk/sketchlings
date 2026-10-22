@@ -2,18 +2,21 @@
 # One command for a playtest or filming day: TV, server, live view, and a recording of everything the TV shows.
 #   scripts/session.sh               start (Ctrl-C stops it)
 #   scripts/session.sh --lan         start without the tunnel: phones on the Mac's Wi-Fi, plain http, no shouting
+#   scripts/session.sh --no-ai       start with AI personas off (a consent form said No): no drawing goes to Claude,
+#                                    and every later start stays off until you rm video/clips/.no-ai
 #   scripts/session.sh stop          stop it from another tab (also cleans up after a session whose tab is gone)
 #   scripts/session.sh take <name>   end the current chunk and record one unbroken chunk of up to 180 s named after
 #                                    the take (the video's one-take rule); start the take once it says "Recording"
-#   --dry-run                        prints each step instead of doing it (with start, --lan, stop or take)
+#   --dry-run                        prints each step instead of doing it (with start, --lan, --no-ai, stop or take)
 # Start: keeps the Mac awake (caffeinate), boots the VVD headless if it is down, launches the installed app, starts
-# the server through scripts/tunnel.sh, opens the live view full screen in its own Chrome window, records the VVD
+# the server through scripts/tunnel.sh, opens the live view in its own Chrome window, records the VVD
 # screen with its sound in 120 s chunks (video/capture.sh's settings; a crash loses at most one chunk), runs
 # scripts/preflight.sh and prints the join link. If a session is already running it only prints its status.
 # Stop: ends the recording cleanly, stops the server, tunnel and live view, lists the files. The VVD and app keep running.
 # Files: video/clips/session-<YYYYMMDD-HHMM>/ vvd-<YYYYMMDD-HHMMSS>[-<take>].webm, server.log, recorder.log,
-# live-view.log. The server log also goes to notes/playtest-<YYYYMMDD>.log (runsheet, cold-test.md) and, with the
-# tunnel, notes/tunnel-run.log (preflight reads the link there).
+# live-view.log. A take also links video/clips/<take>.webm to its file, the slot name video/build.mjs looks for.
+# The server log also goes to notes/playtest-<YYYYMMDD>.log (runsheet, cold-test.md) and, with the tunnel,
+# notes/tunnel-run.log (preflight reads the link there).
 # The emulator records one file at a time: while a session runs, use `take`, not video/capture.sh.
 # ADB=... and SERIAL=... override the adb and device (as in video/capture.sh), CHUNK=... the chunk length (1-180 s).
 set -uo pipefail
@@ -21,7 +24,6 @@ cd "$(dirname "$0")/.."
 ROOT=$PWD
 # the PATH adb (Homebrew), the same as vega, preflight and tv/scripts/remote.sh: two adb versions kill each other's server (F6)
 ADB="${ADB:-$(command -v adb)}"
-[ -x "$ADB" ] || ADB=/Applications/Unity/Hub/Editor/6000.6.0f1/PlaybackEngines/AndroidPlayer/SDK/platform-tools/adb
 export ADB # live-view.ts presses the remote keys with it
 SERIAL="${SERIAL:-emulator-5554}"
 APP=com.starfungames.sketchlings.main
@@ -30,15 +32,17 @@ CHUNK="${CHUNK:-120}" # seconds per chunk: a VVD or Mac crash loses at most one
 TAKE=180              # the emulator's longest recording
 PORT=8787
 STATE=video/clips/.session
+NOAI=video/clips/.no-ai # outlives the session: a restart can't bring Claude back for a family that said No (consent.md)
 PROFILE="${TMPDIR:-/tmp}/sketchlings-live-view-chrome" # a Chrome of its own, so the owner's windows stay as they are
 DIR=
 
-usage() { sed -n '2,8p' "$0" >&2; exit 2; }
-DRY=0 LAN=0 CMD=start NAME=
+usage() { sed -n '2,10p' "$0" >&2; exit 2; }
+DRY=0 LAN=0 NO_AI=0 CMD=start NAME=
 for a in "$@"; do
   case "$a" in
     --dry-run) DRY=1 ;;
     --lan) LAN=1 ;;
+    --no-ai) NO_AI=1 ;;
     start | stop | take) CMD=$a ;;
     *) { [ "$CMD" = take ] && [ -z "$NAME" ] && NAME=$a; } || usage ;;
   esac
@@ -55,6 +59,8 @@ alive() { [ -n "${1:-}" ] && kill -0 "$1" 2>/dev/null; }
 pid() { cat "$STATE/$1.pid" 2>/dev/null; }
 running() { local p; p=$(pid main); alive "$p" && ps -p "$p" -o command= | grep -q session.sh; }
 listening() { lsof -tiTCP:"$1" -sTCP:LISTEN >/dev/null 2>&1; }
+ai_off() { [ "$NO_AI" = 1 ] || [ -e "$NOAI" ]; }
+personas() { local p; p=$(grep -E '^Personas:' "$(cat "$STATE/dir" 2>/dev/null || echo "$DIR")/server.log" 2>/dev/null | tail -1); echo "${p:-(no Personas line from the server yet)}"; } # its own banner
 healthy() { curl -fsS -m "${2:-3}" "$1/health" 2>/dev/null | grep -q '"ok":true'; }
 free_gb() { df -k "$1" | awk 'NR == 2 { printf "%d", $4 / 1048576 }'; }
 spawn() { # spawn <name> <log> <cmd...>: run in the background and remember its pid
@@ -91,7 +97,7 @@ settle() { # the emulator finishes a file after stop: wait until the newest chun
   done
 }
 record() { # chunk after chunk until $STATE/stop appears; a failed start (VVD down, recorder busy) is retried every second
-  local take name f out secs i fails=0 prev= full=0
+  local take name f l out secs i fails=0 prev= full=0
   while [ ! -e "$STATE/stop" ]; do
     if [ "$(free_gb "$DIR")" -lt 3 ]; then # ~5 GB an hour: never fill the disk the server and the VVD write to
       [ "$full" = 0 ] && rlog "WARNING less than 3 GB free: recording paused until there is more room"
@@ -108,11 +114,16 @@ record() { # chunk after chunk until $STATE/stop appears; a failed start (VVD do
     f=$ROOT/$DIR/$name # the emulator writes the file itself, so the path must be absolute
     [ -e "$f" ] && { sleep 1; continue; }
     if out=$("$ADB" -s "$SERIAL" emu screenrecord start --time-limit "$TAKE" --fps 30 "$f" 2>&1) && [[ "$out" != *KO* ]]; then
-      rm -f "$STATE/take"
-      echo "$name" >"$STATE/current"
+      echo "$name" >"$STATE/current" # before the take file goes: take_cmd then reads this name
+      [ "$(cat "$STATE/take" 2>/dev/null)" = "$take" ] && rm -f "$STATE/take" # a take asked for just now stays for the next chunk
       [ "$fails" -gt 0 ] && rlog "recording again after $fails failed tries"
       fails=0
       rlog "start $name${take:+ (take, up to $TAKE s)}"
+      if [ -n "$take" ]; then # the slot name video/build.mjs looks for; a newer take of the same name wins
+        l=video/clips/$take.webm
+        if [ -e "$l" ] && [ ! -L "$l" ]; then rlog "$l is a capture.sh file: left as it is, this take is only $name"
+        else ln -sfn "${DIR#video/clips/}/$name" "$l" && rlog "$l -> $name"; fi
+      fi
       i=0
       while [ "$i" -lt "$secs" ] && [ ! -e "$STATE/stop" ] && [ ! -s "$STATE/take" ]; do
         sleep 1
@@ -209,21 +220,24 @@ stop_cmd() {
 take_cmd() {
   [[ "$NAME" =~ ^[A-Za-z0-9._-]+$ ]] || usage
   if dry; then
-    say "  would end the current chunk and record vvd-<YYYYMMDD-HHMMSS>-$NAME.webm for up to $TAKE s"
+    say "  would end the current chunk and record vvd-<YYYYMMDD-HHMMSS>-$NAME.webm for up to $TAKE s,"
+    say "  linked as video/clips/$NAME.webm for video/build.mjs"
     return 0
   fi
   running || die "no session running: start one with scripts/session.sh"
   echo "$NAME" >"$STATE/take"
   for _ in $(seq 30); do [ -e "$STATE/take" ] || break; sleep 1; done
   if [ -e "$STATE/take" ]; then warn "the take has not started yet (VVD down?): it starts as soon as the recorder can"
-  else say "Recording $(cat "$STATE/current") now: up to $TAKE s, or until the next take or stop."; fi
+  else say "Recording $(cat "$STATE/current") now (video/clips/$NAME.webm): up to $TAKE s, or until the next take or stop."; fi
 }
 
 status() {
   say ""
   say "Session  $(cat "$STATE/dir" 2>/dev/null || echo "$DIR")/   (pid $(pid main || echo -))"
   say "Join     $(cat "$STATE/join" 2>/dev/null || echo '<link>')/j/<CODE>   (the code is on the TV, its QR has the whole link)"
-  say "TV       live view http://localhost:8799/ in Chrome, full screen (over HDMI: mirror the Mac's display)"
+  say "TV       live view http://localhost:8799/ in its own Chrome window: on the TV (extended display), click once for full screen"
+  if ai_off; then say "AI       OFF for every start ($NOAI): $(personas)"
+  else say "AI       $(personas): only for parties where the TV's Grown-ups switch says AI personas ON"; fi
   say "REC      $(cat "$STATE/current" 2>/dev/null || echo 'starting...')   (${CHUNK} s chunks, about 5 GB an hour, $(free_gb .) GB free)"
   say "Take     scripts/session.sh take <name>   (one unbroken chunk, up to $TAKE s)"
   say "Stop     Ctrl-C here, or scripts/session.sh stop in another tab"
@@ -233,6 +247,10 @@ status() {
 start_cmd() {
   if running; then
     say "A session is already running:"
+    if [ "$NO_AI" = 1 ] && [[ "$(personas)" != *offline* ]]; then
+      dry || : >"$NOAI"
+      warn "AI is off from the next start, but this server still uses Claude: scripts/session.sh stop, then scripts/session.sh"
+    fi
     status
     return 0
   fi
@@ -259,6 +277,7 @@ start_cmd() {
   # shellcheck disable=SC1090
   source ~/vega/env >/dev/null 2>&1 || true
   command -v vega >/dev/null || dry || die "vega not found (source ~/vega/env)"
+  [ -x "$ADB" ] || dry || die "adb not found on PATH: brew install --cask android-platform-tools"
   local booted=0 st launched=0 off base new old
   if dry || ! vega virtual-device status 2>/dev/null | grep -q '"running":true'; then
     dry || say "  not running: booting it (about 10 s)"
@@ -270,7 +289,7 @@ start_cmd() {
   if ! dry; then
     for _ in $(seq 60); do "$ADB" devices 2>/dev/null | grep -qE "^$SERIAL[[:space:]]+device" && break; sleep 1; done
     "$ADB" devices 2>/dev/null | grep -qE "^$SERIAL[[:space:]]+device" ||
-      warn "$SERIAL is not online in adb: live-view keys won't reach the TV (runsheet section 6, Unity's adb)"
+      warn "$SERIAL is not online in adb: live-view keys won't reach the TV (runsheet section 7, Keys do nothing)"
   fi
   [ "$booted" = 1 ] && run sleep 10 # "ready" comes before vega can see the device (tv/scripts/soak.mjs)
 
@@ -293,9 +312,12 @@ start_cmd() {
   else say "  already running"; fi
 
   step "Server ($([ "$LAN" = 1 ] && echo "LAN: phones on this Mac's Wi-Fi" || echo 'HTTPS tunnel, scripts/tunnel.sh'))"
-  [ -f phone/dist/index.html ] || warn "phone/dist is missing: cd phone && npm run build"
-  [ -n "$(find phone/src -newer phone/dist/index.html -type f 2>/dev/null | head -1)" ] &&
-    warn "phone/src has changes newer than phone/dist: cd phone && npm run build, then restart the session"
+  [ -f phone/dist/index.html ] || warn "phone/dist is missing: cd phone && npm run build" # preflight also checks it is newer than its sources
+  if ai_off; then
+    [ "$NO_AI" = 1 ] && { dry || : >"$NOAI"; }
+    export ANTHROPIC_API_KEY= # an empty key beats server/.env (Bun keeps what the environment already has)
+    say "  AI personas OFF: no drawing goes to Claude, today and at every later start (rm $NOAI to undo)"
+  fi
   local logs=("$DIR/server.log" "notes/playtest-$(date +%Y%m%d).log") cmd
   if [ "$LAN" = 1 ]; then
     cmd='cd server && exec bun run start'
@@ -329,18 +351,16 @@ start_cmd() {
     fi
   fi
 
-  step "Live view, full screen in its own Chrome window"
+  step "Live view in its own Chrome window"
   if dry || ! listening 8799; then spawn live "$DIR/live-view.log" bun scripts/live-view.ts; else say "  already running"; fi
   dry || for _ in $(seq 10); do listening 8799 && break; sleep 1; done
   if dry || ! pgrep -f "user-data-dir=$PROFILE" >/dev/null; then
     if [ -d "/Applications/Google Chrome.app" ]; then
       run open -na "Google Chrome" --args --user-data-dir="$PROFILE" --no-first-run --no-default-browser-check \
-        --start-fullscreen --app=http://localhost:8799/
+        --app=http://localhost:8799/
       dry || : >"$STATE/chrome"
-    else
-      run open http://localhost:8799/
-      say "  click once on the page for full screen"
-    fi
+    else run open http://localhost:8799/; fi
+    say "  a TV on HDMI (extended display): drag the window onto it. Then click it once: full screen"
   else say "  its window is already open"; fi
 
   step "Recording the VVD screen and sound in $CHUNK s chunks"

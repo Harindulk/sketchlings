@@ -34,6 +34,8 @@ export function lanIp(): string {
 const json = (body: unknown, status = 200) => Response.json(body, {status});
 const html = (body: string, status = 200) => new Response(body, {status, headers: {'Content-Type': 'text/html; charset=utf-8'}});
 const isFile = (p: string) => !!statSync(p, {throwIfNoEntry: false})?.isFile();
+// Cloudflare adds these to every request through the quick tunnel (scripts/tunnel.sh); the TV and LAN phones come direct.
+const viaTunnel = (req: Request) => req.headers.has('cf-connecting-ip') || req.headers.has('cf-ray');
 
 // A client whose every call fails, so injected failures go through generatePersona's real fallback path.
 const failingClaude = (model: string): Claude => ({model, client: {beta: {messages: {create: () => Promise.reject(new Error('injected failure'))}}} as unknown as Claude['client']});
@@ -65,7 +67,7 @@ export function createServer(cfg: ServerConfig) {
       renameSync(hallPath, bad);
     }
   }
-  function forget(old: Sketchling) {
+  function forget(old: {id: string}) {
     if (!/^[0-9a-f-]{36}$/.test(old.id)) return; // ids come from hall.json: never a path outside data/
     try {
       unlinkSync(join(spritesDir, `${old.id}.png`)); // images stay on the host only as long as they're shown
@@ -95,6 +97,16 @@ export function createServer(cfg: ServerConfig) {
     console.log(`[hall] cleared by the TV: ${removed} creatures, every sprite and voice clip`);
     return removed;
   }
+  /** The TV's removePlayer and deleteCreature: the matching hall entries, with their sprites and voices. */
+  function deleteCreatures(match: (s: Sketchling) => boolean): number {
+    const gone = hall.filter(match);
+    if (!gone.length) return 0;
+    hall = hall.filter(s => !match(s));
+    saveHall(); // first, as in clearHall
+    for (const s of gone) forget(s);
+    console.log(`[hall] deleted by the TV: ${gone.length} creature(s)`);
+    return gone.length;
+  }
   function saveHall() {
     try {
       writeFileSync(`${hallPath}.tmp`, JSON.stringify(hall));
@@ -106,7 +118,7 @@ export function createServer(cfg: ServerConfig) {
 
   // ---------- rooms ----------
   const base = () => (cfg.publicUrl?.trim() || `http://${lanIp()}:${server.port}`).replace(/\/+$/, '');
-  const hub = createHub(code => `${base()}/j/${code}`, cfg.ghostGraceMs, {clearHall, sketchlingChanged: s => patchHall(s.id, {move: s.move, ability: s.ability})});
+  const hub = createHub(code => `${base()}/j/${code}`, cfg.ghostGraceMs, {clearHall, deleteCreatures, sketchlingChanged: s => patchHall(s.id, {move: s.move, ability: s.ability})});
 
   let personaCalls = 0;
   function claudeFor(room: Room): Claude | null {
@@ -122,6 +134,7 @@ export function createServer(cfg: ServerConfig) {
     try {
       const taken = [...room.slots.values()].map(sl => sl.player.sketchling?.name).concat(hall.slice(0, 30).map(h => h.name));
       const persona = await generatePersona(png, size, claudeFor(room), taken.filter((n): n is string => !!n));
+      if (room.slots.get(playerId) !== slot) return forget({id}); // the TV removed this player meanwhile
       const sketchling: Sketchling = {id, playerId, ...persona, spriteUrl: `/sprites/${id}.png`, width: size.width, height: size.height, artist: slot.player.name, artistAge: slot.player.ageGroup};
       slot.player.sketchling = sketchling;
       hub.toTvAndPlayer(room, playerId, {t: 'sketchling', sketchling});
@@ -130,15 +143,18 @@ export function createServer(cfg: ServerConfig) {
       hub.toTvAndPlayer(room, playerId, {t: 'scan', playerId, status: 'ready'});
       hub.broadcastPlayers(room);
       addToHall(sketchling);
-      // Audio never holds up the reveal: a second `sketchling` frame (same id) adds `voice` when it's ready.
-      void voices?.speak(sketchling).then(voice => {
-        if (!voice) return;
-        console.log(`[scan] ${playerId} upload->voices ${Date.now() - uploadAt} ms lines=${Object.keys(voice).length}`);
+      // Audio never holds up the reveal: later `sketchling` frames (same id) add `voice`, the intro alone first, then every line.
+      const sendVoice = (voice: NonNullable<Sketchling['voice']>) => {
         patchHall(id, {voice});
         const current = slot.player.sketchling;
-        if (current?.id !== id) return; // the player has scanned something new since
+        if (current?.id !== id || room.slots.get(playerId) !== slot) return; // a new scan since, or the TV removed it
         slot.player.sketchling = {...current, voice}; // keeps an ability the artist changed meanwhile
         hub.toTvAndPlayer(room, playerId, {t: 'sketchling', sketchling: slot.player.sketchling});
+      };
+      void voices?.speak(sketchling, sendVoice).then(voice => {
+        if (!voice) return;
+        console.log(`[scan] ${playerId} upload->voices ${Date.now() - uploadAt} ms lines=${Object.keys(voice).length}`);
+        sendVoice(voice);
       });
     } catch (e) {
       console.error('[scan] failed:', e);
@@ -197,8 +213,14 @@ export function createServer(cfg: ServerConfig) {
     return new Response(Bun.file(path), {headers: {'Cache-Control': immutable ? 'public, max-age=31536000, immutable' : 'no-cache'}});
   }
 
+  /** A creature someone is playing with right now: the only sprites a phone on the public link needs. */
+  const inPlay = (id: string) => [...hub.rooms.values()].some(r => [...r.slots.values()].some(s => s.player.sketchling?.id === id));
+
   async function route(req: Request, url: URL): Promise<Response> {
     const p = url.pathname;
+    // Children's names and drawings stay on this computer's network: the public link gets no hall, no voices and
+    // only the sprites of creatures in a live room. Phones only ever show their party's creatures.
+    const tunnel = viaTunnel(req);
     if (req.method === 'OPTIONS') {
       return new Response(null, {status: 204, headers: {'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type, Range', 'Access-Control-Max-Age': '86400'}});
     }
@@ -207,16 +229,17 @@ export function createServer(cfg: ServerConfig) {
     if (req.method !== 'GET' && req.method !== 'HEAD') return json({error: 'method not allowed'}, 405);
 
     if (p === '/health') return json({ok: true});
-    if (p === '/api/hall-of-fame') return json(hall);
+    if (p === '/api/hall-of-fame') return tunnel ? json({error: 'not found'}, 404) : json(hall);
     const sprite = p.match(/^\/sprites\/([0-9a-f-]{36})\.png$/);
     if (sprite) {
       const file = join(spritesDir, `${sprite[1]}.png`);
-      return isFile(file)
+      return isFile(file) && (!tunnel || inPlay(sprite[1]!))
         ? new Response(Bun.file(file), {headers: {'Content-Type': 'image/png', 'Cache-Control': 'public, max-age=31536000, immutable'}})
         : json({error: 'no such sprite'}, 404);
     }
     const voice = p.match(/^\/voice\/([0-9a-f-]{36})\/(intro|catchphrase|winLine)\.m4a$/);
     if (voice) {
+      if (tunnel) return json({error: 'no such clip'}, 404);
       const file = join(voiceDir, voice[1]!, `${voice[2]}.m4a`);
       // Bun answers Range requests for a BunFile body itself (206 + Content-Range + Accept-Ranges, 416 when unsatisfiable).
       const headers = {
@@ -241,7 +264,7 @@ export function createServer(cfg: ServerConfig) {
     async fetch(req, srv) {
       const url = new URL(req.url);
       if (url.pathname === '/ws') {
-        if (srv.upgrade(req, {data: {} as WsData})) return undefined;
+        if (srv.upgrade(req, {data: (viaTunnel(req) ? {tunnel: true} : {}) as WsData})) return undefined;
         return json({error: 'expected a WebSocket upgrade'}, 400);
       }
       const res = await route(req, url);

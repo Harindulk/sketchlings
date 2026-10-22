@@ -15,5 +15,6 @@ export default defineConfig({
     },
   },
   worker: {format: 'es'},
-  build: {target: 'es2020'},
+  // Keep the old hashed files: open phones load the worker and the fallback chunk lazily, on their first snap.
+  build: {target: 'es2020', emptyOutDir: false},
 });

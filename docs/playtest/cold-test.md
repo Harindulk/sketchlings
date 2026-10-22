@@ -23,17 +23,17 @@ On Friday the testers are the teachers who then run the children's session ([`ru
 
 ## Setup (before every tester)
 
-- **The laptop is the TV.** VVD running (runsheet 3.2), `bun scripts/live-view.ts`, Chrome on http://localhost:8799/, click once for full screen. The page's keyboard is the Fire TV remote: arrows, Enter = OK, Backspace = Back, Space = Play/Pause, M = Menu. The app is on **Home**, focus on Start party. Mac volume up: the creatures' voices are timed.
-- **Server.** `scripts/tunnel.sh` (runsheet 3.3) is the default: the QR gives an HTTPS link that works on any network, mobile data included, and "Enable shouting" works. Without it (`cd server && bun run start`), both phones must be on the Mac's Wi-Fi before the clock starts, and there is no shouting. Write which one in the table. Over the tunnel, a phone's round trip goes phone, Cloudflare, Mac. For the Wi-Fi round trip, run at least one tester on Wi-Fi only.
+- **The laptop is the TV.** The session running (runsheet 3.2, `scripts/session.sh`): VVD, app, server and the live view in its own Chrome window; click it once for full screen. AI personas on in Grown-ups (runsheet 3.4 step 6), unless the tester said No to AI. The page's keyboard is the Fire TV remote: arrows, Enter = OK, Backspace = Back, Space = Play/Pause, M = Menu. The app is on **Home**, focus on Start party. Mac volume up: the creatures' voices are timed.
+- **Server.** The session's HTTPS link is the default: the QR gives a link that works on any network, mobile data included, and "Enable shouting" works. With `scripts/session.sh --lan` instead, both phones must be on the Mac's Wi-Fi before the clock starts, and there is no shouting. Write which one in the table. Over the tunnel, a phone's round trip goes phone, Cloudflare, Mac. For the Wi-Fi round trip, run at least one tester on Wi-Fi only.
 - **Phones.** Two phones on the table, unlocked, on the home screen, no game tab open (ideally one iPhone and one Android). If a tester would rather use their own phone, let them and write it down.
 - **On the table.** Our two drawings (one with big wings, one with wheels or long legs), blank white paper and a thick marker. Nothing else: no how-to-play card, no notes.
 - **Observer.** The clock phone as a stopwatch with laps, the tables below printed, a pen. Keep a lap log on paper: each lap's number and two words as you press it ("7 chip B"). The tables are filled from it afterwards. The laptop is the TV, so notes go on paper.
-- **Mark the server log.** The server's lines carry no clock time, so mark where each tester starts. In tab 3, with the tester's number:
+- **Mark the server log.** The server's lines carry no clock time, so mark where each tester starts. In tab 2, with the tester's number:
   ```sh
   M="Tester 1"; L=notes/playtest-$(date +%Y%m%d).log; echo "=== $M start $(date +%T)" >> "$L"
   ```
 - **Room camera** only if the tester ticked filming (hands, phones and screen, no face).
-- **Between testers.** Copy the tester's log lines first ("After each tester" below). App back to Home (Backspace until Home), close the game's tab on both phones, put our two drawings back, fresh paper. Restart tab 2 (Ctrl-C, then the runsheet 3.3 line): the phones remember the last name typed for each link, and a new link starts them clean. On Wi-Fi only, clear the phones' website data for the Mac's address instead.
+- **Between testers.** Copy the tester's log lines first ("After each tester" below). App back to Home (Backspace until Home; on the Lobby the first press only asks), close the game's tab on both phones, put our two drawings back, fresh paper. The next Start party has a new code and link, and a phone fills in a name only for the party it was typed in, so the next tester starts clean. No restart needed.
 
 ## What you say
 
@@ -123,7 +123,7 @@ Testers are "Tester 1" to "Tester 5" here. Their names stay on the paper OKs.
 
 ## After each tester: server log lines
 
-In tab 3 (`M` and `L` are still set from the Setup line), close the tester's part of the log and print it:
+In tab 2 (`M` and `L` are still set from the Setup line), close the tester's part of the log and print it:
 
 ```sh
 echo "=== $M end $(date +%T)" >> "$L"

@@ -116,7 +116,7 @@ One thing, from what was seen today: what tripped them up most or what they aske
 
 ## Server log lines (copy after the session)
 
-In tab 3 (`runsheet.md` section 8), close the children's part of the log and print it:
+In tab 2 (`runsheet.md` section 8), close the children's part of the log and print it:
 
 ```sh
 echo "=== $M end $(date +%T)" >> "$L"

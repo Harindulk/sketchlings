@@ -13,6 +13,7 @@ interface Props {
   order: string[]; // player ids, winner first
   onAgain: () => void;
   onHome: () => void;
+  homeLabel?: string; // 'Lobby' in a live party: Home would drop the room
 }
 
 // podium slots: [place, centre x, block height, sprite size]
@@ -24,7 +25,13 @@ const PODIUM: [number, number, number, number][] = [
 const BLOCK_W = 160;
 const BLOCK_COLORS = ['', '#ffc531', '#CFE3F5', '#ff8a3d'];
 
-export function Results({racers, order, onAgain, onHome}: Props) {
+export function Results({
+  racers,
+  order,
+  onAgain,
+  onHome,
+  homeLabel = 'Home',
+}: Props) {
   const ranked = useMemo(
     () => order.map((id) => racers.find((p) => p.id === id)!).filter(Boolean),
     [order, racers],
@@ -175,11 +182,11 @@ export function Results({racers, order, onAgain, onHome}: Props) {
           <Text style={styles.btnText}>Play again</Text>
         </FocusButton>
         <FocusButton
-          label="Home"
+          label={homeLabel}
           color="#2bb3ff"
           onPress={onHome}
           style={styles.btn}>
-          <Text style={styles.btnText}>Home</Text>
+          <Text style={styles.btnText}>{homeLabel}</Text>
         </FocusButton>
       </TVFocusGuideView>
     </View>

@@ -9,7 +9,7 @@ import {Sprite} from '../components/Sprite';
 import {SAMPLE_SKETCHLINGS} from '../game/demo';
 import {C, F, W} from '../theme';
 
-export type HomeChoice = 'start' | 'demo' | 'hof' | 'howto';
+export type HomeChoice = 'start' | 'demo' | 'hof' | 'howto' | 'grownups';
 
 const TILES: {
   id: HomeChoice;
@@ -93,11 +93,23 @@ export function Home({
       </TVFocusGuideView>
 
       <Text style={styles.blurb}>
-        {TILES.find((t) => t.id === focused)?.blurb}
+        {TILES.find((t) => t.id === focused)?.blurb ??
+          'For grown-ups: AI personas and clearing the Hall of Fame.'}
       </Text>
       <View style={styles.platform}>
-        <Text style={styles.platformText}>Running on Fire TV · Vega OS</Text>
+        <Text style={styles.platformText}>Built for Fire TV · Vega OS</Text>
       </View>
+      <FocusButton
+        label="Grown-ups"
+        testID="tile-grownups"
+        preferred={initial === 'grownups'}
+        color={C.inkSoft}
+        onFocus={() => setFocused('grownups')}
+        onPress={() => onChoose('grownups')}
+        style={styles.grownups}
+        focusScale={1.05}>
+        <Text style={styles.grownupsText}>Grown-ups</Text>
+      </FocusButton>
       <Text style={styles.hint}>
         Use the arrows and OK on the remote · phones join with the QR code
       </Text>
@@ -171,6 +183,13 @@ const Logo = React.memo(function Logo() {
 
 const TILE_W = 178;
 const styles = StyleSheet.create({
+  grownups: {position: 'absolute', top: 18, left: 48, width: 128, height: 40}, // Up from the tiles; behind a parent gate
+  grownupsText: {
+    fontFamily: F.semi,
+    fontSize: 18,
+    lineHeight: 26,
+    color: C.inkSoft,
+  },
   platform: {
     position: 'absolute',
     top: 18,

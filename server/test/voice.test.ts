@@ -85,6 +85,26 @@ describe('queue', () => {
     expect(aborted).toBe(true);
   });
 
+  test('first jobs run before every waiting job, whatever order they came in', async () => {
+    const enqueue = createQueue(1000);
+    const order: string[] = [];
+    const job = (name: string) => async () => (order.push(name), await Bun.sleep(5), name);
+    await Promise.all([enqueue(job('a1')), enqueue(job('a2')), enqueue(job('b1'), true), enqueue(job('a3')), enqueue(job('b2'), true)]);
+    expect(order).toEqual(['a1', 'b1', 'b2', 'a2', 'a3']); // a1 was already running
+  });
+
+  test('several creatures at once: every intro is made before any other line, and announced as soon as it is ready', async () => {
+    const order: string[] = [];
+    const slow: Tts = {clip: async (text, _v, out) => (order.push(text), await Bun.sleep(5), writeFileSync(out, 'm4a'), 1000)};
+    const voices = createVoices(mkdtempSync(join(tmpdir(), 'sketchlings-voice-')), async () => slow);
+    const kids = ['A', 'B', 'C'].map(n => persona({name: `Zig ${n}`, intro: `Intro ${n}`, catchphrase: `Catch ${n}`, winLine: `Win ${n}`}));
+    const early: string[] = [];
+    const done = await Promise.all(kids.map(k => voices.speak(k, v => early.push(`${k.name}: ${Object.keys(v)}`))));
+    expect(order).toEqual(['Intro A', 'Intro B', 'Intro C', 'Catch A', 'Win A', 'Catch B', 'Win B', 'Catch C', 'Win C']);
+    expect(early).toEqual(['Zig A: intro', 'Zig B: intro', 'Zig C: intro']);
+    for (const v of done) expect(Object.keys(v!).sort()).toEqual(['catchphrase', 'intro', 'winLine']);
+  });
+
   test('speak gives no voice when TTS is missing, hangs or fails', async () => {
     const s = persona({});
     const dir = mkdtempSync(join(tmpdir(), 'sketchlings-voice-'));
@@ -167,7 +187,7 @@ const canSpeak = hasModel(modelsDir) && existsSync(FFMPEG);
 describe('creature voices end-to-end', () => {
   // Needs the Kokoro model (bun run tts:download); skipped without it so CI stays green.
   test.skipIf(!canSpeak)(
-    'upload -> sketchling without voice -> second sketchling frame with voice URLs + hall of fame',
+    'upload -> sketchling without voice -> a frame with the intro -> one with every voice URL + hall of fame',
     async () => {
       const app = startTestServer({tts: kokoro(modelsDir)});
       const tv = await connect(app.wsUrl);
@@ -183,9 +203,12 @@ describe('creature voices end-to-end', () => {
       const first: Sketchling = (await tv.next('sketchling')).sketchling;
       expect(first.id).toBe(id);
       expect(first.voice).toBeUndefined(); // the reveal never waits for audio
+      const early: Sketchling = (await tv.next('sketchling', 60_000)).sketchling;
+      expect(early).toEqual({...first, voice: {intro: `/voice/${id}/intro.m4a`}}); // the intro first, for the Reveal
       const second: Sketchling = (await tv.next('sketchling', 60_000)).sketchling;
       expect(second).toEqual({...first, voice: {intro: `/voice/${id}/intro.m4a`, catchphrase: `/voice/${id}/catchphrase.m4a`, winLine: `/voice/${id}/winLine.m4a`}});
       expect((await kid.next('sketchling')).sketchling).toEqual(first);
+      expect((await kid.next('sketchling')).sketchling).toEqual(early);
       expect((await kid.next('sketchling')).sketchling).toEqual(second);
 
       for (const url of Object.values(second.voice!)) {

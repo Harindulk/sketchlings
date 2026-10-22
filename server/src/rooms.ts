@@ -5,7 +5,7 @@ import {MAX_PLAYERS, PLAYER_COLORS} from '../../shared/protocol';
 import {abilityFor, MOVES} from './ability';
 import {UNSAFE_NAME} from './persona';
 
-export type WsData = {role?: 'tv' | 'phone'; room?: string; playerId?: string};
+export type WsData = {role?: 'tv' | 'phone'; room?: string; playerId?: string; tunnel?: boolean}; // tunnel: came through the public link
 type Ws = ServerWebSocket<WsData>;
 
 export interface Slot {
@@ -28,11 +28,13 @@ export interface Room {
   aiPersonas?: boolean; // false: the TV's grown-ups said no, so this room's drawings never go to Claude
   pinger?: ReturnType<typeof setInterval>; // during a race: measures each phone's Wi-Fi round trip
   raceFrom?: number; // when the TV entered the current race (server ms)
+  removed?: Set<string>; // playerIds the TV took out: a hello with one of them is refused
 }
 
 export interface HubHooks {
   clearHall?: () => number; // deletes the Hall of Fame, returns how many creatures went
   sketchlingChanged?: (s: Sketchling) => void; // the artist changed its ability
+  deleteCreatures?: (match: (s: Sketchling) => boolean) => number; // deletes the hall entries it matches, returns how many
 }
 
 // No vowels (so codes never spell words) and none of I/L/O/Q that read like 1 or 0.
@@ -45,6 +47,7 @@ const ROOM_TTL_MS = 6 * 60 * 60 * 1000;
 const RTT_PING_MS = 2000; // during a race the server pings every phone this often
 const MAX_RTT_SAMPLES = 500; // per player per race
 export const ARTIST_FEATURE = "artist's pick"; // ability.feature when the child picked a kind the drawing didn't
+const REMOVED = "You've left this party. Thanks for playing!";
 
 const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
 const optStr = (v: unknown) => v === undefined || typeof v === 'string';
@@ -66,6 +69,10 @@ export function parseClientMsg(raw: string | Buffer): ClientMsg | string {
       return MOVES.includes(m.kind as MoveStyle) ? {t: 'ability', kind: m.kind as MoveStyle} : `kind must be one of ${MOVES.join(', ')}`;
     case 'clearHall':
       return {t: 'clearHall'};
+    case 'removePlayer':
+      return typeof m.playerId === 'string' ? {t: 'removePlayer', playerId: m.playerId} : 'playerId must be a string';
+    case 'deleteCreature':
+      return typeof m.id === 'string' ? {t: 'deleteCreature', id: m.id} : 'id must be a string';
     case 'hello':
       if (m.role === 'tv') {
         if (!optStr(m.room)) return 'room must be a string';
@@ -166,8 +173,8 @@ export function createHub(joinUrl: (code: string) => string, graceMs = 2 * 60_00
 
   /** Forget whatever this socket was attached to (on close, or before a second hello). */
   function detach(ws: Ws) {
-    const {role, room: code, playerId} = ws.data;
-    ws.data = {};
+    const {role, room: code, playerId, tunnel} = ws.data;
+    ws.data = {tunnel};
     const room = code ? rooms.get(code) : undefined;
     if (!room) return;
     room.touched = Date.now();
@@ -205,6 +212,7 @@ export function createHub(joinUrl: (code: string) => string, graceMs = 2 * 60_00
   function helloPhone(ws: Ws, msg: HelloPhone) {
     const room = rooms.get(msg.room.trim().toUpperCase());
     if (!room) return fail(ws, 'no_room', `No room called ${msg.room.trim().toUpperCase().slice(0, 8)}. Check the code on the TV.`);
+    if (msg.playerId && room.removed?.has(msg.playerId)) return fail(ws, 'removed', REMOVED);
     let slot = msg.playerId ? room.slots.get(msg.playerId) : undefined;
     // playerIds are in every `players` frame: without the first hello's key, a known id joins as a new player.
     if (slot?.key !== undefined && msg.key !== slot.key) slot = undefined;
@@ -219,13 +227,13 @@ export function createHub(joinUrl: (code: string) => string, graceMs = 2 * 60_00
     }
     clearTimeout(slot.dropTimer);
     if (slot.ws && slot.ws !== ws) {
-      slot.ws.data = {}; // so the older socket's close event can't mark the live player disconnected
+      slot.ws.data = {tunnel: slot.ws.data.tunnel}; // so the older socket's close event can't mark the live player disconnected
       slot.ws.close(1000, 'replaced');
     }
     slot.ws = ws;
     slot.player.connected = true;
     room.touched = Date.now();
-    ws.data = {role: 'phone', room: room.code, playerId: slot.player.id};
+    ws.data = {role: 'phone', room: room.code, playerId: slot.player.id, tunnel: ws.data.tunnel};
     send(ws, {t: 'joined', playerId: slot.player.id, color: slot.player.color, room: room.code, phase: room.phase});
     if (room.lastPhase) send(ws, room.lastPhase);
     broadcastPlayers(room);
@@ -299,6 +307,8 @@ export function createHub(joinUrl: (code: string) => string, graceMs = 2 * 60_00
       case 'ping':
         return send(ws, {t: 'pong'});
       case 'hello':
+        // The TV reaches the server over the LAN (or 10.0.2.2); a "TV" on the public link could delete the hall or take a room.
+        if (msg.role === 'tv' && ws.data.tunnel) return fail(ws, 'bad_message', 'A TV must connect over the Wi-Fi, not the public link.');
         detach(ws);
         return msg.role === 'tv' ? helloTv(ws, msg.room, msg.aiPersonas) : helloPhone(ws, msg);
       case 'ability':
@@ -311,6 +321,33 @@ export function createHub(joinUrl: (code: string) => string, graceMs = 2 * 60_00
           console.error('[hall] clear failed:', e);
           return fail(ws, 'bad_message', 'Could not clear the Hall of Fame. Please try again.');
         }
+      case 'removePlayer': {
+        if (ws.data.role !== 'tv' || !room || room.tv !== ws) return fail(ws, 'bad_message', 'only the TV can remove a player (send hello as tv first)');
+        const slot = room.slots.get(msg.playerId);
+        if (!slot) return fail(ws, 'bad_message', 'No such player in this party.');
+        clearTimeout(slot.dropTimer);
+        room.slots.delete(msg.playerId);
+        (room.removed ??= new Set()).add(msg.playerId);
+        if (slot.ws) {
+          fail(slot.ws, 'removed', REMOVED);
+          slot.ws.close(1000, 'removed');
+        }
+        const n = hooks.deleteCreatures?.(s => s.playerId === msg.playerId) ?? 0;
+        console.log(`[room] ${room.code}: the TV removed a player and their ${n} creature(s)`); // no name: it may be a withdrawal
+        return broadcastPlayers(room);
+      }
+      case 'deleteCreature': {
+        if (ws.data.role !== 'tv' || !room || room.tv !== ws) return fail(ws, 'bad_message', 'only the TV can delete a creature (send hello as tv first)');
+        const removed = hooks.deleteCreatures?.(s => s.id === msg.id) ?? 0;
+        for (const r of rooms.values()) {
+          for (const s of r.slots.values()) {
+            if (s.player.sketchling?.id !== msg.id) continue;
+            s.player.sketchling = undefined; // its sprite and voice are gone
+            broadcastPlayers(r);
+          }
+        }
+        return send(ws, {t: 'creatureDeleted', id: msg.id, removed});
+      }
       case 'phase': {
         if (ws.data.role !== 'tv' || !room || room.tv !== ws) return fail(ws, 'bad_message', 'only the TV can change the phase (send hello as tv first)');
         if (room.phase === 'race' && msg.phase !== 'race') {

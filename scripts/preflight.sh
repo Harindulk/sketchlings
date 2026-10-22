@@ -30,17 +30,25 @@ else fail "Free disk ${disk_gb} GB, need > 5 GB" "empty Downloads/Trash yourself
 
 # 4. Server up on 8787
 if curl -s -m 3 http://localhost:8787/health | grep -q '"ok":true'; then pass "Server answers on http://localhost:8787/health"
-else fail "Server not answering on port 8787" "start it: scripts/tunnel.sh 2>&1 | tee notes/tunnel-run.log"; fi
+else fail "Server not answering on port 8787" "start the session (runsheet 3.2): scripts/session.sh"; fi
 
-# 5. Claude key: present in server/.env (value never printed) and the newest server log's banner says Claude
-if grep -qE '^ANTHROPIC_API_KEY=.+' server/.env 2>/dev/null; then pass "server/.env has an ANTHROPIC_API_KEY"
-else fail "No ANTHROPIC_API_KEY in server/.env" "paste the key into server/.env and restart the server"; fi
+# 5. Claude key: present in server/.env (value never printed) and the newest server log's banner says Claude.
+# With AI off on purpose (scripts/session.sh --no-ai, a form said No) the banner must say offline instead.
 log=$(ls -t notes/*.log 2>/dev/null | head -1)
 banner=$([ -n "$log" ] && grep -E '^Personas:' "$log" | tail -1)
-case "$banner" in
-  "Personas: Claude"*) pass "Newest log ($log): ${banner%%,*}" ;;
-  *) fail "Newest log (${log:-none}) does not say \"Personas: Claude\"" "start the server with its output in notes/*.log (runsheet step 2.4) and check the key" ;;
-esac
+if [ -e video/clips/.no-ai ]; then
+  case "$banner" in
+    "Personas: offline"*) pass "AI personas off on purpose (video/clips/.no-ai): newest log ($log) says offline" ;;
+    *) fail "AI is off on purpose (video/clips/.no-ai), but the newest log (${log:-none}) does not say \"Personas: offline\"" "scripts/session.sh stop, then scripts/session.sh (it starts the server with no key)" ;;
+  esac
+else
+  if grep -qE '^ANTHROPIC_API_KEY=.+' server/.env 2>/dev/null; then pass "server/.env has an ANTHROPIC_API_KEY"
+  else fail "No ANTHROPIC_API_KEY in server/.env" "paste the key into server/.env, then scripts/session.sh stop and scripts/session.sh"; fi
+  case "$banner" in
+    "Personas: Claude"*) pass "Newest log ($log): ${banner%%,*}" ;;
+    *) fail "Newest log (${log:-none}) does not say \"Personas: Claude\"" "start the server with scripts/session.sh (runsheet 3.2) and check the key" ;;
+  esac
+fi
 
 # 6. Hall of Fame reset: file missing or < 3 entries, and the running server agrees (it keeps the hall in memory)
 file_n=$( [ -f server/data/hall.json ] && python3 -c 'import json,sys; print(len(json.load(open(sys.argv[1]))))' server/data/hall.json 2>/dev/null || echo 0)
@@ -55,21 +63,32 @@ if vega virtual-device status 2>/dev/null | grep -q '"running":true' && adb devi
   pass "VVD running (emulator-5554 online)"
 else fail "VVD not running or not online in adb" "vega virtual-device start --no-gui --timeout 300, then reinstall the app"; fi
 
-# 8. TV build is not older than the last commit to tv/ or shared/
+# 8. TV build is newer than every TV source file, committed or not.
+# shortcut: the vpkg's time stands for the installed app (vbuild.sh --run builds and installs in one go); a hand
+# install of an older vpkg is not caught.
 vpkg=tv/build/sketchlings_aarch64.vpkg
 if [ -f "$vpkg" ]; then
-  built=$(stat -f %m "$vpkg"); committed=$(git log -1 --format=%ct -- tv shared)
-  dirty=$(git status --porcelain -- tv/src shared | wc -l | tr -d ' ')
-  if [ "$built" -ge "$committed" ]; then pass "TV build $(date -r "$built" '+%a %H:%M') is newer than the last tv/shared commit ($dirty uncommitted files in tv/src, shared)"
-  else fail "TV build $(date -r "$built" '+%a %H:%M') is older than the last tv/shared commit $(date -r "$committed" '+%a %H:%M')" "rebuild and install: tv/scripts/vbuild.sh release --run"; fi
+  built=$(stat -f %m "$vpkg")
+  newer=$(find tv/src tv/assets tv/index.js tv/manifest.toml tv/package.json shared -newer "$vpkg" -type f 2>/dev/null | head -1)
+  if [ -z "$newer" ]; then pass "TV build $(date -r "$built" '+%a %H:%M') is newer than its sources (tv/src, tv/assets, shared)"
+  else fail "TV build $(date -r "$built" '+%a %H:%M') is older than $newer" "rebuild and install: tv/scripts/vbuild.sh release --run"; fi
 else fail "No $vpkg" "build it: tv/scripts/vbuild.sh release --run"; fi
 
-# 9. HTTPS tunnel (phones need a secure page for "Enable shouting")
+# 9. HTTPS tunnel (phones need a secure page for "Enable shouting"). The link is the last one tunnel.sh announced in
+# the run sheet's logs (notes/playtest-<date>.log, notes/tunnel-run.log), read oldest file first
 if pgrep -x cloudflared >/dev/null; then
-  URL=$(grep -ohE 'https://[a-z0-9-]+\.trycloudflare\.com' notes/tunnel-run.log 2>/dev/null | tail -1)
+  URL=$(ls -tr notes/playtest-*.log notes/tunnel-run.log 2>/dev/null | xargs cat 2>/dev/null |
+    sed -nE 's#^Phones join at (https://[a-z0-9-]+\.trycloudflare\.com)/.*#\1#p' | tail -1)
   if [ -n "$URL" ] && curl -fsS -m 10 "$URL/health" >/dev/null 2>&1; then pass "HTTPS tunnel answers: $URL"
-  else fail "cloudflared runs but its URL doesn't answer" "restart scripts/tunnel.sh 2>&1 | tee notes/tunnel-run.log"; fi
-else fail "No HTTPS tunnel" "start the server with scripts/tunnel.sh (not bun run start)"; fi
+  else fail "cloudflared runs but the last link in notes/playtest-*.log (${URL:-none}) doesn't answer" "if phones can't join either: scripts/session.sh stop, then scripts/session.sh (every phone then rescans)"; fi
+else fail "No HTTPS tunnel" "start the session with scripts/session.sh (with --lan there is no tunnel: this line FAILs)"; fi
+
+# 10. Phone build is newer than its sources (the server serves phone/dist only)
+if [ -f phone/dist/index.html ]; then
+  stale=$(find phone/index.html phone/src packages/doodle-cutout/src shared -newer phone/dist/index.html -type f 2>/dev/null | head -1)
+  if [ -z "$stale" ]; then pass "Phone build $(date -r "$(stat -f %m phone/dist/index.html)" '+%a %H:%M') is newer than its sources"
+  else fail "Phone build is older than $stale" "cd phone && npm run build (no server restart; open phones reload their page)"; fi
+else fail "No phone build (phone/dist)" "cd phone && npm run build"; fi
 
 echo
 if [ "$FAILS" -eq 0 ]; then echo "ALL PASS: ready to film."; else echo "$FAILS FAIL(s): fix them before the family plays."; fi

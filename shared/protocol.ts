@@ -84,10 +84,18 @@ export type PingMsg = {t: 'ping'}; // keeps the socket alive; the server measure
 // phone -> server: the artist changes their creature's ability, only before the race (phase lobby, draw or reveal).
 // The server answers with the usual `sketchling` frame (same id) to the TV and the phone, or an error.
 export type AbilityMsg = {t: 'ability'; kind: MoveStyle};
-// tv -> server: delete the Hall of Fame (hall.json and every sprite and voice clip). Any client that sends hello as tv
-// can send it (the server cannot tell a TV from a phone), so the TV's parent gate is the only guard. Answer: HallClearedMsg.
+// tv -> server: delete the Hall of Fame (hall.json and every sprite and voice clip). Only the room's TV can send it. The
+// server refuses a TV hello through the public tunnel, but any device on the Wi-Fi can still say it is a TV, so the TV's
+// parent gate is the real guard, for this and the two messages below. Answer: HallClearedMsg.
 export type ClearHallMsg = {t: 'clearHall'};
-export type ClientMsg = HelloTv | HelloPhone | PhaseMsg | InputMsg | PingMsg | AbilityMsg | ClearHallMsg;
+// tv -> server: take one player out of the room (a child stops or withdraws). The slot goes, their phone gets an error
+// with code 'removed' and cannot rejoin as that player, and every Hall of Fame entry they made is deleted with its sprite
+// and voice. Answer: the usual `players` frame without them.
+export type RemovePlayerMsg = {t: 'removePlayer'; playerId: string};
+// tv -> server: delete one creature (a Sketchling id) from the Hall of Fame with its sprite and voice. A player in a live
+// room who still has it is left without a creature. Answer: CreatureDeletedMsg.
+export type DeleteCreatureMsg = {t: 'deleteCreature'; id: string};
+export type ClientMsg = HelloTv | HelloPhone | PhaseMsg | InputMsg | PingMsg | AbilityMsg | ClearHallMsg | RemovePlayerMsg | DeleteCreatureMsg;
 
 // ---------- server -> client ----------
 export type RoomMsg = {t: 'room'; code: string; joinUrl: string}; // to tv after hello
@@ -97,7 +105,9 @@ export type SketchlingMsg = {t: 'sketchling'; sketchling: Sketchling}; // to tv 
 export type ScanStatusMsg = {t: 'scan'; playerId: string; status: 'processing' | 'ready' | 'failed'; message?: string}; // to tv + phone
 export type RelayedInputMsg = {t: 'input'; playerId: string; kind: InputKind; at: number}; // to tv
 export type HallClearedMsg = {t: 'hallCleared'; removed: number}; // to the TV that sent clearHall; removed = creatures deleted
-export type ErrorMsg = {t: 'error'; code: 'no_room' | 'room_full' | 'bad_message'; message: string};
+export type CreatureDeletedMsg = {t: 'creatureDeleted'; id: string; removed: number}; // to the TV that sent deleteCreature; 0 = no such id
+// removed: the TV took this player out (RemovePlayerMsg); the phone should stop reconnecting.
+export type ErrorMsg = {t: 'error'; code: 'no_room' | 'room_full' | 'bad_message' | 'removed'; message: string};
 export type ServerMsg =
   | RoomMsg
   | JoinedMsg
@@ -107,6 +117,7 @@ export type ServerMsg =
   | RelayedInputMsg
   | PhaseMsg
   | HallClearedMsg
+  | CreatureDeletedMsg
   | ErrorMsg
   | {t: 'pong'};
 
@@ -114,8 +125,9 @@ export type ServerMsg =
 // GET  /j/:room                          phone web app (join page for that room)
 // POST /api/rooms/:room/players/:playerId/sketch
 //      body: image/png (cutout with alpha, max 1024 px). Response 202; result arrives as `scan` + `sketchling` WS frames.
-// GET  /sprites/:id.png                  cutout sprite
-// GET  /api/hall-of-fame                 Sketchling[] saved across sessions (newest first)
+// GET  /sprites/:id.png                  cutout sprite (through the public tunnel: only creatures in a live room)
+// GET  /voice/:id/:line.m4a              a creature's spoken line (LAN only: 404 through the public tunnel)
+// GET  /api/hall-of-fame                 Sketchling[] saved across sessions, newest first (LAN only: 404 through the tunnel)
 // GET  /health                           {ok: true}
 
 export const MAX_PLAYERS = 6;

@@ -60,9 +60,9 @@ export function drawBlob(width: number, height: number, fill: [number, number, n
   return d;
 }
 
-/** WebSocket client that queues JSON frames so tests can await a frame of a given type. */
-export async function connect(url: string) {
-  const ws = new WebSocket(url);
+/** WebSocket client that queues JSON frames so tests can await a frame of a given type. `headers`: e.g. Cloudflare's. */
+export async function connect(url: string, headers?: Record<string, string>) {
+  const ws = headers ? new WebSocket(url, {headers}) : new WebSocket(url);
   const queue: any[] = [];
   let wake: (() => void) | undefined;
   ws.onmessage = e => {

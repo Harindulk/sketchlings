@@ -164,23 +164,32 @@ export function kokoro(modelsDir: string): () => Promise<Tts | null> {
 
 // ---------- queue + per-sketchling clips ----------
 
-/** Runs jobs one at a time; a job that takes longer than `timeoutMs` is aborted and rejected so the queue moves on. */
+/** Runs jobs one at a time, every waiting `first` job before the others; a job that takes longer than `timeoutMs` is
+ * aborted and rejected so the queue moves on. */
 export function createQueue(timeoutMs: number) {
-  let tail: Promise<unknown> = Promise.resolve();
-  return <T>(job: (signal: AbortSignal) => Promise<T>): Promise<T> => {
-    const run = async () => {
-      const ac = new AbortController();
-      const timer = setTimeout(() => ac.abort(new Error(`timed out after ${timeoutMs} ms`)), timeoutMs);
-      try {
-        return await Promise.race([job(ac.signal), new Promise<never>((_, reject) => ac.signal.addEventListener('abort', () => reject(ac.signal.reason)))]);
-      } finally {
-        clearTimeout(timer);
-      }
-    };
-    const p = tail.then(run);
-    tail = p.catch(() => {});
-    return p;
-  };
+  const waiting: [(() => Promise<void>)[], (() => Promise<void>)[]] = [[], []]; // [first, rest]
+  let busy = false;
+  async function pump() {
+    if (busy) return;
+    busy = true;
+    for (let run; (run = waiting[0].shift() ?? waiting[1].shift()); ) await run();
+    busy = false;
+  }
+  return <T>(job: (signal: AbortSignal) => Promise<T>, first = false): Promise<T> =>
+    new Promise<T>((resolve, reject) => {
+      waiting[first ? 0 : 1].push(async () => {
+        const ac = new AbortController();
+        const timer = setTimeout(() => ac.abort(new Error(`timed out after ${timeoutMs} ms`)), timeoutMs);
+        try {
+          resolve(await Promise.race([job(ac.signal), new Promise<never>((_, no) => ac.signal.addEventListener('abort', () => no(ac.signal.reason)))]));
+        } catch (e) {
+          reject(e);
+        } finally {
+          clearTimeout(timer);
+        }
+      });
+      void pump();
+    });
 }
 
 const isFile = (p: string) => !!statSync(p, {throwIfNoEntry: false})?.isFile();
@@ -192,7 +201,7 @@ export function createVoices(dir: string, tts: () => Promise<Tts | null>, timeou
   const enqueue = createQueue(timeoutMs);
 
   // shortcut: the cache is never pruned (~40 KB a clip); add an LRU sweep if data/voice/cache ever gets big.
-  async function clip(text: string, v: VoiceProfile): Promise<string> {
+  async function clip(text: string, v: VoiceProfile, first: boolean): Promise<string> {
     const key = createHash('sha256').update(JSON.stringify([MODEL_ID, v.voice, v.speed, v.semitones, text])).digest('hex').slice(0, 32);
     const file = join(cacheDir, `${key}.m4a`);
     if (isFile(file)) return file;
@@ -204,11 +213,13 @@ export function createVoices(dir: string, tts: () => Promise<Tts | null>, timeou
       const ms = await engine.clip(text, v, file, signal);
       console.log(`[voice] ${v.voice} ${v.semitones > 0 ? '+' : ''}${v.semitones} st: ${(ms / 1000).toFixed(1)} s clip in ${Math.round(performance.now() - started)} ms`);
       return file;
-    });
+    }, first);
   }
 
-  /** The `voice` field for a sketchling, or undefined if no line could be made. Never throws. */
-  async function speak(s: Sketchling): Promise<Sketchling['voice']> {
+  /** The `voice` field for a sketchling, or undefined if no line could be made. Never throws. Intros jump the queue, so
+   * with several scans at once every creature can introduce itself on the Reveal; `onIntro` gets the voice so far as
+   * soon as the intro is ready. */
+  async function speak(s: Sketchling, onIntro?: (voice: NonNullable<Sketchling['voice']>) => void): Promise<Sketchling['voice']> {
     if (!(await tts())) return undefined;
     const v = pickVoice(s);
     const voice: NonNullable<Sketchling['voice']> = {};
@@ -217,10 +228,11 @@ export function createVoices(dir: string, tts: () => Promise<Tts | null>, timeou
       LINES.map(async line => {
         try {
           const dest = join(dir, s.id, `${line}.m4a`);
-          const src = await clip(s[line], v);
+          const src = await clip(s[line], v, line === 'intro');
           rmSync(dest, {force: true});
           linkSync(src, dest);
           voice[line] = `/voice/${s.id}/${line}.m4a`;
+          if (line === 'intro') onIntro?.({...voice});
         } catch (e) {
           console.warn(`[voice] ${line} for ${s.id} failed:`, e instanceof Error ? e.message : e);
         }

@@ -4,6 +4,8 @@ import sampleUrl from './samples/monster.jpg?url';
 
 export const MAX_SIDE = 1024; // protocol: sprite PNG max 1024 px
 const OPTIONS: CutoutOptions = {maxSize: MAX_SIDE, outline: 8};
+// The drawpad is flat white, and its strokes often touch its edge: keep ink at the edge, no lighting estimate.
+export const PAD_OPTIONS: CutoutOptions = {...OPTIONS, removeBorderBlobs: false, backgroundRadius: 720, threshold: 0.3};
 
 export interface Sprite {
   blob: Blob;
@@ -66,19 +68,19 @@ function getWorker(): Worker {
   return w;
 }
 
-export async function runCutout(img: ImageData): Promise<CutoutResult> {
+export async function runCutout(img: ImageData, options = OPTIONS): Promise<CutoutResult> {
   const image = {data: img.data, width: img.width, height: img.height};
   try {
     const w = getWorker();
     return await new Promise<CutoutResult>((resolve, reject) => {
       const id = ++seq;
       pending.set(id, {resolve, reject});
-      w.postMessage({id, image, options: OPTIONS});
+      w.postMessage({id, image, options});
     });
   } catch {
     // No module workers (old Safari) or the worker failed to load: run on the main thread.
     const {cutout} = await import('../../packages/doodle-cutout/src/index');
-    return cutout(image, OPTIONS);
+    return cutout(image, options);
   }
 }
 
@@ -104,8 +106,11 @@ export async function toSprite(r: CutoutResult): Promise<Sprite | null> {
   return {blob, url: URL.createObjectURL(blob), width: out.width, height: out.height};
 }
 
-export async function processImage(img: ImageData): Promise<Sprite | null> {
-  return toSprite(await runCutout(img));
+export async function processImage(img: ImageData, options = OPTIONS): Promise<Sprite | null> {
+  const r = await runCutout(img, options);
+  // A photo's cut-out as big as the whole frame is paper or table, not a creature: show the retake screen instead.
+  if (options === OPTIONS && r.bbox.width >= img.width * 0.95 && r.bbox.height >= img.height * 0.95) return null;
+  return toSprite(r);
 }
 
 /**

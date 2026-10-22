@@ -835,6 +835,27 @@ input {
   font: 800 1.2rem/1.1 var(--display);
 }
 
+/* Pick another power: four big emoji buttons, styled like the age buttons. */
+.powers {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  width: 100%;
+}
+
+.powers .age {
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  padding: 6px 2px;
+  text-align: center;
+}
+
+.powers .age span {
+  font-size: 2.4rem;
+  line-height: 1;
+}
+
 /* ---------- controller ---------- */
 
 body.racing {
@@ -989,6 +1010,32 @@ body.racing #app {
 .btn.roar {
   --bg: #ff8a3d;
   --r: 0.8deg;
+}
+
+/* After a ROAR the button greys and an orange bar refills it over 4 s, the TV's cooldown. */
+.btn.roar.cooling {
+  --bg: #d9e2ec;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn.roar.cooling::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 8px;
+  background: #ff8a3d;
+  transform-origin: left;
+  animation: refill 4s linear both;
+}
+
+@keyframes refill {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
 }
 
 .extras {

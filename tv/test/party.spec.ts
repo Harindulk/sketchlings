@@ -1,7 +1,13 @@
 import {MAX_PLAYERS} from '../../shared/protocol';
 import {demoPlayers, SAMPLE_SKETCHLINGS} from '../src/game/demo';
 import type {PartyState} from '../src/game/party';
-import {isGuest, racersOf, withGuests} from '../src/game/party';
+import {
+  clearHall,
+  isGuest,
+  racersOf,
+  setAiPersonas,
+  withGuests,
+} from '../src/game/party';
 
 const [potato, frog, cloud, hedgehog, dino, star] = SAMPLE_SKETCHLINGS;
 const party = (n: number): PartyState => ({
@@ -54,5 +60,50 @@ describe('Demo party', () => {
     expect(demoPlayers([dino]).map((p) => p.sketchling!.id)).toEqual(
       SAMPLE_SKETCHLINGS.slice(0, 4).map((s) => s.id),
     );
+  });
+});
+
+/* global globalThis */ // the RN eslint env predates it
+describe('Grown-ups: Clear Hall of Fame', () => {
+  const sent: string[] = [];
+  const realWs = globalThis.WebSocket;
+  // the server's side of clearHall: room after hello, then hallCleared (or an error)
+  const fakeServer = (answer: object) =>
+    class {
+      onopen?: () => void;
+      onmessage?: (e: {data: string}) => void;
+      onclose?: () => void;
+      onerror?: () => void;
+      constructor() {
+        setTimeout(() => this.onopen?.(), 0);
+      }
+      send(s: string) {
+        sent.push(s);
+        const t = JSON.parse(s).t;
+        const reply = t === 'hello' ? {t: 'room', code: 'BCDF', joinUrl: 'x'} : answer;
+        setTimeout(() => this.onmessage?.({data: JSON.stringify(reply)}), 0);
+      }
+      close() {
+        this.onclose?.();
+      }
+    };
+  afterEach(() => {
+    globalThis.WebSocket = realWs;
+    sent.length = 0;
+  });
+
+  it('says hello as the TV with the consent flag, then clears', async () => {
+    globalThis.WebSocket = fakeServer({t: 'hallCleared', removed: 3}) as any;
+    setAiPersonas(true);
+    await expect(clearHall()).resolves.toBe(3);
+    expect(JSON.parse(sent[0])).toEqual({t: 'hello', role: 'tv', aiPersonas: true});
+    expect(sent[1]).toBe('{"t":"clearHall"}');
+    setAiPersonas(false);
+  });
+
+  it("passes the server's error on", async () => {
+    globalThis.WebSocket = fakeServer({t: 'error', code: 'bad_message', message: 'Could not clear'}) as any;
+    await expect(clearHall()).rejects.toThrow('Could not clear');
+    expect(JSON.parse(sent[0]).aiPersonas).toBe(false);
   });
 });

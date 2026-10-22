@@ -238,6 +238,19 @@ const server = Bun.serve({
         else console.log(`[mock] ${p.name}: ${msg.kind}`);
         return;
       }
+      if (msg.t === 'ability') {
+        // Like the server: the drawing's pick stays in `original`; going back to it drops chosenBy.
+        const p = ws.data.playerId ? players.get(ws.data.playerId) : undefined;
+        const s = p?.sketchling;
+        if (!p || !s || phase === 'race' || phase === 'results') return send(ws, {t: 'error', code: 'bad_message', message: 'Abilities can only change before the race.'});
+        const original = s.ability.original ?? {kind: s.ability.kind, feature: s.ability.feature};
+        const ability = msg.kind === original.kind ? {...ABILITIES[msg.kind], feature: original.feature} : {...ABILITIES[msg.kind], feature: "artist's pick", chosenBy: 'artist' as const, original};
+        p.sketchling = {...s, move: msg.kind, ability};
+        console.log(`[mock] ${p.name}: ability ${msg.kind}`);
+        send(ws, {t: 'sketchling', sketchling: p.sketchling});
+        broadcastPlayers();
+        return;
+      }
       send(ws, {t: 'error', code: 'bad_message', message: `unexpected ${msg.t}`});
     },
     close(ws) {
