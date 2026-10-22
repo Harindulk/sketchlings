@@ -29,7 +29,7 @@
     <div class="row"><div class="k">Cause</div><div class="v hand">The JS thread blocks in <span class="mono">send()</span> to the watchdog while holding its mutex; the watchdog's loop, the only reader, waits for that mutex.</div></div>
     <div class="row"><div class="k">6 lanes</div><div class="v hand">About 66 ink-blot images mounting at race start set it off again: 3 of 7 starts froze.</div></div>
     <div class="row"><div class="k">Fix</div><div class="v hand">One JS task per frame, animated values native from birth, blots mount lane by lane.</div></div>
-    <div class="res"><b>52 race starts, 0 freezes</b><span>on the fixed builds; then 30 more with race audio back on, 0 freezes</span></div>
+    <div class="res"><b>105 race starts, 0 freezes</b><span>since the last fix, 70 with race audio. Its Hall of Fame form: 42 visits, 0 frozen</span></div>
   </div>
 
   <div class="card sticker k2"><span class="tape" style="--t: var(--blue)"></span>
@@ -39,7 +39,7 @@
     <div class="row"><div class="k">Cause</div><div class="v hand">Each clip got a new MediaSource. Swapping it detached the old source while its pipeline was still finishing, and a libW3CMedia thread then used it.</div></div>
     <div class="row"><div class="k">Proof</div><div class="v hand">Five crash reports with the same 6-frame stack.</div></div>
     <div class="row"><div class="k">Fix</div><div class="v hand">One AudioPlayer and one long-lived MediaSource for the whole session.</div></div>
-    <div class="res"><b>0 crashes in 73 screens</b><span>of Reveal and Results; on the old code, 5 crashes in 216 clips</span></div>
+    <div class="res"><b>0 crashes in 168 screens</b><span>of Reveal and Results (73 on 21 Oct, 95 on 23 Oct); on the old code, 5 crashes in 216 clips</span></div>
   </div>
 
   <div class="abs src foot">Both written up with platform suggestions in FRICTION_LOG.md (#1, #5). Not yet run on Fire TV hardware.</div>
