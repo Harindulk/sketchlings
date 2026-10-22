@@ -62,7 +62,7 @@ We say "the youngest can really win". We have no playtest behind that yet. This 
 - **A grown-up wins:** any grown-up in the race wins.
 - **Median gap:** the little kid's finish time minus the fastest grown-up's. A plus sign means the grown-up crossed first. Runners who had not crossed when the race ended keep running in the same engine until they do, only to time this gap; who won is decided at the real end of the race.
 
-**Correction (22 Oct).** The first version of this page seeded race n and race n+1 with almost the same first dice, which gave the little kid too wide a spread of tap rates and every race nearly the same first ink blots. The script now scrambles each race's seed and its self-check tests for this. Every number moved by 3.5 points or less. The biggest changes: the youngest's family-race wins went from 14.5% to 12.2%, and without the boost a little kid beats a grown-up in 0.6% of races, not 1.1%.
+**Correction (22 Oct).** The first version of this page seeded race n and race n+1 with almost the same first dice, which gave the little kid too wide a spread of tap rates and every race nearly the same first ink blots. The script now scrambles each race's seed and its self-check tests for this. Every number moved by 3.5 points or less. The biggest changes: the youngest's family-race wins went from 14.5% to 12.2%, and without the boost a little kid beats a grown-up in 0.6% of races, not 1.1%. (The tables now show the 23 Oct rerun, after fly speed went to 1.0: 0.4% without the boost and 27% with it.)
 
 **Rerun (23 Oct).** After the fly change, every number on this page moved by 1.3 points or less. The youngest's family-race wins went from 12.2% to 11.7%.
 
