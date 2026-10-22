@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>doodle-cutout demo</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #f6f5f2;
+        --fg: #1f2430;
+        --card: #ffffff;
+        --muted: #6b7080;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #15171c;
+          --fg: #eceef3;
+          --card: #20232b;
+          --muted: #9aa0ad;
+        }
+      }
+      body {
+        margin: 0;
+        padding: 24px 16px;
+        font: 16px/1.5 system-ui, sans-serif;
+        background: var(--bg);
+        color: var(--fg);
+      }
+      main {
+        max-width: 960px;
+        margin: 0 auto;
+      }
+      h1 {
+        margin: 0 0 4px;
+        font-size: 28px;
+      }
+      p {
+        color: var(--muted);
+        margin: 0 0 16px;
+      }
+      label {
+        display: inline-block;
+        padding: 10px 18px;
+        border-radius: 999px;
+        background: #e8443a;
+        color: #fff;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      input {
+        position: absolute;
+        opacity: 0;
+        width: 1px;
+      }
+      label:focus-within {
+        outline: 3px solid #1f6feb;
+        outline-offset: 2px;
+      }
+      .panes {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 16px;
+        margin-top: 16px;
+      }
+      figure {
+        margin: 0;
+        padding: 12px;
+        background: var(--card);
+        border-radius: 12px;
+      }
+      figure > div {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 240px;
+      }
+      .checker {
+        background: repeating-conic-gradient(#d6d6d6 0 25%, #ececec 0 50%) 0 0 / 20px 20px;
+        border-radius: 8px;
+      }
+      canvas {
+        max-width: 100%;
+        max-height: 60vh;
+        height: auto;
+      }
+      figcaption {
+        margin-top: 8px;
+        color: var(--muted);
+        font-size: 14px;
+      }
+      .swatch {
+        display: inline-block;
+        width: 14px;
+        height: 14px;
+        border-radius: 3px;
+        vertical-align: -2px;
+        margin-right: 2px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>doodle-cutout</h1>
+      <p>Pick a photo of a drawing on paper. It is cut out right here in your browser; nothing is uploaded.</p>
+      <label>Choose a photo<input id="file" type="file" accept="image/*" /></label>
+      <div class="panes">
+        <figure>
+          <div><canvas id="photo" aria-label="Your photo"></canvas></div>
+          <figcaption>Photo</figcaption>
+        </figure>
+        <figure>
+          <div class="checker"><canvas id="sprite" aria-label="The cut-out"></canvas></div>
+          <figcaption id="info" aria-live="polite">Cut-out</figcaption>
+        </figure>
+      </div>
+    </main>
+    <script type="module" src="./demo.ts"></script>
+  </body>
+</html>

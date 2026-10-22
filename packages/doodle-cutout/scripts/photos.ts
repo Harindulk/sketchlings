@@ -136,9 +136,9 @@ export function bigFillPhoto(fraction: number, color: RGB = RED_CRAYON, lined = 
 }
 
 /** A crayon creature running off the left edge of the photo, and a separate small doodle (C3). */
-export function offEdgePhoto(): RGBAImage {
+export function offEdgePhoto(coverage = 0.8): RGBAImage {
   const s = new Scene(1024, 768);
-  s.fillEllipse(220, 384, 300, 220, BLUE_CRAYON, 0.8, 14).strokeEllipse(220, 384, 300, 220, 10).disc(330, 330, 22);
+  s.fillEllipse(220, 384, 300, 220, BLUE_CRAYON, coverage, 14).strokeEllipse(220, 384, 300, 220, 10).disc(330, 330, 22);
   s.strokeEllipse(800, 300, 90, 70, 8).disc(780, 290, 10);
   return s.render({shadow: 0.3, noise: 0.02, seed: 15});
 }
@@ -178,7 +178,8 @@ export const BENCH: {name: string; photo: () => RGBAImage}[] = [
   {name: 'C2: coloured in, 50%', photo: () => bigFillPhoto(0.5)},
   {name: 'C2: coloured in, 65%', photo: () => bigFillPhoto(0.65, BLUE_CRAYON)},
   {name: 'C2: coloured in, 60%, lined', photo: () => bigFillPhoto(0.6, YELLOW_CRAYON, true)},
-  {name: 'C3: off the photo edge + doodle', photo: offEdgePhoto},
+  {name: 'C3: streaky crayon off the photo edge + doodle', photo: () => offEdgePhoto(0.8)},
+  {name: 'C3: solid crayon off the photo edge + doodle', photo: () => offEdgePhoto(0.95)},
 ];
 
 
