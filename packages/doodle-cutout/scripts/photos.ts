@@ -165,6 +165,8 @@ export const BENCH: {name: string; photo: () => RGBAImage}[] = [
     },
   },
   {name: 'sheet on a table', photo: () => creature(new Scene(768, 1024).table({x: 60, y: 50, w: 640, h: 900}), 384, 450, 220, 250).render({shadow: 0.3, noise: 0.02, seed: 8})},
+  {name: 'small sheet on a wide dark table', photo: () => creature(new Scene(1024, 768).table({x: 300, y: 200, w: 420, h: 380}, [0.3, 0.22, 0.15]), 510, 370, 110, 110, 8).render({shadow: 0.3, noise: 0.02, seed: 16})},
+  {name: 'small sheet on a wide light table', photo: () => creature(new Scene(1024, 768).table({x: 300, y: 200, w: 420, h: 380}, [0.75, 0.72, 0.66]), 510, 370, 110, 110, 8).render({shadow: 0.3, noise: 0.02, seed: 17})},
   {name: 'legs to the paper edge', photo: () => creature(new Scene(768, 1024).table({x: 40, y: 40, w: 688, h: 820}), 384, 420, 220, 330).render({shadow: 0.3, noise: 0.02, seed: 9})},
   {name: 'two drawings', photo: () => creature(creature(new Scene(1024, 768), 300, 330, 160, 190), 760, 380, 130, 150).render({shadow: 0.3, noise: 0.02, seed: 10})},
   {name: 'tiny 64 px', photo: () => new Scene(64, 48).strokeEllipse(32, 24, 18, 13, 2).disc(27, 21, 2).render({noise: 0.02, seed: 11})},

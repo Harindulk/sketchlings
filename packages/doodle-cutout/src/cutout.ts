@@ -234,6 +234,49 @@ function pageTexture(v: Float32Array, paper: Float32Array, w: number, h: number,
 }
 
 /**
+ * Pixels of `tile`-sized tiles whose paper estimate looks like bare paper: at least 60% as bright as the
+ * brightest tiles' and no more colourful than the sheet's least colourful bright tiles, plus 0.1. A big
+ * coloured-in area is its own "paper" in the estimate, darker or more colourful than the sheet, so the
+ * page statistics taken here are not pulled towards the crayon. All pixels when too few tiles qualify.
+ */
+function paperPixels(bg: Float32Array[], w: number, h: number, tile: number): Uint8Array {
+  const lums: number[] = [];
+  const chromas: number[] = [];
+  for (let ty = 0; ty < h; ty += tile) {
+    for (let tx = 0; tx < w; tx += tile) {
+      const c = [0, 0, 0];
+      let count = 0;
+      for (let y = ty; y < Math.min(h, ty + tile); y++) {
+        for (let x = tx; x < Math.min(w, tx + tile); x++) {
+          for (let k = 0; k < 3; k++) c[k] += bg[k][y * w + x];
+          count++;
+        }
+      }
+      const mx = Math.max(...c) / count;
+      lums.push(lum(c[0], c[1], c[2]) / count);
+      chromas.push((mx - Math.min(...c) / count) / Math.max(mx, 0.02));
+    }
+  }
+  const bright = 0.6 * [...lums].sort((a, b) => a - b)[Math.floor(lums.length * 0.9)];
+  const neutral = chromas.filter((_, i) => lums[i] >= bright).sort((a, b) => a - b);
+  const maxChroma = neutral[Math.floor(neutral.length * 0.1)] + 0.1;
+  const ok = lums.map((l, i) => l >= bright && chromas[i] <= maxChroma);
+  const out = new Uint8Array(w * h);
+  if (ok.filter(Boolean).length < ok.length * 0.1) return out.fill(1);
+  const cols = Math.ceil(w / tile);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) out[y * w + x] = ok[Math.floor(y / tile) * cols + Math.floor(x / tile)] ? 1 : 0;
+  return out;
+}
+
+/** The values of `v` where `m` is set. */
+function pick(v: Float32Array, m: Uint8Array): Float32Array {
+  const out = new Float32Array(v.length);
+  let j = 0;
+  for (let i = 0; i < v.length; i++) if (m[i]) out[j++] = v[i];
+  return out.subarray(0, j);
+}
+
+/**
  * The ink that belongs to the drawing, without what surrounds the sheet. Thick ink touching the photo
  * edge (a table, a cloth, fingers) is cut away pixel by pixel, with any ink joined to it or to the photo
  * edge within a 2 * `thick` margin (a thin strip of table, the paper's edge and its shadow), so a stroke
@@ -385,10 +428,13 @@ export function cutout(img: ImageLike, options: CutoutOptions = {}): CutoutResul
   const sigmaSoft = (percentiles(resid, [0.5])[0] * 1.57) / 3;
   //    Saturation against the global paper tint does not depend on lighting at all, so it also
   //    catches coloured areas too big for the paper estimate (their middle looks like "paper" locally).
+  //    The tint and the noise floor below come from paper-like tiles, so a drawing coloured in over
+  //    half the photo does not become the "paper".
+  const onPaper = paperPixels(bg, w, h, Math.max(8, Math.round(long / 16)));
   const tint = bg.map((ch) => {
     const ratio = new Float32Array(n);
     for (let i = 0; i < n; i++) ratio[i] = ch[i] / Math.max(bg[0][i], bg[1][i], bg[2][i], 0.02);
-    return Math.max(0.05, percentiles(ratio, [0.5])[0]);
+    return Math.max(0.05, percentiles(pick(ratio, onPaper), [0.5])[0]);
   });
   const score = new Float32Array(n);
   const flattened = options.debug ? new Uint8ClampedArray(n * 4) : undefined;
@@ -425,11 +471,18 @@ export function cutout(img: ImageLike, options: CutoutOptions = {}): CutoutResul
   //    floor (median + 4 sigma of the score) stops grain from leaking in. Thick faint ink must reach
   //    half the threshold. Thin strokes (pencil or pink wings, antennae) only need to clear the noise
   //    floor, so a dark marker body, which pushes the threshold up, does not erase them.
-  const [p16, p50] = percentiles(score, [0.16, 0.5]);
+  const [p16, p50] = percentiles(pick(score, onPaper), [0.16, 0.5]);
   const noiseFloor = p50 + 4 * Math.max(0.005, p50 - p16);
   let t: number;
-  if (o.threshold === 'auto') t = Math.max(clamp(otsu(score), 0.12, 0.4), noiseFloor + 0.05);
-  else t = clamp(o.threshold, 0.01, 1);
+  if (o.threshold === 'auto') {
+    t = Math.max(clamp(otsu(score), 0.12, 0.4), noiseFloor + 0.05);
+    // Coloured in over most of the photo, Otsu splits the outline from the crayon, not the crayon from
+    // the paper. When a quarter of the photo lies between the two, split again below t.
+    const mid = new Uint8Array(n);
+    let midCount = 0;
+    for (let i = 0; i < n; i++) if ((mid[i] = score[i] < t ? 1 : 0) && score[i] > noiseFloor + 0.05) midCount++;
+    if (midCount > n * 0.25) t = Math.min(t, Math.max(clamp(otsu(pick(score, mid)), 0.12, 0.4), noiseFloor + 0.05));
+  } else t = clamp(o.threshold, 0.01, 1);
   const weak = Math.min(t, Math.max(0.06, t * 0.5, noiseFloor));
   const thinWeak = Math.min(weak, Math.max(0.06, noiseFloor + 0.03));
   const grow = new Float32Array(n);

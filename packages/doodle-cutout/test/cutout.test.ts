@@ -305,6 +305,26 @@ describe('cutout', () => {
     expectWings(cutout(bug(s, [0.55, 0.55, 0.58], 3)));
   });
 
+  test('a creature coloured in over 50-65% of the photo comes out whole, not empty or inverted', () => {
+    for (const [fraction, color] of [[0.5, RED_CRAYON], [0.65, [0.25, 0.45, 0.85]]] as const) {
+      const ry = Math.sqrt((fraction * 768 * 1024) / Math.PI / 0.75);
+      const rx = ry * 0.75;
+      const photo = new Scene(768, 1024)
+        .fillEllipse(384, 512, rx, ry, color as [number, number, number], 0.8, 12)
+        .strokeEllipse(384, 512, rx, ry, 10)
+        .disc(384 - rx * 0.35, 512 - ry * 0.3, 26)
+        .disc(384 + rx * 0.35, 512 - ry * 0.3, 26)
+        .render({shadow: 0.35, angle: 0.7, noise: 0.02, seed: 13});
+      const r = cutout(photo);
+      expectNear(r.bbox.width, 2 * rx + 10, 10);
+      expectNear(r.bbox.height, 2 * ry + 10, 10);
+      expectNear(opaqueArea(r), Math.PI * (rx + 5) * (ry + 5), Math.PI * rx * ry * 0.06);
+      expect(alphaAt(r, ...sp(r, 384, 512))).toBe(255);
+      expect(alphaAt(r, ...sp(r, 384, 700))).toBe(255);
+      expect(alphaAt(r, ...sp(r, 384 - rx + 20, 512 - ry + 20))).toBe(0); // the paper corner of its box
+    }
+  });
+
   test('a hard-edged shadow across the drawing does not break it', () => {
     const scene = new Scene(W, H).strokeEllipse(200, 150, 90, 70, 6);
     for (let y = 0; y < H; y++) {
