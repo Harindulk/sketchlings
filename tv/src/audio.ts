@@ -77,6 +77,13 @@ export function hush() {
   finished();
 }
 
+/** Set the player up before the Reveal, so the first line isn't late (a cold setup took up to 3.7 s on the VVD). */
+export function warm() {
+  if (!sound.enabled || broken || ready) return;
+  ready = setup();
+  ready.catch(() => {}); // play() sees the same rejection and turns sound off
+}
+
 async function setup() {
   // loaded lazily so the media stack costs nothing at launch (TTFD) or when sound is off
   const lib = require('@amazon-devices/react-native-w3cmedia') as W3C;

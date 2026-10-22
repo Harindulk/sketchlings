@@ -6,6 +6,7 @@ import type {Player} from '../../../shared/protocol';
 import {MAX_PLAYERS} from '../../../shared/protocol';
 import {AgeBadge, Title} from '../components/Bits';
 import {FocusButton} from '../components/FocusButton';
+import {warm} from '../audio';
 import {Sprite} from '../components/Sprite';
 import type {PartyMode, PartyState, ScanStatus} from '../game/party';
 import {ABILITY, ABILITY_TIP, abilityOf} from '../game/ability';
@@ -22,6 +23,7 @@ interface Props {
 }
 
 export function Lobby({mode, state, onStart, onDemo, leaving}: Props) {
+  useEffect(() => warm(), []); // the Reveal's first line plays on time
   const racers = racersOf(state);
   const ready = racers.length > 0;
   const offline = mode === 'live' && state.conn === 'offline';

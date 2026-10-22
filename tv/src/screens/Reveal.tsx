@@ -6,7 +6,7 @@ import {FocusButton} from '../components/FocusButton';
 import {ABILITY, abilityOf} from '../game/ability';
 import {Sprite} from '../components/Sprite';
 import {C, F} from '../theme';
-import {narrator, say} from '../audio';
+import {hush, narrator, say} from '../audio';
 
 const CARD_MS = 6500;
 
@@ -20,6 +20,10 @@ export function Reveal({
 }) {
   const [i, setI] = useState(0);
   useEffect(() => void narrator('meet-sketchlings'), []);
+  // A new card cuts the last creature's line, so each intro plays over its own card (they used to drift one card late).
+  useEffect(() => {
+    if (i > 0) hush();
+  }, [i]);
   useEffect(() => {
     if (i >= racers.length) {
       onDone();
