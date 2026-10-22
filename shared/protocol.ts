@@ -29,6 +29,8 @@ export interface Sketchling {
     kind: MoveStyle; // same as `move`
     feature: string; // the drawn feature it comes from, kid-readable, <= 4 words: "big wings", "round wheels"
     label: string; // the power, <= 6 words: "Flies over ink blots!"
+    chosenBy?: 'artist'; // the child changed it on the phone (AbilityMsg); absent = picked from the drawing
+    original?: {kind: MoveStyle; feature: string}; // the pick from the drawing (Claude's or offline), kept when the artist changes it
   };
   colors: string[]; // dominant ink colours, '#rrggbb'
   spriteUrl: string; // absolute path on the server, e.g. '/sprites/<id>.png'
@@ -61,18 +63,31 @@ export interface Player {
   sketchling?: Sketchling;
 }
 
-export type InputKind = 'tap' | 'jump' | 'hold' | 'release' | 'shout'; // shout = phone mic loudness spike or the ROAR button
+// shout = phone mic loudness spike or the ROAR button. hold = a finger kept down, repeated every 0.5 s until release;
+// the TV counts it as 4 taps a second. The server counts each player's inputs during a race for one log line.
+export type InputKind = 'tap' | 'jump' | 'hold' | 'release' | 'shout';
 
 // ---------- client -> server ----------
-export type HelloTv = {t: 'hello'; role: 'tv'; room?: string}; // room: rejoin an existing room after reconnect
-export type HelloPhone = {t: 'hello'; role: 'phone'; room: string; name: string; ageGroup: AgeGroup; playerId?: string};
+// room: rejoin an existing room after reconnect. aiPersonas: false = this room's drawings never go to Claude (offline
+// personas only); absent = on. Send it in EVERY hello: a server restart recreates the room and an absent flag means on.
+export type HelloTv = {t: 'hello'; role: 'tv'; room?: string; aiPersonas?: boolean};
+// key: a random secret (16-64 chars) the phone makes once and sends in every hello with its playerId. A player who
+// joined with a key can only be taken back with it; without one, anyone who knows the playerId can take the player over.
+export type HelloPhone = {t: 'hello'; role: 'phone'; room: string; name: string; ageGroup: AgeGroup; playerId?: string; key?: string};
 export type PhaseMsg = {t: 'phase'; phase: Phase; data?: Record<string, unknown>}; // tv -> server -> phones
 // `data` for phase 'results' (place 1 = winner).
 export interface ResultsData {
   placements: {playerId: string; place: number}[];
 }
 export type InputMsg = {t: 'input'; kind: InputKind; at: number}; // phone -> server -> tv; `at` = phone ms timestamp
-export type ClientMsg = HelloTv | HelloPhone | PhaseMsg | InputMsg | {t: 'ping'};
+export type PingMsg = {t: 'ping'}; // keeps the socket alive; the server measures race round trips itself (WebSocket pings)
+// phone -> server: the artist changes their creature's ability, only before the race (phase lobby, draw or reveal).
+// The server answers with the usual `sketchling` frame (same id) to the TV and the phone, or an error.
+export type AbilityMsg = {t: 'ability'; kind: MoveStyle};
+// tv -> server: delete the Hall of Fame (hall.json and every sprite and voice clip). Any client that sends hello as tv
+// can send it (the server cannot tell a TV from a phone), so the TV's parent gate is the only guard. Answer: HallClearedMsg.
+export type ClearHallMsg = {t: 'clearHall'};
+export type ClientMsg = HelloTv | HelloPhone | PhaseMsg | InputMsg | PingMsg | AbilityMsg | ClearHallMsg;
 
 // ---------- server -> client ----------
 export type RoomMsg = {t: 'room'; code: string; joinUrl: string}; // to tv after hello
@@ -81,6 +96,7 @@ export type PlayersMsg = {t: 'players'; players: Player[]}; // to tv + phones on
 export type SketchlingMsg = {t: 'sketchling'; sketchling: Sketchling}; // to tv + owning phone when a scan is processed
 export type ScanStatusMsg = {t: 'scan'; playerId: string; status: 'processing' | 'ready' | 'failed'; message?: string}; // to tv + phone
 export type RelayedInputMsg = {t: 'input'; playerId: string; kind: InputKind; at: number}; // to tv
+export type HallClearedMsg = {t: 'hallCleared'; removed: number}; // to the TV that sent clearHall; removed = creatures deleted
 export type ErrorMsg = {t: 'error'; code: 'no_room' | 'room_full' | 'bad_message'; message: string};
 export type ServerMsg =
   | RoomMsg
@@ -90,6 +106,7 @@ export type ServerMsg =
   | ScanStatusMsg
   | RelayedInputMsg
   | PhaseMsg
+  | HallClearedMsg
   | ErrorMsg
   | {t: 'pong'};
 

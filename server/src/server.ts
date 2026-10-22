@@ -1,5 +1,5 @@
 // HTTP routes + WebSocket wiring. createServer() is used by index.ts and by the tests (port 0).
-import {existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync, unlinkSync, writeFileSync} from 'node:fs';
+import {existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, unlinkSync, writeFileSync} from 'node:fs';
 import {networkInterfaces} from 'node:os';
 import {join, resolve, sep} from 'node:path';
 import type {Sketchling} from '../../shared/protocol';
@@ -21,6 +21,7 @@ export interface ServerConfig {
   claude: Claude | null;
   tts?: () => Promise<Tts | null>; // creature voices; omitted = off (tests)
   ghostGraceMs?: number; // a disconnected player with no sketchling is dropped after this (default 2 min)
+  failEvery?: number; // soak tests (SKETCHLINGS_FAIL_EVERY): every Nth persona call fails, so the offline fallback runs
 }
 
 export function lanIp(): string {
@@ -33,6 +34,9 @@ export function lanIp(): string {
 const json = (body: unknown, status = 200) => Response.json(body, {status});
 const html = (body: string, status = 200) => new Response(body, {status, headers: {'Content-Type': 'text/html; charset=utf-8'}});
 const isFile = (p: string) => !!statSync(p, {throwIfNoEntry: false})?.isFile();
+
+// A client whose every call fails, so injected failures go through generatePersona's real fallback path.
+const failingClaude = (model: string): Claude => ({model, client: {beta: {messages: {create: () => Promise.reject(new Error('injected failure'))}}} as unknown as Claude['client']});
 
 const PLACEHOLDER = (code: string) => `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Sketchlings</title><body style="font-family:system-ui,sans-serif;text-align:center;padding:48px 16px;background:#fffaf0;color:#222">
@@ -61,21 +65,35 @@ export function createServer(cfg: ServerConfig) {
       renameSync(hallPath, bad);
     }
   }
+  function forget(old: Sketchling) {
+    if (!/^[0-9a-f-]{36}$/.test(old.id)) return; // ids come from hall.json: never a path outside data/
+    try {
+      unlinkSync(join(spritesDir, `${old.id}.png`)); // images stay on the host only as long as they're shown
+    } catch {}
+    rmSync(join(voiceDir, old.id), {recursive: true, force: true});
+  }
   function addToHall(s: Sketchling) {
     hall.unshift(s);
-    for (const old of hall.splice(HALL_CAP)) {
-      try {
-        unlinkSync(join(spritesDir, `${old.id}.png`)); // images stay on the host only as long as they're shown
-      } catch {}
-      if (/^[0-9a-f-]{36}$/.test(old.id)) rmSync(join(voiceDir, old.id), {recursive: true, force: true}); // ids come from hall.json
-    }
+    for (const old of hall.splice(HALL_CAP)) forget(old);
     saveHall();
   }
-  function updateHall(s: Sketchling) {
-    const i = hall.findIndex(h => h.id === s.id);
+  function patchHall(id: string, patch: Partial<Sketchling>) {
+    const i = hall.findIndex(h => h.id === id);
     if (i < 0) return;
-    hall[i] = s;
+    hall[i] = {...hall[i]!, ...patch};
     saveHall();
+  }
+  /** The TV's Clear Hall of Fame: every saved creature, and every sprite and voice clip on disk. Rooms keep their players. */
+  function clearHall(): number {
+    const removed = hall.splice(0).length;
+    saveHall(); // first: a failed delete below must never bring the names back on the next start
+    // Whole folders, not just the hall's ids: a failed scan or a hall.json.bad-* copy leaves drawings no entry points to.
+    for (const dir of [spritesDir, voiceDir]) rmSync(dir, {recursive: true, force: true, maxRetries: 3});
+    mkdirSync(spritesDir, {recursive: true});
+    if (voices) mkdirSync(join(voiceDir, 'cache'), {recursive: true}); // voice.ts writes new clips there
+    for (const f of readdirSync(dataDir)) if (f.startsWith('hall.json.bad-')) rmSync(join(dataDir, f), {force: true});
+    console.log(`[hall] cleared by the TV: ${removed} creatures, every sprite and voice clip`);
+    return removed;
   }
   function saveHall() {
     try {
@@ -88,18 +106,26 @@ export function createServer(cfg: ServerConfig) {
 
   // ---------- rooms ----------
   const base = () => (cfg.publicUrl?.trim() || `http://${lanIp()}:${server.port}`).replace(/\/+$/, '');
-  const hub = createHub(code => `${base()}/j/${code}`, cfg.ghostGraceMs);
+  const hub = createHub(code => `${base()}/j/${code}`, cfg.ghostGraceMs, {clearHall, sketchlingChanged: s => patchHall(s.id, {move: s.move, ability: s.ability})});
+
+  let personaCalls = 0;
+  function claudeFor(room: Room): Claude | null {
+    if (room.aiPersonas === false) return null; // the grown-ups said no on the TV
+    if (!cfg.failEvery || ++personaCalls % cfg.failEvery) return cfg.claude;
+    console.warn(`[persona] injected failure on call ${personaCalls} (SKETCHLINGS_FAIL_EVERY=${cfg.failEvery})`);
+    return failingClaude(cfg.claude?.model ?? 'claude');
+  }
 
   async function processScan(room: Room, slot: Slot, id: string, png: Uint8Array, size: PngInfo, uploadAt: number) {
     const playerId = slot.player.id;
     hub.toTvAndPlayer(room, playerId, {t: 'scan', playerId, status: 'processing'});
     try {
       const taken = [...room.slots.values()].map(sl => sl.player.sketchling?.name).concat(hall.slice(0, 30).map(h => h.name));
-      const persona = await generatePersona(png, size, cfg.claude, taken.filter((n): n is string => !!n));
+      const persona = await generatePersona(png, size, claudeFor(room), taken.filter((n): n is string => !!n));
       const sketchling: Sketchling = {id, playerId, ...persona, spriteUrl: `/sprites/${id}.png`, width: size.width, height: size.height, artist: slot.player.name, artistAge: slot.player.ageGroup};
       slot.player.sketchling = sketchling;
       hub.toTvAndPlayer(room, playerId, {t: 'sketchling', sketchling});
-      // Playtest KPI: snap-to-reveal on the server side, one line per scan.
+      // Playtest KPI: snap-to-reveal on the server side, one line per scan (and one more when its voices are ready).
       console.log(`[scan] ${playerId} upload->sketchling ${Date.now() - uploadAt} ms source=${sketchling.source}`);
       hub.toTvAndPlayer(room, playerId, {t: 'scan', playerId, status: 'ready'});
       hub.broadcastPlayers(room);
@@ -107,11 +133,12 @@ export function createServer(cfg: ServerConfig) {
       // Audio never holds up the reveal: a second `sketchling` frame (same id) adds `voice` when it's ready.
       void voices?.speak(sketchling).then(voice => {
         if (!voice) return;
-        const voiced = {...sketchling, voice};
-        updateHall(voiced);
-        if (slot.player.sketchling?.id !== id) return; // the player has scanned something new since
-        slot.player.sketchling = voiced;
-        hub.toTvAndPlayer(room, playerId, {t: 'sketchling', sketchling: voiced});
+        console.log(`[scan] ${playerId} upload->voices ${Date.now() - uploadAt} ms lines=${Object.keys(voice).length}`);
+        patchHall(id, {voice});
+        const current = slot.player.sketchling;
+        if (current?.id !== id) return; // the player has scanned something new since
+        slot.player.sketchling = {...current, voice}; // keeps an ability the artist changed meanwhile
+        hub.toTvAndPlayer(room, playerId, {t: 'sketchling', sketchling: slot.player.sketchling});
       });
     } catch (e) {
       console.error('[scan] failed:', e);

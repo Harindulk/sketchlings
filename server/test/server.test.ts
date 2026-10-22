@@ -1,8 +1,12 @@
-import {afterAll, describe, expect, test} from 'bun:test';
-import {mkdirSync, mkdtempSync, writeFileSync} from 'node:fs';
+import {afterAll, describe, expect, spyOn, test} from 'bun:test';
+import {existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import type {Sketchling} from '../../shared/protocol';
+import {ABILITY_LABEL, MOVES} from '../src/ability';
+import type {Claude} from '../src/persona';
+import {ARTIST_FEATURE} from '../src/rooms';
+import type {Tts} from '../src/voice';
 import {drawBlob, encodePng, connect, startTestServer} from './helpers';
 
 const cors = (r: Response) => expect(r.headers.get('access-control-allow-origin')).toBe('*');
@@ -146,6 +150,152 @@ describe('phone app static files', () => {
     expect((await fetch(`${app.http}/assets/missing.js`)).status).toBe(404);
     expect((await fetch(`${app.http}/%2e%2e/%2e%2e/package.json`)).status).toBe(404);
     expect((await fetch(`${app.http}/%E0%A4%A`)).status).toBe(404);
+    app.stop();
+  });
+});
+
+/** A TV and one phone in a fresh room, and a way to scan a drawing for that phone and wait for its creature. */
+async function party(app: ReturnType<typeof startTestServer>, hello: Record<string, unknown> = {}) {
+  const tv = await connect(app.wsUrl);
+  tv.send({t: 'hello', role: 'tv', ...hello});
+  const {code} = await tv.next('room');
+  const mia = await connect(app.wsUrl);
+  mia.send({t: 'hello', role: 'phone', room: code, name: 'Mia'});
+  const {playerId} = await mia.next('joined');
+  const png = encodePng(120, 90, drawBlob(120, 90, [60, 200, 90]));
+  const scan = async (): Promise<Sketchling> => {
+    const res = await fetch(`${app.http}/api/rooms/${code}/players/${playerId}/sketch`, {method: 'POST', body: png});
+    expect(res.status).toBe(202);
+    const sk = (await tv.next('sketchling')).sketchling;
+    await mia.next('sketchling');
+    while ((await tv.next('scan')).status !== 'ready');
+    return sk;
+  };
+  return {tv, mia, code: code as string, playerId: playerId as string, scan, close: () => Promise.all([tv.close(), mia.close()])};
+}
+
+/** Fake Claude that counts calls and answers `{}` (sanitized into a valid persona marked claude). */
+function countingClaude() {
+  const c = {calls: 0, claude: undefined as unknown as Claude};
+  const create = async () => (c.calls++, {stop_reason: 'end_turn', content: [{type: 'text', text: '{}'}]});
+  c.claude = {model: 'test-model', client: {beta: {messages: {create}}}} as unknown as Claude;
+  return c;
+}
+
+describe('consent: AI personas off for a room', () => {
+  test('aiPersonas false -> offline personas, no Claude call, logged once; absent -> Claude as before', async () => {
+    const fake = countingClaude();
+    const app = startTestServer({claude: fake.claude});
+    const log = spyOn(console, 'log');
+    const off = await party(app, {aiPersonas: false});
+    expect((await off.scan()).source).toBe('offline');
+    off.tv.send({t: 'hello', role: 'tv', room: off.code, aiPersonas: false}); // the TV reconnects
+    await off.tv.next('room');
+    expect((await off.scan()).source).toBe('offline');
+    expect(fake.calls).toBe(0);
+    expect(log.mock.calls.map(c => String(c[0])).filter(l => l.startsWith('[consent]'))).toEqual([`[consent] room ${off.code}: AI personas off, no drawing from this room goes to Claude`]);
+    log.mockRestore();
+
+    const on = await party(app); // today's TV: no flag
+    expect((await on.scan()).source).toBe('claude');
+    expect(fake.calls).toBe(1);
+    await Promise.all([off.close(), on.close()]);
+    app.stop();
+  });
+});
+
+describe('failure injection (SKETCHLINGS_FAIL_EVERY)', () => {
+  test('every Nth persona call fails into the offline fallback, and says so', async () => {
+    const fake = countingClaude();
+    const app = startTestServer({claude: fake.claude, failEvery: 2});
+    const warn = spyOn(console, 'warn');
+    const p = await party(app);
+    const sources = [];
+    for (let i = 0; i < 4; i++) sources.push((await p.scan()).source);
+    expect(sources).toEqual(['claude', 'offline', 'claude', 'offline']);
+    expect(fake.calls).toBe(2);
+    const lines = warn.mock.calls.map(c => String(c[0]));
+    expect(lines.filter(l => l.includes('injected failure on call'))).toEqual(['[persona] injected failure on call 2 (SKETCHLINGS_FAIL_EVERY=2)', '[persona] injected failure on call 4 (SKETCHLINGS_FAIL_EVERY=2)']);
+    expect(lines.filter(l => l.includes('using offline persona'))).toHaveLength(2); // the real fallback path ran
+    warn.mockRestore();
+    await p.close();
+    app.stop();
+  });
+});
+
+describe('the artist changes the ability', () => {
+  const app = startTestServer();
+  afterAll(() => app.stop());
+
+  test('before the race: validated, marked as the artist\'s, original kept, sent to TV + phone, saved in the hall', async () => {
+    const p = await party(app);
+    p.mia.send({t: 'ability', kind: 'fly'});
+    expect((await p.mia.next('error')).message).toBe('Scan a drawing first.');
+    const sk = await p.scan();
+    const other = MOVES.find(k => k !== sk.move)!;
+    const original = {kind: sk.ability.kind, feature: sk.ability.feature};
+
+    p.mia.send({t: 'ability', kind: other});
+    const changed = (await p.tv.next('sketchling')).sketchling;
+    expect(changed).toEqual({...sk, move: other, ability: {kind: other, feature: ARTIST_FEATURE, label: ABILITY_LABEL[other], chosenBy: 'artist', original}});
+    expect((await p.mia.next('sketchling')).sketchling).toEqual(changed);
+    expect(((await (await fetch(`${app.http}/api/hall-of-fame`)).json()) as Sketchling[])[0]).toEqual(changed);
+
+    p.mia.send({t: 'ability', kind: sk.move}); // back to the drawing's pick: the drawing's ability, not the artist's
+    expect((await p.tv.next('sketchling')).sketchling.ability).toEqual(sk.ability);
+    await p.mia.next('sketchling');
+
+    p.mia.send({t: 'ability', kind: 'swim'});
+    expect((await p.mia.next('error')).code).toBe('bad_message');
+    p.tv.send({t: 'ability', kind: other});
+    expect((await p.tv.next('error')).code).toBe('bad_message');
+    p.tv.send({t: 'phase', phase: 'race'});
+    await p.mia.next('phase');
+    p.mia.send({t: 'ability', kind: other});
+    expect((await p.mia.next('error')).message).toBe('Abilities can only change before the race.');
+    expect(app.hub.rooms.get(p.code)!.slots.get(p.playerId)!.player.sketchling!.move).toBe(sk.move);
+    await p.close();
+  });
+});
+
+describe('clear Hall of Fame', () => {
+  test('the TV deletes hall entries, sprites and voice clips (temporary data dir only); scan logs give both timings', async () => {
+    const dataDir = mkdtempSync(join(tmpdir(), 'sketchlings-clear-'));
+    expect(dataDir.startsWith(tmpdir())).toBe(true); // never the real server/data
+    writeFileSync(join(dataDir, 'hall.json.bad-1'), '[{"artist":"Mia"}]'); // an old unreadable copy holds names too
+    const fakeTts: Tts = {clip: async (_text, _v, out) => (writeFileSync(out, 'm4a'), 1000)};
+    const app = startTestServer({dataDir, tts: async () => fakeTts});
+    const log = spyOn(console, 'log');
+    const p = await party(app);
+    const sk = await p.scan();
+    const voiced = (await p.tv.next('sketchling')).sketchling as Sketchling;
+    expect(voiced.voice?.intro).toBe(`/voice/${sk.id}/intro.m4a`);
+    const scanLines = log.mock.calls.map(c => String(c[0])).filter(l => l.startsWith(`[scan] ${p.playerId}`));
+    expect(scanLines).toHaveLength(2);
+    expect(scanLines[0]).toMatch(/ upload->sketchling \d+ ms source=offline$/);
+    expect(scanLines[1]).toMatch(/ upload->voices \d+ ms lines=3$/);
+    log.mockRestore();
+    expect(existsSync(join(dataDir, 'sprites', `${sk.id}.png`))).toBe(true);
+    expect(readdirSync(join(dataDir, 'voice', 'cache')).length).toBeGreaterThan(0);
+    const orphan = join(dataDir, 'sprites', `${crypto.randomUUID()}.png`); // a failed scan's drawing: no hall entry
+    writeFileSync(orphan, 'png');
+
+    p.mia.send({t: 'clearHall'}); // phones can't
+    expect((await p.mia.next('error')).code).toBe('bad_message');
+    p.tv.send({t: 'clearHall'});
+    expect(await p.tv.next('hallCleared')).toEqual({t: 'hallCleared', removed: 1});
+    expect(await (await fetch(`${app.http}/api/hall-of-fame`)).json()).toEqual([]);
+    expect(JSON.parse(readFileSync(join(dataDir, 'hall.json'), 'utf8'))).toEqual([]);
+    expect((await fetch(app.http + sk.spriteUrl)).status).toBe(404);
+    expect((await fetch(app.http + voiced.voice!.intro!)).status).toBe(404);
+    expect(existsSync(join(dataDir, 'voice', sk.id))).toBe(false);
+    expect(readdirSync(join(dataDir, 'voice', 'cache'))).toEqual([]); // still there for new clips
+    expect(existsSync(join(dataDir, 'hall.json.bad-1'))).toBe(false);
+    expect(existsSync(orphan)).toBe(false);
+
+    expect((await p.scan()).source).toBe('offline'); // the party carries on
+    expect(((await (await fetch(`${app.http}/api/hall-of-fame`)).json()) as Sketchling[])).toHaveLength(1);
+    await p.close();
     app.stop();
   });
 });

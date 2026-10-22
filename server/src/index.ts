@@ -5,6 +5,7 @@ import {kokoro} from './voice';
 
 const env = process.env;
 const tts = kokoro(join(import.meta.dir, '../models'));
+const failEvery = Math.floor(Number(env.SKETCHLINGS_FAIL_EVERY));
 const claude = makeClaude({apiKey: env.ANTHROPIC_API_KEY, model: env.SKETCHLINGS_MODEL, baseURL: env.SKETCHLINGS_ANTHROPIC_BASE_URL, workspaceId: env.ANTHROPIC_WORKSPACE_ID});
 const {server, joinBase} = createServer({
   port: Number(env.PORT) || 8787,
@@ -14,9 +15,11 @@ const {server, joinBase} = createServer({
   publicUrl: env.PUBLIC_URL,
   claude,
   tts,
+  failEvery: failEvery >= 1 ? failEvery : undefined,
 });
 
 console.log(`Sketchlings server on http://0.0.0.0:${server.port}  (ws: /ws)`);
 console.log(`Phones join at ${joinBase()}/j/<CODE>`);
 console.log(claude ? `Personas: Claude (${claude.model}), offline fallback on any error` : 'Personas: offline generator (no ANTHROPIC_API_KEY in server/.env)');
+if (failEvery >= 1) console.log(`Failure injection: 1 in every ${failEvery} persona calls fails on purpose (SKETCHLINGS_FAIL_EVERY)`);
 void tts().then(t => t && console.log('Voices: Kokoro-82M on this Mac, clips at /voice/<id>/<line>.m4a'));

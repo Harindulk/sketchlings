@@ -2,6 +2,7 @@ import {mkdtempSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {deflateSync} from 'node:zlib';
+import type {Claude} from '../src/persona';
 import {createServer} from '../src/server';
 import type {Tts} from '../src/voice';
 
@@ -96,7 +97,7 @@ export async function connect(url: string) {
   };
 }
 
-export function startTestServer(opts: {dataDir?: string; phoneDist?: string; tts?: () => Promise<Tts | null>; ghostGraceMs?: number} = {}) {
+export function startTestServer(opts: {dataDir?: string; phoneDist?: string; tts?: () => Promise<Tts | null>; ghostGraceMs?: number; claude?: Claude; failEvery?: number} = {}) {
   const dataDir = opts.dataDir ?? mkdtempSync(join(tmpdir(), 'sketchlings-'));
   const app = createServer({
     port: 0,
@@ -104,9 +105,10 @@ export function startTestServer(opts: {dataDir?: string; phoneDist?: string; tts
     dataDir,
     phoneDist: opts.phoneDist ?? join(dataDir, 'no-phone-dist'),
     publicUrl: 'http://test.local:8787',
-    claude: null, // never call the API from tests, even if server/.env has a key
+    claude: opts.claude ?? null, // never the real API from tests, even if server/.env has a key: only a fake a test passes
     tts: opts.tts, // voices stay off unless a test asks
     ghostGraceMs: opts.ghostGraceMs,
+    failEvery: opts.failEvery,
   });
   return {...app, dataDir, wsUrl: `ws://127.0.0.1:${app.server.port}/ws`, http: `http://127.0.0.1:${app.server.port}`};
 }

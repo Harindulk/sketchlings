@@ -122,6 +122,29 @@ export function cleanText(v: unknown, words: number, chars: number): string | nu
   return s || null;
 }
 
+// Backstop behind the kind-only prompt: words that never suit ages 4-10, in any model-written text.
+// Whole words only (plus a plural s), so "skill", "warm" or "dumbbell" pass; game words (run, jump, roar, zoom, blast, splash) are not listed.
+// shortcut: a fixed English list misses misspellings and other languages; add a moderation model if players ever type this text.
+const UNSAFE_WORDS = [
+  'kill killed killer killing murder dead death die died dying blood bloody gore corpse stab stabbed destroy war', // violence, gore, death
+  'gun knife knives sword bomb bullet rifle pistol grenade weapon', // weapons
+  'sex sexy naked nude porn boob', // sexual
+  'drug beer wine vodka whisky whiskey booze drunk alcohol cocaine cigarette', // drugs and alcohol
+  'stupid ugly dumb fat idiot loser moron hate', // insults and body-shaming
+].join(' ');
+// Brands and characters: kept out of model text, but not out of players' names (Elsa, Mario and Mickey are real names).
+const BRANDS = 'disney pixar marvel pokemon pokémon pikachu mickey elsa spiderman spider-man batman superman mario sonic barbie lego minecraft fortnite roblox peppa bluey nintendo mcdonald coca-cola';
+const wordsRe = (words: string) => new RegExp(`\\b(?:${words.replace(/ /g, '|')})s?\\b`, 'i');
+const UNSAFE = wordsRe(`${UNSAFE_WORDS} ${BRANDS}`);
+export const UNSAFE_NAME = wordsRe(UNSAFE_WORDS); // players' first names (rooms.ts cleanName)
+
+/** `s`, or null (logged) when it holds an unsuitable word, so the caller's fallback takes over. */
+function kidSafe(field: string, s: string | null): string | null {
+  if (!s || !UNSAFE.test(s)) return s;
+  console.warn(`[persona] unsafe word in ${field} -> offline`);
+  return null;
+}
+
 const LIMITS = {
   name: [4, 24],
   title: [5, 32],
@@ -136,7 +159,7 @@ export function sanitizePersona(raw: unknown, fallback: Persona): Omit<Persona, 
   const o = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
   const text = {} as Record<keyof typeof LIMITS, string>;
   for (const [k, [w, c]] of Object.entries(LIMITS) as [keyof typeof LIMITS, readonly [number, number]][]) {
-    text[k] = cleanText(o[k], w, c) ?? fallback[k];
+    text[k] = kidSafe(k, cleanText(o[k], w, c)) ?? fallback[k];
   }
   const st = (o.stats && typeof o.stats === 'object' ? o.stats : {}) as Record<string, unknown>;
   const num = (v: unknown, d: number) => (typeof v === 'number' && Number.isFinite(v) ? v : typeof v === 'string' && v.trim() && Number.isFinite(+v) ? +v : d);
@@ -149,7 +172,7 @@ export function sanitizePersona(raw: unknown, fallback: Persona): Omit<Persona, 
   const modelMove = MOVES.includes(o.move as MoveStyle) ? (o.move as MoveStyle) : null;
   const move = modelMove ?? fallback.move;
   const ab = (o.ability && typeof o.ability === 'object' ? o.ability : {}) as Record<string, unknown>;
-  const ability = modelMove ? abilityFor(move, cleanText(ab.feature, 4, 28) ?? GENERIC_FEATURE[move]) : fallback.ability;
+  const ability = modelMove ? abilityFor(move, kidSafe('ability', cleanText(ab.feature, 4, 28)) ?? GENERIC_FEATURE[move]) : fallback.ability;
   const colors = Array.isArray(o.colors)
     ? [...new Set(o.colors.filter((c): c is string => typeof c === 'string' && /^#[0-9a-f]{6}$/i.test(c.trim())).map(c => c.trim().toLowerCase()))].slice(0, 3)
     : [];

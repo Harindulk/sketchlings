@@ -1,4 +1,4 @@
-import {afterAll, describe, expect, test} from 'bun:test';
+import {afterAll, describe, expect, setSystemTime, spyOn, test} from 'bun:test';
 import {MAX_PLAYERS, PLAYER_COLORS} from '../../shared/protocol';
 import {CODE_ALPHABET, cleanName, parseClientMsg} from '../src/rooms';
 import {connect, startTestServer} from './helpers';
@@ -22,6 +22,15 @@ describe('frame validation', () => {
     expect(parseClientMsg('{"t":"input","kind":"shout","at":5}')).toEqual({t: 'input', kind: 'shout', at: 5});
     expect(parseClientMsg('{"t":"phase","phase":"race","data":{"track":2}}')).toEqual({t: 'phase', phase: 'race', data: {track: 2}});
     expect(parseClientMsg('{"t":"input","kind":"jump","at":123.5,"extra":1}')).toEqual({t: 'input', kind: 'jump', at: 123.5});
+    // optional additions; frames without them parse as before
+    expect(parseClientMsg('{"t":"hello","role":"tv","aiPersonas":false}')).toEqual({t: 'hello', role: 'tv', room: undefined, aiPersonas: false});
+    expect(parseClientMsg('{"t":"hello","role":"tv","room":"BCDF","aiPersonas":true}')).toEqual({t: 'hello', role: 'tv', room: 'BCDF', aiPersonas: true});
+    expect(parseClientMsg('{"t":"ping","rtt":41.5}')).toEqual({t: 'ping'}); // an old phone's rtt is ignored, still a ping
+    const key = 'k'.repeat(16);
+    expect(parseClientMsg(JSON.stringify({t: 'hello', role: 'phone', room: 'BCDF', name: 'Mia', key}))).toMatchObject({key});
+    for (const bad of ['short', 'k'.repeat(65), 5]) expect(typeof parseClientMsg(JSON.stringify({t: 'hello', role: 'phone', room: 'BCDF', name: 'Mia', key: bad}))).toBe('string');
+    expect(parseClientMsg('{"t":"ability","kind":"fly"}')).toEqual({t: 'ability', kind: 'fly'});
+    expect(parseClientMsg('{"t":"clearHall"}')).toEqual({t: 'clearHall'});
   });
 
   test('rejects malformed frames with a reason', () => {
@@ -45,15 +54,46 @@ describe('frame validation', () => {
       '{"t":"hello","role":"phone","room":"BCDF","name":"A","ageGroup":7}',
       '{"t":"input","kind":"tap"}',
       '{"t":"input","kind":"tap","at":"now"}',
+      '{"t":"hello","role":"tv","aiPersonas":"no"}',
+      '{"t":"ability"}',
+      '{"t":"ability","kind":"swim"}',
     ]) {
       expect(typeof parseClientMsg(bad)).toBe('string');
     }
     expect(typeof parseClientMsg(Buffer.from('{"t":"ping"}'))).toBe('string');
   });
 
-  test('cleans player names', () => {
-    expect(cleanName('  Mia\n\u0000 <b>Rose</b> the Great Explorer ')).toBe('Mia bRose/b the');
-    expect(cleanName(' ​ ')).toBe('');
+  test('cleans player names: first word, letters only, at most 12, word guard, "Artist" fallback', () => {
+    const cases: [string, string][] = [
+      ['  Mia\n\u0000 <b>Rose</b> the Great Explorer ', 'Mia'],
+      ['mia rose', 'mia'],
+      ['Anne-Marie', 'Anne-Marie'],
+      ["O'Neil", "O'Neil"],
+      ['D’Andre', 'D’Andre'],
+      ['Zoe\u0308', 'Zoë'], // combining mark -> one letter
+      ['සුනිල්', 'සුනිල්'], // Sinhala keeps its vowel signs
+      ['\u0DC1\u0DCA\u200D\u0DBB\u0DD2\u0DBA\u0DCF\u0DB1\u0DD2', 'ශ්‍රියානි'], // and the ZWJ that joins ශ්‍ර
+      ['க்\u200Cஷமா', 'க்\u200Cஷமா'], // an inner ZWNJ stays too
+      ['\u200DMia\u200C \u200DLeo', 'Mia'], // joiners at a word's edge go
+      ['Mi\u200Ba\u2066\u00AD', 'Mia'], // other format characters still go
+      ['Maximilianu\u200Ds', 'Maximilianu'], // the cut at 12 leaves no dangling joiner
+      ['Ki\u200Dll', 'Artist'], // a joiner can't hide a word from the guard
+      ['小龙', '小龙'],
+      ['Mia2', 'Mia'],
+      ['-Mia-', 'Mia'],
+      ['Maximilianus', 'Maximilianus'], // exactly 12
+      ['Bartholomew-James', 'Bartholomew'], // cut at 12, no dangling hyphen
+      ['Killian', 'Killian'], // whole words only
+      ['Elsa', 'Elsa'], // brand and character words guard personas, not real first names
+      ['Mario', 'Mario'],
+      ['Stupid', 'Artist'],
+      ['KILL', 'Artist'],
+      ['123', 'Artist'],
+      ['🦄', 'Artist'],
+      ['<3', 'Artist'],
+    ];
+    for (const [raw, want] of cases) expect([raw, cleanName(raw)]).toEqual([raw, want]);
+    for (const blank of [' ​ ', '', ' \n ', '\u0000', ' \u200D\u200C ']) expect(cleanName(blank)).toBe(''); // blank stays a "type your name" error
   });
 });
 
@@ -101,6 +141,90 @@ describe('rooms over WebSocket', () => {
     mia.send({t: 'ping'});
     expect(await mia.next('pong')).toEqual({t: 'pong'});
     await Promise.all([tv.close(), mia.close(), leo.close()]);
+  });
+
+  test('logs each player\'s Wi-Fi round trip once per race (median/p90 of the server\'s WebSocket pings)', async () => {
+    const log = spyOn(console, 'log');
+    const {tv, code} = await tvAndRoom();
+    const mia = await phone(code, 'Mia');
+    await mia.next('joined');
+    const leo = await phone(code, 'Leo');
+    await leo.next('joined');
+    const net = () => log.mock.calls.map(c => String(c[0])).filter(l => l.startsWith('[net]'));
+    const slots = () => [...app.hub.rooms.get(code)!.slots.values()];
+    tv.send({t: 'phase', phase: 'race'}); // the first ping goes out at once; the clients answer it themselves
+    await mia.next('phase');
+    for (let i = 0; i < 40 && !slots().every(s => s.rtt?.length); i++) await Bun.sleep(25);
+    tv.send({t: 'phase', phase: 'results'});
+    await mia.next('phase');
+    expect(net()).toHaveLength(1);
+    expect(net()[0]).toMatch(/^\[net\] race rtt ms \(median\/p90\): Mia \d+\/\d+ n=1, Leo \d+\/\d+ n=1$/);
+    await Bun.sleep(50);
+    expect(net()).toHaveLength(1); // no pings outside a race
+    log.mockRestore();
+    await Promise.all([tv.close(), mia.close(), leo.close()]);
+  });
+
+  test('logs each player\'s inputs once per race: taps/s with a hold as 4 a second, hold time, jumps, roars', async () => {
+    const log = spyOn(console, 'log');
+    const {tv, code} = await tvAndRoom();
+    const mia = await phone(code, 'Mia', undefined, 'little');
+    await mia.next('joined');
+    const dad = await phone(code, 'Dad', undefined, 'grownup');
+    await dad.next('joined');
+    const race = () => log.mock.calls.map(c => String(c[0])).filter(l => l.startsWith('[race]'));
+    const input = async (p: typeof mia, kind: string) => {
+      p.send({t: 'input', kind, at: 0});
+      await tv.next('input'); // relayed, so the server has counted it
+    };
+    const t0 = Date.now();
+    try {
+      await input(mia, 'tap'); // before the race: not counted
+      tv.send({t: 'phase', phase: 'race'});
+      await mia.next('phase');
+      for (let i = 0; i < 3; i++) await input(mia, 'tap');
+      await input(mia, 'jump');
+      await input(mia, 'shout');
+      setSystemTime(t0 + 1000);
+      await input(mia, 'hold');
+      setSystemTime(t0 + 1500);
+      await input(mia, 'hold'); // the phone repeats it every 0.5 s
+      setSystemTime(t0 + 3000);
+      await input(mia, 'release');
+      await input(dad, 'tap');
+      await input(dad, 'tap');
+      await input(dad, 'shout');
+      setSystemTime(t0 + 5000);
+      await input(dad, 'hold'); // still holding when the race ends
+      setSystemTime(t0 + 10_000);
+      tv.send({t: 'phase', phase: 'results'});
+      await mia.next('phase');
+      expect(race()).toEqual([
+        '[race] inputs over 10.0s: Mia little taps/s 1.1 hold 2.0s jumps 1 roars 1; Dad grownup taps/s 2.2 hold 5.0s jumps 0 roars 1',
+      ]);
+      await input(dad, 'tap'); // after the race: not counted, nothing more logged
+      expect(race()).toHaveLength(1);
+    } finally {
+      setSystemTime();
+      log.mockRestore();
+    }
+    await Promise.all([tv.close(), mia.close(), dad.close()]);
+  });
+
+  test('a known playerId takes its player back only with the key the player joined with', async () => {
+    const {tv, code} = await tvAndRoom();
+    const key = crypto.randomUUID();
+    const mia = await connect(app.wsUrl);
+    mia.send({t: 'hello', role: 'phone', room: code, name: 'Mia', key});
+    const {playerId} = await mia.next('joined');
+    await mia.close(); // Mia's phone drops; she has the id and the key, the thief only the id
+    const thief = await connect(app.wsUrl);
+    thief.send({t: 'hello', role: 'phone', room: code, name: 'x', playerId}); // the id from a players frame, no key
+    expect((await thief.next('joined')).playerId).not.toBe(playerId);
+    const back = await connect(app.wsUrl);
+    back.send({t: 'hello', role: 'phone', room: code, name: 'Mia', playerId, key});
+    expect((await back.next('joined')).playerId).toBe(playerId);
+    await Promise.all([tv.close(), thief.close(), back.close()]);
   });
 
   test('relays input to the TV and phase to the phones', async () => {

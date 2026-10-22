@@ -30,19 +30,46 @@ Listens on `0.0.0.0:8787`. The Vega Virtual Device reaches it at `http://10.0.2.
 | `PORT` | `8787` | Listen port (the TV and phones expect 8787). |
 | `PUBLIC_URL` | `http://<first LAN IPv4>:8787` | Base of the `joinUrl` in the QR code. |
 | `SKETCHLINGS_ANTHROPIC_BASE_URL` | `https://api.anthropic.com` | API endpoint. The shell's `ANTHROPIC_BASE_URL` is deliberately ignored. |
+| `SKETCHLINGS_FAIL_EVERY` | empty | Soak tests only: every Nth persona call fails on purpose, so the offline fallback runs (logged). |
 
 ## WebSocket `ws://<host>:8787/ws`
 
 JSON frames with a `t` field, exactly as in `shared/protocol.ts`.
 
-- TV: `hello {role:'tv', room?}` gets `room {code, joinUrl}` and `players`. With `room` it rejoins that room; if the
+- TV: `hello {role:'tv', room?, aiPersonas?}` gets `room {code, joinUrl}` and `players`. With `room` it rejoins that room; if the
   server restarted, the room is recreated under the same code (players then rejoin as new players).
-- Phone: `hello {role:'phone', room, name, ageGroup, playerId?}` gets `joined`, then the last `phase` frame if the TV
+  `aiPersonas: false` (the grown-ups' consent) means no drawing from that room goes to Claude: every upload gets the
+  offline persona, logged once as `[consent] room <code>: AI personas off`. Absent = on; send it in every hello, because a
+  server restart recreates the room with it on.
+- Phone: `hello {role:'phone', room, name, ageGroup, playerId?, key?}` gets `joined`, then the last `phase` frame if the TV
   sent one. `ageGroup` is `little|big|grownup`; if omitted it defaults to `big`, any other value is rejected.
   A known `playerId` reconnects to the same player (name, age group, colour, sketchling); an unknown one joins as a
   new player, so always store the `playerId` from `joined`. `players` frames carry each player's `ageGroup`.
+  `players` frames also carry every `playerId`, so a phone should make a random `key` (16-64 characters) once and send
+  it in every hello: a player who joined with a key is only taken back by a hello with the same key (otherwise that
+  hello joins as a new player). A player who joined without one can be taken over by any phone that knows the id.
 - Relay: phone `input` (`tap|jump|hold|release|shout`) goes to the TV as `{t:'input', playerId, kind, at}`; TV `phase` goes to every phone.
   `players` goes to the TV and all phones on any join, leave, reconnect or new sketchling. `ping` gets `pong`.
+- Names: the server keeps the first word of a phone's `name`, letters only (plus an inner `-`, `'`, ZWNJ or ZWJ, which
+  Sinhala and Tamil names need, e.g. ශ්‍රියානි), at most 12, through the persona word guard; anything unusable becomes
+  `Artist`. A blank name is still an error.
+- Wi-Fi latency: during a race the server sends each phone a WebSocket ping (a control frame the browser answers by
+  itself) at the start and every 2 s, keeps the round trips per player and logs one line when the race ends:
+  `[net] race rtt ms (median/p90): Mia 41/88 n=5, Leo 35/60 n=2`. Phones need no code for it.
+- Tap rates: the server also counts each player's inputs while the TV is in `race` and logs one line when it leaves:
+  `[race] inputs over 41.3s: Mia little taps/s 3.8 hold 2.1s jumps 9 roars 3; Dad grownup taps/s 6.2 hold 0.0s jumps 12 roars 5`.
+  Name, age group, then taps a second over the whole race, including the 3-2-1 and any time after that player finished
+  (a hold counts as 4 taps a second, as on the TV), hold time, jumps, and roars (every `shout`: ROAR button or mic).
+  Players who sent nothing are left out. Compare with the assumed rates in docs/FAIRNESS.md (little kids 4 taps/s).
+- Ability change: phone `ability {kind}` in phase lobby, draw or reveal changes that player's creature to `kind`
+  (`move` too) with `chosenBy: 'artist'` and the drawing's pick in `ability.original`; `feature` becomes
+  "artist's pick"; going back to the original kind restores the drawing's ability with no chosenBy. It goes out as the usual
+  `sketchling` frame (same id) plus `players`, and the hall-of-fame entry is updated. In race or results: an error.
+- Clear Hall of Fame: TV `clearHall` deletes every hall entry and every sprite and voice clip in server/data (plus the
+  voice cache and any `hall.json.bad-*` copies) and answers `hallCleared {removed}`. Rooms keep their players, but their
+  creatures' pictures and clips are gone, so offer it outside a party. If a delete fails, the hall is already empty on
+  disk and the TV gets a `bad_message` error to try again. The server cannot tell a TV from any other client on the
+  Wi-Fi: the TV's parent gate is the only guard, for this and for `aiPersonas`.
 - Every bad frame gets `{t:'error', code:'bad_message'|'no_room'|'room_full', message}`; the socket stays open.
   Max frame size 64 KB. Room codes are 4 letters with no vowels and no I/L/O/Q.
 
@@ -86,8 +113,12 @@ decides: tall with two thin lower protrusions = hop ("long legs"), wide with a f
 fly ("wide wings"), near-circular = roll ("round body"), else walk ("big strong body"). Hall-of-fame entries saved
 before abilities existed get one from their `move` when the server loads them.
 
-Data lives in `server/data/` (git-ignored): `sprites/<id>.png` and `hall.json`. Sprites that drop out of the
-hall of fame are deleted.
+Data lives in `server/data/` (git-ignored): `sprites/<id>.png`, `voice/` and `hall.json`. Every scan becomes a
+hall-of-fame entry. Sprites that drop out of the hall of fame are deleted. The TV stores nothing: it fetches the
+hall from the server each time, and its "Race again" picks live only in memory.
+
+The scan log gives the full server-side chain per scan: `[scan] <playerId> upload->sketchling <ms> ms source=...`
+(persona ready) and `[scan] <playerId> upload->voices <ms> ms lines=<n>` (voice clips ready).
 
 ## Creature voices
 

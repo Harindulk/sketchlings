@@ -1,4 +1,4 @@
-import {describe, expect, test} from 'bun:test';
+import {describe, expect, spyOn, test} from 'bun:test';
 import type {Sketchling} from '../../shared/protocol';
 import {ABILITY_LABEL, GENERIC_FEATURE} from '../src/ability';
 import {analyze, balanceStats, generatePersona, offlinePersona, sanitizePersona, type Claude, type Persona} from '../src/persona';
@@ -145,6 +145,68 @@ describe('persona validation', () => {
     expect(sanitizePersona({eyes: [], drewEyes: false}, fallback)).toMatchObject({eyes: [], ownEyes: false});
     expect(sanitizePersona({eyes: [], drewEyes: 'yes'}, fallback).ownEyes).toBe(true);
     expect(sanitizePersona({eyes: []}, fallback).ownEyes).toBe(false);
+  });
+});
+
+describe('kid-safety guard', () => {
+  const fallback = persona(png(60, 60, [120, 60, 200]));
+  const warnings = (fn: () => void) => {
+    const spy = spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      fn();
+      return spy.mock.calls.map(c => String(c[0]));
+    } finally {
+      spy.mockRestore();
+    }
+  };
+
+  test('an unsuitable word in any text field gives that field the fallback and logs it', () => {
+    let p!: ReturnType<typeof sanitizePersona>;
+    const logs = warnings(() => {
+      p = sanitizePersona(
+        {
+          name: 'Captain Killer',
+          title: 'the Bloody Potato',
+          personality: 'Loves drinking BEER all day.',
+          catchphrase: 'You are so Stupid!',
+          intro: 'Here comes Spider-Man, ready to race!',
+          winLine: 'Ha, you are all losers!',
+          move: 'fly',
+          ability: {feature: 'big gun arms'},
+        },
+        fallback,
+      );
+    });
+    for (const k of ['name', 'title', 'personality', 'catchphrase', 'intro', 'winLine'] as const) expect(p[k]).toBe(fallback[k]);
+    expect(p.ability).toEqual({kind: 'fly', feature: GENERIC_FEATURE.fly, label: ABILITY_LABEL.fly});
+    expect(logs).toContain('[persona] unsafe word in catchphrase -> offline');
+    expect(logs).toContain('[persona] unsafe word in ability -> offline');
+    expect(logs.length).toBe(7);
+  });
+
+  test('game words and words that only contain a listed word pass', () => {
+    const raw = {
+      name: 'Skill Zoomer',
+      title: 'the Warm Blaster',
+      personality: 'Loves to run, jump and splash in puddles.',
+      catchphrase: 'Roar! Zoom! Blast off!',
+      intro: 'Here comes Skill Zoomer, the most skillful racer!',
+      winLine: 'What a jump, high fives everyone!',
+      move: 'walk',
+      ability: {feature: 'dumbbell arms'},
+    };
+    let p!: ReturnType<typeof sanitizePersona>;
+    expect(warnings(() => (p = sanitizePersona(raw, fallback)))).toEqual([]);
+    expect(p).toMatchObject({...raw, ability: {feature: 'dumbbell arms'}});
+  });
+
+  test('the offline generator never trips it', () => {
+    const logs = warnings(() => {
+      for (let seed = 1; seed < 3000; seed++) {
+        offlinePersona({seed, colors: ['#123456'], family: (['red', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink', 'brown', 'ink'] as const)[seed % 9]!, aspect: (seed % 40) / 10 + 0.1, ink: 0.3, eyes: [], ownEyes: false, kind: (['walk', 'hop', 'fly', 'roll'] as const)[seed % 4]!});
+      }
+    });
+    expect(logs).toEqual([]);
   });
 });
 
