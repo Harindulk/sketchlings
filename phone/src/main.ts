@@ -350,6 +350,10 @@ function joinView(): View {
 }
 
 function connectingView(): View {
+  // The commonest real failure is a phone on mobile data or the guest network: say so after a while.
+  const hint = h('p', {class: 'card note', role: 'alert'}, "Can't reach the TV. Is this phone on the same Wi-Fi?");
+  hint.hidden = true;
+  setTimeout(() => (hint.hidden = false), 10_000);
   return {
     el: h(
       'section',
@@ -358,6 +362,7 @@ function connectingView(): View {
       svg(mascot(S.color), 'mascot'),
       title('Finding your party...'),
       h('p', {class: 'note'}, `Room ${S.room}`),
+      hint,
       h(
         'button',
         {
@@ -506,6 +511,8 @@ function scanIntroView(): View {
       {class: 'screen'},
       // 'Draw a new one' is one tap from the waiting card: give a way back that doesn't need a new photo.
       keep ? h('button', {type: 'button', class: 'link-btn', onclick: () => ((S.redraw = false), render())}, `Keep ${keep.name}`) : null,
+      // A mis-tap on Retake shouldn't cost the cut-out: it is still in memory until the next photo.
+      !keep && S.sprite ? h('button', {type: 'button', class: 'link-btn', onclick: () => ((S.step = 'preview'), render())}, 'Back to my drawing') : null,
       photoLost
         ? h('p', {class: 'card note', role: 'alert'}, 'Your phone needed its memory back, so the photo got lost. Close other apps and try again, or take the photo with the Camera app and use "Pick a photo you took".')
         : null,
@@ -519,7 +526,7 @@ function scanIntroView(): View {
       file,
       library,
       snap,
-      h('div', {class: 'stack center', style: 'gap:0'}, pickBtn, h('button', {type: 'button', class: 'link-btn', onclick: () => ((S.step = 'pad'), render())}, 'Draw on screen instead')),
+      h('div', {class: 'stack center', style: 'gap:8px'}, pickBtn, h('button', {type: 'button', class: 'link-btn', onclick: () => ((S.step = 'pad'), render())}, 'Draw on screen instead')),
       h(
         'ul',
         {class: 'tips'},
@@ -714,7 +721,7 @@ function cardView(): View {
     h('button', {type: 'button', class: 'age', onclick: () => pickAbility(kind)}, h('span', {'aria-hidden': 'true'}, ABILITY_EMOJI[kind]), h('small', null, MOVES[kind])),
   );
   const oops = h('p', {class: 'note', role: 'alert'});
-  const picker = h('div', {class: 'stack center'}, h('p', {class: 'note'}, 'Want a different power? Tap one!'), h('div', {class: 'powers', role: 'group', 'aria-label': 'Powers'}, ...buttons), oops);
+  const picker = h('div', {class: 'stack center', style: 'margin-top:12px'}, h('p', {class: 'note'}, 'Want a different power? Tap one!'), h('div', {class: 'powers', role: 'group', 'aria-label': 'Powers'}, ...buttons), oops);
   const update = () => {
     const text = S.phase === 'draw' ? 'Ready! Waiting for the others...' : S.phase === 'reveal' ? 'Look at the TV!' : '';
     banner.textContent = text;
@@ -747,11 +754,11 @@ function cardView(): View {
         h('p', {class: 'char-title'}, sk.title),
         // Why it plays the way it does.
         sk.ability ? ability : h('span', {class: 'tag'}, MOVES[sk.move] ?? sk.move),
+        picker, // right under the ability, so a small screen shows it without scrolling
         h('div', {class: 'stats'}, stat('Speed', sk.stats.speed, 0), stat('Jump', sk.stats.jump, 1), stat('Power', sk.stats.power, 2)),
         h('p', {class: 'bubble'}, `"${sk.catchphrase}"`),
         h('p', {class: 'byline'}, `Drawn by ${sk.artist || S.name}`),
       ),
-      picker,
       h('div', {class: 'center stack', style: 'gap:0'}, redraw),
     ),
     update,

@@ -375,7 +375,7 @@ input {
 
 .ages {
   display: grid;
-  gap: 10px;
+  gap: 16px; /* the tilted buttons need it: at 10px they sat 2-6 px apart */
 }
 
 .age {
@@ -524,6 +524,15 @@ input {
   .illo {
     max-width: 170px;
   }
+
+  /* Keep "Bring it to life!" on screen on a 360x640 phone. */
+  .checker {
+    min-height: 220px;
+  }
+
+  .sprite {
+    max-height: 220px;
+  }
 }
 
 .illo .draw-on {
@@ -653,13 +662,13 @@ input {
 .swatches {
   display: flex;
   flex-wrap: wrap;
-  gap: 7px;
+  gap: 10px;
   justify-content: center;
 }
 
 .swatches button {
-  width: 38px;
-  height: 38px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
   border: 3px solid var(--ink);
   background: var(--c);
@@ -725,6 +734,16 @@ input {
   max-width: 82%;
   max-height: 196px;
   animation: hop 1.4s ease-in-out infinite;
+}
+
+/* Short phones: a smaller picture keeps the power picker on screen. */
+@media (max-height: 760px) {
+  .char-card .art {
+    height: 150px;
+  }
+  .char-card .art img {
+    max-height: 140px;
+  }
 }
 
 .char-name {
@@ -839,7 +858,7 @@ input {
 .powers {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
+  gap: 12px;
   width: 100%;
 }
 
