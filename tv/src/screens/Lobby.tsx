@@ -151,7 +151,9 @@ export function Lobby({mode, state, onStart, onDemo, leaving}: Props) {
       </View>
       {leaving && (
         <View style={styles.leave}>
-          <Text style={styles.waitTitle}>Press Back again to end the party</Text>
+          <Text style={styles.waitTitle}>
+            Press Back again to end the party
+          </Text>
           <Text style={styles.waitText}>
             Every phone will need to scan a new code.
           </Text>
@@ -216,62 +218,64 @@ function PlayerChip({
   }
   const st = racer ? 'ready' : status ?? 'drawing';
   return (
-    <Animated.View
-      style={[
-        styles.chip,
-        {
-          borderColor: C.ink,
-          opacity: player.connected ? 1 : 0.5,
-          transform: [{scale: pop}],
-        },
-      ]}>
-      <View style={[styles.swatch, {backgroundColor: player.color}]}>
-        {racer?.sketchling ? (
-          <Sprite s={racer.sketchling} size={68} still />
-        ) : (
-          <Text style={styles.initial}>
-            {player.name.slice(0, 1).toUpperCase()}
-          </Text>
-        )}
-        {racer?.sketchling && (
-          <Image
-            source={ABILITY[abilityOf(racer.sketchling).kind].icon}
-            style={styles.ability}
-          />
-        )}
-      </View>
-      <View style={styles.chipText}>
-        <Text style={styles.name} numberOfLines={1}>
-          {player.name}
-        </Text>
-        <View style={styles.statusRow}>
-          {st === 'processing' && (
-            <Animated.Text
-              style={[
-                styles.sparkle,
-                {
-                  transform: [
-                    {
-                      rotate: spinDeg,
-                    },
-                  ],
-                },
-              ]}>
-              ✦
-            </Animated.Text>
+    // opacity on a plain View: on the VVD a change to it on the native-driven Animated.View was not drawn (23 Oct)
+    <View style={{opacity: player.connected ? 1 : 0.5}}>
+      <Animated.View
+        style={[
+          styles.chip,
+          {
+            borderColor: C.ink,
+            transform: [{scale: pop}],
+          },
+        ]}>
+        <View style={[styles.swatch, {backgroundColor: player.color}]}>
+          {racer?.sketchling ? (
+            <Sprite s={racer.sketchling} size={68} still />
+          ) : (
+            <Text style={styles.initial}>
+              {player.name.slice(0, 1).toUpperCase()}
+            </Text>
           )}
-          <Text
-            style={[
-              styles.status,
-              st === 'ready' && styles.statusReady,
-              st === 'failed' && styles.statusFailed,
-            ]}>
-            {isGuest(player) ? 'Hall of Famer' : STATUS[st]}
-          </Text>
+          {racer?.sketchling && (
+            <Image
+              source={ABILITY[abilityOf(racer.sketchling).kind].icon}
+              style={styles.ability}
+            />
+          )}
         </View>
-      </View>
-      <AgeBadge age={player.ageGroup} style={styles.chipBadge} />
-    </Animated.View>
+        <View style={styles.chipText}>
+          <Text style={styles.name} numberOfLines={1}>
+            {player.name}
+          </Text>
+          <View style={styles.statusRow}>
+            {st === 'processing' && (
+              <Animated.Text
+                style={[
+                  styles.sparkle,
+                  {
+                    transform: [
+                      {
+                        rotate: spinDeg,
+                      },
+                    ],
+                  },
+                ]}>
+                ✦
+              </Animated.Text>
+            )}
+            <Text
+              style={[
+                styles.status,
+                st === 'ready' && styles.statusReady,
+                st === 'failed' && styles.statusFailed,
+              ]}>
+              {isGuest(player) ? 'Hall of Famer' : STATUS[st]}
+            </Text>
+          </View>
+        </View>
+        <AgeBadge age={player.ageGroup} style={styles.chipBadge} />
+      </Animated.View>
+    </View>
   );
 }
 
@@ -405,7 +409,13 @@ const styles = StyleSheet.create({
   statusReady: {color: '#1E9E57', fontFamily: F.bold},
   statusFailed: {color: '#D9363E'},
   chipBadge: {position: 'absolute', bottom: -13, right: 8},
-  ability: {position: 'absolute', right: -12, bottom: -10, width: 34, height: 34},
+  ability: {
+    position: 'absolute',
+    right: -12,
+    bottom: -10,
+    width: 34,
+    height: 34,
+  },
   actions: {position: 'absolute', right: 0, bottom: 4, flexDirection: 'row'},
   startBtn: {width: 300, height: 66},
   waitPill: {borderWidth: 3, borderRadius: 22, alignItems: 'center'},

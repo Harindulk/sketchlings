@@ -6,7 +6,7 @@ import {hush, prefetch} from './audio';
 import {ScreenIn} from './components/Bits';
 import {Paper} from './components/Paper';
 import type {PartyMode} from './game/party';
-import {loadConsent, racersOf, useParty, withGuests} from './game/party';
+import {racersOf, useParty, withGuests} from './game/party';
 import {GrownUps} from './screens/GrownUps';
 import {HallOfFame} from './screens/HallOfFame';
 import {Home, HomeChoice} from './screens/Home';
@@ -41,7 +41,6 @@ export const App = () => {
   const [lastTile, setLastTile] = useState<HomeChoice>('start'); // focus returns to it on Home
   const [leaving, setLeaving] = useState(false); // Back on a live Lobby with players: the first press only asks
   const party = useParty(mode);
-  useEffect(loadConsent, []);
   useEffect(() => {
     if (!leaving) return;
     const t = setTimeout(() => setLeaving(false), 4000);

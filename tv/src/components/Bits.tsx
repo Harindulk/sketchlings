@@ -14,9 +14,10 @@ import {AGE_BOOST, PLAYER_COLORS} from '../../../shared/protocol';
 import {C, F, STAT_COLORS, W} from '../theme';
 
 /** Font size that fits `text` on one line in `width` dp. adjustsFontSizeToFit does nothing on Vega, so we
- *  estimate: Baloo 2 bold averages ~0.54 em per character. */
+ *  estimate: Baloo 2 bold averages ~0.54 em per character, but wide letters push it up ("Whooshy Lemon" was cut off
+ *  at 0.54 on the VVD, 23 Oct), so assume 0.62. */
 export const fitFont = (text: string, width: number, max: number) =>
-  Math.min(max, Math.floor(width / 0.54 / Math.max(1, text.length)));
+  Math.min(max, Math.floor(width / 0.62 / Math.max(1, text.length)));
 
 export function Bubble({
   text,
