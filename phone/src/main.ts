@@ -517,7 +517,8 @@ function scanIntroView(): View {
         ? h('p', {class: 'card note', role: 'alert'}, 'Your phone needed its memory back, so the photo got lost. Close other apps and try again, or take the photo with the Camera app and use "Pick a photo you took".')
         : null,
       title('Draw your champion!'),
-      h('div', {class: 'card no-tape', style: '--r:1deg;padding:10px'}, svg(drawIllo, 'illo')),
+      // With a Keep/Back link above, drop the picture so "Snap my drawing" stays on a short screen.
+      keep || S.sprite ? null : h('div', {class: 'card no-tape', style: '--r:1deg;padding:10px'}, svg(drawIllo, 'illo')),
       h('p', {class: 'big-text'}, 'Draw your champion on paper with a ', h('strong', null, 'thick marker'), '. Make it ', h('strong', {class: 'marker'}, 'BIG!'), ' Leave white space around it.'),
       // Writing near the drawing can end up in the cut-out, which the TV, Claude and the Hall of Fame see.
       h('p', {class: 'big-text'}, 'Just your champion: ', h('strong', null, 'no names'), ' on the paper!'),
