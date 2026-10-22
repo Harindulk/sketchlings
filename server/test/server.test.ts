@@ -155,7 +155,7 @@ describe('phone app static files', () => {
 });
 
 /** A TV and one phone in a fresh room, and a way to scan a drawing for that phone and wait for its creature. */
-async function party(app: ReturnType<typeof startTestServer>, hello: Record<string, unknown> = {}) {
+async function party(app: ReturnType<typeof startTestServer>, hello: Record<string, unknown> = {aiPersonas: true}) {
   const tv = await connect(app.wsUrl);
   tv.send({t: 'hello', role: 'tv', ...hello});
   const {code} = await tv.next('room');
@@ -183,7 +183,7 @@ function countingClaude() {
 }
 
 describe('consent: AI personas off for a room', () => {
-  test('aiPersonas false -> offline personas, no Claude call, logged once; absent -> Claude as before', async () => {
+  test('aiPersonas false -> offline personas, no Claude call, logged once; absent -> offline too; true -> Claude', async () => {
     const fake = countingClaude();
     const app = startTestServer({claude: fake.claude});
     const log = spyOn(console, 'log');
@@ -196,10 +196,13 @@ describe('consent: AI personas off for a room', () => {
     expect(log.mock.calls.map(c => String(c[0])).filter(l => l.startsWith('[consent]'))).toEqual([`[consent] room ${off.code}: AI personas off, no drawing from this room goes to Claude`]);
     log.mockRestore();
 
-    const on = await party(app); // today's TV: no flag
+    const absent = await party(app, {}); // an older TV that sends no flag: no consent, so no Claude
+    expect((await absent.scan()).source).toBe('offline');
+    expect(fake.calls).toBe(0);
+    const on = await party(app, {aiPersonas: true}); // a grown-up turned AI personas on
     expect((await on.scan()).source).toBe('claude');
     expect(fake.calls).toBe(1);
-    await Promise.all([off.close(), on.close()]);
+    await Promise.all([off.close(), absent.close(), on.close()]);
     app.stop();
   });
 });

@@ -131,6 +131,7 @@ const UNSAFE_WORDS = [
   'sex sexy naked nude porn boob', // sexual
   'drug beer wine vodka whisky whiskey booze drunk alcohol cocaine cigarette', // drugs and alcohol
   'stupid ugly dumb fat idiot loser moron hate', // insults and body-shaming
+  'fuck fucking shit bitch bastard asshole cock pussy crap piss slut whore cunt retard', // swearing (typed names too)
 ].join(' ');
 // Brands and characters: kept out of model text, but not out of players' names (Elsa, Mario and Mickey are real names).
 const BRANDS = 'disney pixar marvel pokemon pokémon pikachu mickey elsa spiderman spider-man batman superman mario sonic barbie lego minecraft fortnite roblox peppa bluey nintendo mcdonald coca-cola';

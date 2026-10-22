@@ -38,9 +38,9 @@ JSON frames with a `t` field, exactly as in `shared/protocol.ts`.
 
 - TV: `hello {role:'tv', room?, aiPersonas?}` gets `room {code, joinUrl}` and `players`. With `room` it rejoins that room; if the
   server restarted, the room is recreated under the same code (players then rejoin as new players).
-  `aiPersonas: false` (the grown-ups' consent) means no drawing from that room goes to Claude: every upload gets the
-  offline persona, logged once as `[consent] room <code>: AI personas off`. Absent = on; send it in every hello, because a
-  server restart recreates the room with it on. A TV hello through the public tunnel (see HTTP below) gets a
+  Only `aiPersonas: true` (the grown-ups' yes on the TV) lets a room's drawings go to Claude. `false` or absent means every
+  upload gets the offline persona; the first explicit value is logged once, e.g. `[consent] room <code>: AI personas off`.
+  Send it in every hello, because a server restart recreates the room without it. A TV hello through the public tunnel (see HTTP below) gets a
   `bad_message` error: the TV always comes over the LAN or 10.0.2.2.
 - Phone: `hello {role:'phone', room, name, ageGroup, playerId?, key?}` gets `joined`, then the last `phase` frame if the TV
   sent one. `ageGroup` is `little|big|grownup`; if omitted it defaults to `big`, any other value is rejected.

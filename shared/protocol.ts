@@ -68,8 +68,8 @@ export interface Player {
 export type InputKind = 'tap' | 'jump' | 'hold' | 'release' | 'shout';
 
 // ---------- client -> server ----------
-// room: rejoin an existing room after reconnect. aiPersonas: false = this room's drawings never go to Claude (offline
-// personas only); absent = on. Send it in EVERY hello: a server restart recreates the room and an absent flag means on.
+// room: rejoin an existing room after reconnect. aiPersonas: only true (a grown-up's yes) lets this room's drawings go to
+// Claude; false or absent = offline personas only. Send it in EVERY hello: a server restart recreates the room without it.
 export type HelloTv = {t: 'hello'; role: 'tv'; room?: string; aiPersonas?: boolean};
 // key: a random secret (16-64 chars) the phone makes once and sends in every hello with its playerId. A player who
 // joined with a key can only be taken back with it; without one, anyone who knows the playerId can take the player over.

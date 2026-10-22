@@ -122,7 +122,7 @@ export function createServer(cfg: ServerConfig) {
 
   let personaCalls = 0;
   function claudeFor(room: Room): Claude | null {
-    if (room.aiPersonas === false) return null; // the grown-ups said no on the TV
+    if (room.aiPersonas !== true) return null; // only after a grown-up said yes on the TV (absent = no)
     if (!cfg.failEvery || ++personaCalls % cfg.failEvery) return cfg.claude;
     console.warn(`[persona] injected failure on call ${personaCalls} (SKETCHLINGS_FAIL_EVERY=${cfg.failEvery})`);
     return failingClaude(cfg.claude?.model ?? 'claude');

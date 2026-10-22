@@ -200,7 +200,7 @@ export function createHub(joinUrl: (code: string) => string, graceMs = 2 * 60_00
     const room = (code && rooms.get(code)) || createRoom(code && CODE_RE.test(code) && !rooms.has(code) ? code : undefined);
     room.tv = ws; // newest TV wins; frames from a replaced TV socket are ignored
     room.touched = Date.now();
-    if (aiPersonas !== undefined && aiPersonas !== (room.aiPersonas ?? true)) {
+    if (aiPersonas !== undefined && aiPersonas !== room.aiPersonas) { // first word from this TV, or a change
       room.aiPersonas = aiPersonas;
       console.log(`[consent] room ${room.code}: AI personas ${aiPersonas ? 'on' : 'off, no drawing from this room goes to Claude'}`);
     }
