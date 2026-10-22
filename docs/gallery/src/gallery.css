@@ -1,0 +1,93 @@
+/* Sketchlings gallery images: the TV's notebook-paper look (tv/src/theme.ts) and the video cards' sticker style
+   (video/cards/style.css). Fonts: Baloo 2 (the TV's font) and Patrick Hand (the phone's), SIL OFL, in fonts/. */
+@font-face { font-family: 'Baloo 2'; font-weight: 500; src: url(fonts/baloo-2-latin-500-normal.woff2) format('woff2'); }
+@font-face { font-family: 'Baloo 2'; font-weight: 600; src: url(fonts/baloo-2-latin-600-normal.woff2) format('woff2'); }
+@font-face { font-family: 'Baloo 2'; font-weight: 700; src: url(fonts/baloo-2-latin-700-normal.woff2) format('woff2'); }
+@font-face { font-family: 'Baloo 2'; font-weight: 800; src: url(fonts/baloo-2-latin-800-normal.woff2) format('woff2'); }
+@font-face { font-family: 'Patrick Hand'; font-weight: 400; src: url(fonts/patrick-hand-latin-400-normal.woff2) format('woff2'); }
+
+:root {
+  /* tv/src/theme.ts C.* and STAT_COLORS, plus the player colours seen in the TV screenshots */
+  --paper: #FBF7EE; --rule: #CFE3F5; --margin: #F2A7A7; --ink: #1F2A44; --ink-soft: #4A5573;
+  --red: #ff5a5f; --blue: #2bb3ff; --yellow: #ffc531; --green: #3ddc84; --purple: #b06cff; --orange: #ff8a3d;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; width: 100vw; height: 100vh; overflow: hidden; }
+body { position: relative; font-family: 'Baloo 2', sans-serif; color: var(--ink); background: var(--paper); }
+
+/* Notebook paper: ruled lines, red margin, punch holes (like the TV app). --u is the rule spacing. */
+body.paper {
+  --u: 60px; --m: 131px;
+  background:
+    radial-gradient(circle at calc(var(--m) * 0.43) 20%, #E9E2CF 0 calc(var(--u) * 0.28), #D8D0B9 calc(var(--u) * 0.28) calc(var(--u) * 0.33), transparent calc(var(--u) * 0.35)),
+    radial-gradient(circle at calc(var(--m) * 0.43) 50%, #E9E2CF 0 calc(var(--u) * 0.28), #D8D0B9 calc(var(--u) * 0.28) calc(var(--u) * 0.33), transparent calc(var(--u) * 0.35)),
+    radial-gradient(circle at calc(var(--m) * 0.43) 80%, #E9E2CF 0 calc(var(--u) * 0.28), #D8D0B9 calc(var(--u) * 0.28) calc(var(--u) * 0.33), transparent calc(var(--u) * 0.35)),
+    linear-gradient(to right, transparent var(--m), var(--margin) var(--m) calc(var(--m) + 3px), transparent calc(var(--m) + 3px)),
+    linear-gradient(to bottom, transparent 0 calc(var(--u) - 1px), var(--rule) calc(var(--u) - 1px) calc(var(--u) + 2px), transparent calc(var(--u) + 2px)) 0 0 / 100% var(--u) repeat-y,
+    var(--paper);
+}
+body.small { --u: 40px; --m: 88px; }
+
+.abs { position: absolute; }
+.hand { font-family: 'Patrick Hand', cursive; font-weight: 400; }
+.mono { font-family: Menlo, 'SF Mono', Monaco, monospace; }
+
+h1 { margin: 0; font-size: 96px; line-height: 1; font-weight: 800; letter-spacing: -0.5px; }
+h1 .u { background: linear-gradient(transparent 68%, color-mix(in srgb, var(--u-c, var(--yellow)) 75%, transparent) 68% 92%, transparent 92%); padding: 0 8px; }
+.kicker { font-family: 'Patrick Hand', cursive; font-size: 46px; color: var(--ink-soft); line-height: 1.15; }
+
+/* Rainbow wordmark like the TV home screen. */
+.wordmark { font-weight: 800; letter-spacing: -0.02em; line-height: 0.95; white-space: nowrap; }
+.wordmark span { text-shadow: 0.025em 0.035em 0 var(--ink); }
+.wordmark span:nth-child(6n+1) { color: var(--red); }
+.wordmark span:nth-child(6n+2) { color: var(--blue); }
+.wordmark span:nth-child(6n+3) { color: var(--yellow); }
+.wordmark span:nth-child(6n+4) { color: var(--green); }
+.wordmark span:nth-child(6n+5) { color: var(--purple); }
+.wordmark span:nth-child(6n+6) { color: var(--orange); }
+
+/* Sticker card: white, navy border, hard offset shadow, optional tape strip. */
+.sticker { position: relative; background: #fff; border: 6px solid var(--ink); border-radius: 36px; box-shadow: 8px 10px 0 var(--ink); }
+.tape { position: absolute; top: -24px; left: 50%; width: 170px; height: 44px; transform: translateX(-50%) rotate(-2deg);
+  background: color-mix(in srgb, var(--t, var(--red)) 55%, transparent); }
+.pill { display: inline-flex; align-items: center; gap: 14px; background: #fff; border: 5px solid var(--ink); border-radius: 999px;
+  padding: 4px 28px 2px; font-weight: 700; white-space: nowrap; }
+.pill.fill { background: var(--f, var(--yellow)); }
+.dot { width: 22px; height: 22px; border-radius: 50%; background: var(--d, var(--red)); border: 4px solid var(--ink); flex: none; }
+
+/* A real screenshot in a TV: dark bezel, small stand. */
+.tv { position: absolute; background: #141a2b; border-radius: 22px; padding: 16px; box-shadow: 10px 14px 0 rgba(31, 42, 68, 0.28); }
+.tv img { display: block; width: 100%; height: 100%; border-radius: 6px; object-fit: cover; }
+.tv::after { content: ''; position: absolute; left: 50%; bottom: -26px; width: 22%; height: 14px; transform: translateX(-50%);
+  background: #141a2b; border-radius: 0 0 14px 14px; }
+.tv.nostand::after { display: none; }
+
+/* A real phone screenshot in a phone body. */
+.phone { position: absolute; background: #141a2b; border-radius: 52px; padding: 14px; box-shadow: 10px 14px 0 rgba(31, 42, 68, 0.28); }
+.phone img { display: block; width: 100%; height: 100%; border-radius: 40px; object-fit: cover; object-position: top; }
+
+/* Small source line: where the picture or number comes from. */
+.src { font-family: 'Patrick Hand', cursive; font-size: 30px; color: var(--ink-soft); white-space: nowrap; }
+
+svg.to { display: inline-block; width: 1.1em; height: 0.72em; margin: 0 0.12em; vertical-align: 0; overflow: visible; }
+svg.to path { fill: none; stroke: var(--ink); stroke-width: 7; stroke-linecap: round; stroke-linejoin: round; }
+
+/* Ruled lines only, no margin or punch holes (for full-width strips). */
+body.plain { background: linear-gradient(to bottom, transparent 0 59px, var(--rule) 59px 62px, transparent 62px) 0 0 / 100% 60px repeat-y, var(--paper); }
+
+/* Polaroid-style photo card. */
+.photo { position: absolute; background: #fff; padding: 16px 16px 52px; box-shadow: 8px 10px 0 rgba(31, 42, 68, 0.22); border: 3px solid #e3dccb; }
+.photo img { display: block; width: 100%; }
+
+/* Step label: number badge, bold word, hand line. */
+.step { position: absolute; text-align: center; }
+.step .n { display: inline-flex; width: 64px; height: 64px; align-items: center; justify-content: center; border-radius: 50%;
+  border: 5px solid var(--ink); background: var(--f, var(--yellow)); font-weight: 800; font-size: 40px; line-height: 1; padding-top: 4px; vertical-align: middle; margin-right: 12px; }
+.step b { font-size: 54px; font-weight: 800; vertical-align: middle; }
+.step .hand { display: block; font-size: 34px; line-height: 1.1; color: var(--ink-soft); margin-top: 6px; }
+svg.arrow { position: absolute; overflow: visible; }
+svg.arrow path { fill: none; stroke: var(--ink); stroke-width: 8; stroke-linecap: round; stroke-linejoin: round; }
+
+/* Crop of a real screenshot: the img is scaled and shifted inside a clipped box. */
+.crop { position: absolute; overflow: hidden; border: 5px solid var(--ink); border-radius: 22px; box-shadow: 8px 10px 0 rgba(31, 42, 68, 0.22); background: var(--paper); }
+.crop img { position: absolute; display: block; max-width: none; }

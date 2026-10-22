@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Sketchlings abilities</title><link rel="stylesheet" href="gallery.css">
+<style>
+  .title { left: 200px; top: 50px; font-size: 92px; }
+  .sub { left: 206px; top: 156px; font-size: 42px; }
+  .cards { position: absolute; left: 200px; top: 250px; display: flex; gap: 40px; }
+  .card { width: 380px; height: 500px; padding: 26px 22px 20px; text-align: center; }
+  .card img { width: 140px; height: 140px; display: block; margin: 0 auto; }
+  .card .draw { font-size: 30px; font-weight: 600; color: var(--ink-soft); margin-top: 6px; line-height: 1; }
+  .card .feat { font-size: 54px; font-weight: 800; line-height: 1.05; white-space: nowrap; }
+  .card .pop { margin-top: 16px; font-size: 44px; font-weight: 800; padding: 2px 30px 0; }
+  .card .lab { margin-top: 16px; font-size: 38px; line-height: 1.08; }
+  .seen { left: 206px; top: 776px; font-size: 40px; font-weight: 700; }
+  .c1 { left: 200px; top: 836px; width: 660px; height: 152px; }
+  .c1 img { width: 1536px; left: -100px; top: -688px; }
+  .c2 { left: 910px; top: 832px; width: 330px; height: 160px; }
+  .c2 img { width: 1920px; left: -1196px; top: -752px; }
+  .c3 { left: 1290px; top: 832px; width: 340px; height: 160px; }
+  .c3 img { width: 1536px; left: -1030px; top: -690px; }
+  .l1 { left: 200px; top: 1002px; width: 660px; text-align: center; }
+  .l2 { left: 910px; top: 1002px; width: 720px; text-align: center; }
+</style></head>
+<body class="paper">
+  <h1 class="abs title">What you draw <span class="u" style="--u-c: var(--green)">changes how you race</span></h1>
+  <div class="abs kicker sub">Claude (or the offline generator) spots the drawn feature, and the race engine gives it a power.</div>
+
+  <div class="cards">
+    <div class="card sticker"><span class="tape" style="--t: var(--purple)"></span>
+      <img src="../../../tv/src/assets/art/ab_fly.png" alt="">
+      <div class="draw">Draw</div><div class="feat">wings</div>
+      <span class="pill fill pop" style="--f: var(--purple); color: #fff">WINGS!</span>
+      <div class="lab hand">Flies over ink blots!</div>
+    </div>
+    <div class="card sticker"><span class="tape" style="--t: var(--blue)"></span>
+      <img src="../../../tv/src/assets/art/ab_roll.png" alt="">
+      <div class="draw">Draw</div><div class="feat">wheels</div>
+      <span class="pill fill pop" style="--f: var(--blue)">WHEELS!</span>
+      <div class="lab hand">Zooms fast on flat ground!</div>
+    </div>
+    <div class="card sticker"><span class="tape" style="--t: var(--green)"></span>
+      <img src="../../../tv/src/assets/art/ab_hop.png" alt="">
+      <div class="draw">Draw</div><div class="feat">long legs</div>
+      <span class="pill fill pop" style="--f: var(--green)">SPRINGS!</span>
+      <div class="lab hand">Jumps extra high and far!</div>
+    </div>
+    <div class="card sticker"><span class="tape" style="--t: var(--red)"></span>
+      <img src="../../../tv/src/assets/art/ab_walk.png" alt="">
+      <div class="draw">Draw</div><div class="feat">a big body</div>
+      <span class="pill fill pop" style="--f: var(--red); color: #fff">BIG ROAR!</span>
+      <div class="lab hand">ROAR knocks back ink blots!</div>
+    </div>
+  </div>
+
+  <div class="abs seen">On the TV, on the Vega Virtual Device:</div>
+  <div class="crop c1"><img src="img/vvd-reveal-captain-bleep.png" alt=""></div>
+  <div class="crop c2"><img src="../../../notes/shots/04k-race-callout-pills-6-lanes.png" alt=""></div>
+  <div class="crop c3"><img src="../../../notes/shots/04h-race-roar-big-roar-springs.png" alt=""></div>
+  <div class="abs src l1">the Reveal card says what it saw</div>
+  <div class="abs src l2">the race pops the ability when it helps</div>
+</body></html>
