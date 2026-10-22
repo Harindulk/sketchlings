@@ -1,9 +1,9 @@
-// Writes before/after PNGs for the README into examples/.  Run: bun scripts/demo.ts
+// Writes before/after PNGs for the README into examples/.  Run: bun scripts/demo.ts [name ...]
 import {mkdirSync, writeFileSync} from 'node:fs';
 import {join} from 'node:path';
 import {cutout, type CutoutResult} from '../src';
 import {encodePNG, type RGBAImage} from '../test/helpers/png';
-import {blobPhoto, monsterPhoto, ruledPhoto} from './photos';
+import {bigFillPhoto, blobPhoto, monsterPhoto, ruledPhoto, wingsPhoto} from './photos';
 
 const OUT = join(import.meta.dir, '..', 'examples');
 mkdirSync(OUT, {recursive: true});
@@ -81,7 +81,11 @@ const save = (name: string, img: RGBAImage) => {
   console.log(`  examples/${name}  ${img.width}x${img.height}`);
 };
 
-for (const [name, photo] of [['monster', monsterPhoto()], ['crayon-blob', blobPhoto()], ['ruled', ruledPhoto()]] as const) {
+const PHOTOS = {monster: monsterPhoto, 'crayon-blob': blobPhoto, ruled: ruledPhoto, wings: () => wingsPhoto(false), 'coloured-in': () => bigFillPhoto(0.6)};
+const only = process.argv.slice(2);
+for (const [name, make] of Object.entries(PHOTOS)) {
+  if (only.length && !only.includes(name)) continue;
+  const photo = make();
   const t0 = performance.now();
   const plain = cutout(photo, {debug: true});
   const ms = performance.now() - t0;
