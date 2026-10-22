@@ -14,6 +14,7 @@ import {boostLabel, raceView} from './controller';
 import {drawPad} from './drawpad';
 import {Link, type LinkStatus} from './net';
 import {debugImage, decodeImage, processImage, upload, type Sprite} from './scan';
+import {fanfare, unlock} from './sound';
 import {buzz, drawIllo, h, icons, logo, mascot, medal, store, svg} from './ui';
 
 type View = {el: HTMLElement; update?(): void; destroy?(): void};
@@ -52,6 +53,7 @@ const link = new Link(
   onMessage,
   (status) => {
     S.conn = status;
+    if (status === 'open' && owedRelease) sendInput('release'); // after hello, which onopen sends first
     updateTopbar();
   },
 );
@@ -130,8 +132,10 @@ function onMessage(m: ServerMsg) {
   render();
 }
 
+let owedRelease = false; // a 'release' a dropped socket ate: the TV would keep that runner holding
 function sendInput(kind: InputKind) {
-  link.send({t: 'input', kind, at: Date.now()});
+  const sent = link.send({t: 'input', kind, at: Date.now()});
+  if (kind === 'hold' || kind === 'release') owedRelease = kind === 'release' && !sent;
 }
 
 // ---------------------------------------------------------------- keep the phone awake and on this page
@@ -173,6 +177,8 @@ document.addEventListener(
   },
   {passive: true},
 );
+// Race sounds need a running AudioContext, which browsers start only inside a tap (iOS Safari: at touchend).
+for (const type of ['pointerdown', 'touchend', 'keydown']) document.addEventListener(type, unlock, {passive: true});
 
 // ---------------------------------------------------------------- scan pipeline
 
@@ -258,12 +264,15 @@ const AGES: {id: AgeGroup; label: string; sub: string}[] = [
 ];
 
 const cleanName = (s: string) =>
-  s
-    .normalize('NFC')
-    .replace(/[^\p{L}\p{M}' -]/gu, '')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .slice(0, 12);
+  (
+    s
+      .normalize('NFC')
+      .replace(/[^\p{L}\p{M}\u200C\u200D' -]/gu, '') // keep ZWNJ/ZWJ: Sinhala needs the ZWJ in Sri- names
+      .replace(/\s+/g, ' ')
+      .trim()
+      .split(' ')
+      .find((w) => /\p{L}/u.test(w)) ?? '' // first name only, skipping a lone '-' or "'"
+  ).slice(0, 12);
 
 function joinView(): View {
   // Only pre-fill when this phone is already a player in this room ("Change my name"). Otherwise the last
@@ -497,6 +506,8 @@ function scanIntroView(): View {
       title('Draw your champion!'),
       h('div', {class: 'card no-tape', style: '--r:1deg;padding:10px'}, svg(drawIllo, 'illo')),
       h('p', {class: 'big-text'}, 'Draw your champion on paper with a ', h('strong', null, 'thick marker'), '. Make it ', h('strong', {class: 'marker'}, 'BIG!'), ' Leave white space around it.'),
+      // Writing near the drawing can end up in the cut-out, which the TV, Claude and the Hall of Fame see.
+      h('p', {class: 'big-text'}, 'Just your champion: ', h('strong', null, 'no names'), ' on the paper!'),
       // What you draw changes how you play: tell them before they draw (matches the persona prompt).
       h('p', {class: 'big-text'}, 'Draw ', h('strong', null, 'wings'), ' to fly over ink, ', h('strong', null, 'wheels'), ' to roll, ', h('strong', null, 'long legs'), ' to hop, a ', h('strong', null, 'big body'), ' to ROAR!'),
       file,
@@ -561,6 +572,8 @@ function previewView(): View {
       title('Is this your champion?'),
       h('div', {class: 'checker'}, img),
       h('div', {class: 'center stack', style: 'margin-top:-10px'}, turn),
+      // True: the photo is decoded and cut out on this phone; upload() posts only this PNG (canvas-encoded, no EXIF).
+      S.source === 'camera' ? h('p', {class: 'note center'}, 'Only this cut-out is sent. The photo stays on this phone.') : null,
       h('button', {type: 'button', class: 'btn go', onclick: () => void sendSprite()}, svg(icons.sparkle), 'Bring it to life!'),
       h('button', {type: 'button', class: 'btn secondary', onclick: () => ((S.step = S.source === 'pad' ? 'pad' : 'intro'), render())}, again),
     ),
@@ -650,6 +663,8 @@ function failedView(): View {
 }
 
 const MOVES: Record<string, string> = {walk: 'Walker', hop: 'Hopper', fly: 'Flyer', roll: 'Roller'};
+// Emoji old enough (Emoji 11 or earlier: Android 9, iOS 12.1) to show on older phones too.
+const ABILITY_EMOJI: Record<string, string> = {walk: '🦖', hop: '🐸', fly: '🦋', roll: '🛹'};
 
 function cardView(): View {
   const sk = S.sketchling!;
@@ -685,7 +700,15 @@ function cardView(): View {
         h('div', {class: 'art'}, img),
         title(sk.name, 'char-name'),
         h('p', {class: 'char-title'}, sk.title),
-        h('span', {class: 'tag'}, MOVES[sk.move] ?? sk.move),
+        // Why it plays the way it does: the server keeps the feature to 4 words and the label to 5.
+        sk.ability
+          ? h(
+              'p',
+              {class: 'ability'},
+              h('span', {class: 'ability-icon', 'aria-hidden': 'true'}, ABILITY_EMOJI[sk.ability.kind] ?? '✨'),
+              h('span', null, `I saw ${sk.ability.feature}`, h('strong', null, h('span', {'aria-hidden': 'true'}, '→ '), sk.ability.label)),
+            )
+          : h('span', {class: 'tag'}, MOVES[sk.move] ?? sk.move),
         h('div', {class: 'stats'}, stat('Speed', sk.stats.speed, 0), stat('Jump', sk.stats.jump, 1), stat('Power', sk.stats.power, 2)),
         h('p', {class: 'bubble'}, `"${sk.catchphrase}"`),
         h('p', {class: 'byline'}, `Drawn by ${sk.artist || S.name}`),
@@ -745,6 +768,7 @@ function resultsView(): View {
         sk ? h('img', {class: 'podium', src: sk.spriteUrl, alt: sk.name}) : '',
         h('p', {class: 'big-text'}, place === 1 ? `"${sk?.winLine ?? 'What a champion!'}"` : `${sk?.name ?? 'You'} ran a great race. Look at the TV!`),
       );
+      if (celebrated !== place) fanfare(place === 1);
       if (place <= 3 && celebrated !== place) confetti();
       celebrated = place;
     } else {

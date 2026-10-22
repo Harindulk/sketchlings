@@ -161,7 +161,9 @@ async function session(s) {
     const f = await waitFor(new RegExp(`Start the show! \\(${guests ? '[5-6]' : 4}\\)`, 'i'), 25, `s${s}-lobby`);
     if (!f) throw new Error('demo lobby never got ready');
     await sleep(3); // the demo players join one by one; let the last ones in
-    players = Number(ocr(shot(`s${s}-lobby`)).match(/Start the show! \((\d)\)/i)?.[1] ?? 4);
+    // Vision reads the "!" as "l" now and then; a misread count left the soak pressing too few Reveal cards
+    const read = () => ocr(shot(`s${s}-lobby`)).match(/Start the show\S? \((\d)\)/i)?.[1];
+    players = Number(read() ?? read() ?? 4);
     log(`demo party with ${players} racers`);
   }
   key('ok'); // Start the show

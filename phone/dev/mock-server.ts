@@ -75,9 +75,16 @@ function maybeReveal() {
 const NAMES = ['Sir Wobbleton', 'Captain Squiggle', 'Princess Noodle', 'Professor Blob', 'Zippy McDoodle', 'Lady Scribbles'];
 const TITLES = ['the Brave Potato', 'the Speedy Sock', 'Queen of Crayons', 'the Giggling Cloud', 'the Mighty Muffin'];
 const PHRASES = ['Wobble wobble, here I come!', 'Crayons up, let us go!', 'I run on giggles!', 'Nobody out-scribbles me!'];
+const ABILITIES: Record<MoveStyle, Sketchling['ability']> = {
+  walk: {kind: 'walk', feature: 'big stompy feet', label: 'ROAR knocks back ink blots!'},
+  hop: {kind: 'hop', feature: 'springy frog legs', label: 'Jumps extra high and far!'},
+  fly: {kind: 'fly', feature: 'big wings', label: 'Flies over ink blots!'},
+  roll: {kind: 'roll', feature: 'round wheels', label: 'Zooms fast on flat ground!'},
+};
 
 function persona(p: MockPlayer, id: string, png: Uint8Array): Sketchling {
   const dv = new DataView(png.buffer, png.byteOffset, png.byteLength);
+  const move = pick<MoveStyle>(['walk', 'hop', 'fly', 'roll']);
   return {
     id,
     playerId: p.id,
@@ -88,7 +95,8 @@ function persona(p: MockPlayer, id: string, png: Uint8Array): Sketchling {
     intro: `Here comes a brand new champion drawn by ${p.name}!`,
     winLine: 'Hooray, scribbles win the day!',
     stats: {speed: 1 + Math.floor(Math.random() * 5), jump: 1 + Math.floor(Math.random() * 5), power: 1 + Math.floor(Math.random() * 5)},
-    move: pick<MoveStyle>(['walk', 'hop', 'fly', 'roll']),
+    move,
+    ability: ABILITIES[move],
     colors: [p.color],
     spriteUrl: `/sprites/${id}.png`,
     eyes: [],

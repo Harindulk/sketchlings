@@ -2,7 +2,7 @@
 
 Real problems hit while building a React Native for Vega app, worst first. Every entry has the same fields: tool and version, task attempted, steps taken, expected vs actual, severity, workaround and suggestion. Snags with tools outside the Amazon ecosystem are in a short appendix.
 
-**Setup:** MacBook (Apple silicon, 16 GB), macOS 27.0.1, Node 26.12, npm 11.20.0, Vega SDK 0.24.12112, Vega CLI 1.4.5, Vega Perf CLI 0.24.0, Vega Virtual Device (VVD) with the bundled Android emulator 34.1.15, `@amazon-devices/react-native-kepler` 4.0.1+rn0.83.0. All testing was on the VVD. No Fire TV hardware was used.
+**Setup:** MacBook (Apple silicon, 16 GB), macOS 27.0.1, Node 26.12, npm 11.20.0, Vega SDK 0.24.12112, Vega CLI 1.4.5, Vega Perf CLI 0.24.0, Vega Virtual Device (VVD) with the bundled Android emulator 34.1.15, `@amazon-devices/react-native-kepler` 4.0.1+rn0.83.0. All testing was on the VVD. No Fire TV hardware was used. Amazon's docs list the VVD as "Not supported for performance testing", so every timing here is an engineering observation, not Fire TV hardware performance.
 
 **Severity:** **Critical** = the app hangs for good and the platform does not report it correctly. **High** = you can't see the app, or it hangs or crashes. **Medium** = blocks a task until you find an undocumented workaround. **Low** = an annoyance with an easy workaround.
 
@@ -367,7 +367,7 @@ Real problems hit while building a React Native for Vega app, worst first. Every
 - The headless VVD boots in about 10 s, and because it is an Android emulator underneath, `adb` tools work on it, including full-HD recording.
 - The app reaches the host at `10.0.2.2` over HTTP and WebSocket with no setup. `vega device start-port-forwarding` is there too.
 - D-pad focus needed only stock components (`TVFocusGuideView`, `hasTVPreferredFocus`). Declaring Alexa on-screen voice targets takes one `aria-label` per button plus the `com.amazon.category.kva` category (we could not test voice on the VVD).
-- `useReportFullyDrawn` plus the KPI Visualizer measured cool start in one command: TTFF 408 ms mean on the VVD, against a 1.5 s target.
+- `useReportFullyDrawn` plus the KPI Visualizer measured cool start in one command: TTFF 408 ms mean on the VVD over 3 runs on 20 Oct (665 ms over 10 runs on a loaded host on 21 Oct), against a 1.5 s target.
 - w3cmedia accepts fragmented-MP4 AAC through standard Media Source Extensions calls.
 - **Every ACR carries a full core dump with every thread's stack.** `vega device copy-logs -a SYSTEM_TOMBSTONE/acr` pulled them, and that data is what made the deadlock in #1 findable from an app developer's desk.
 - ADBT: one command installed the steering doc, the MCP config and 18 Vega skills into Claude Code.

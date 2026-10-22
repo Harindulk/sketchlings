@@ -92,7 +92,7 @@ export function drawPad(onDone: (img: ImageData) => void, onBack: () => void): {
     'section',
     {class: 'screen'},
     h('h1', {tabindex: '-1'}, 'Draw your champion!'),
-    h('p', {class: 'note'}, 'One big creature. Close the outline!'),
+    h('p', {class: 'note'}, 'One big creature, no names. Close the outline!'),
     h('div', {class: 'pad-wrap'}, canvas),
     swatches,
     h('div', {class: 'tools'}, undo, clear),

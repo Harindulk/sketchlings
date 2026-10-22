@@ -78,7 +78,9 @@ export function HallOfFame({
       <View style={styles.grid}>
         <Animated.View
           style={[styles.gridContent, {transform: [{translateY: scroll}]}]}>
-          {list.map((s, i) => {
+          {/* only the rows down to two below the focused one: mounting all 74 cards (images + animated nodes) at
+              once stopped the JS thread on the VVD's 4th-9th visit (notes/tv.md F11); ~2 rows fit on screen */}
+          {list.slice(0, (row + 3) * COLS).map((s, i) => {
             const picked = guests.includes(s.id);
             return (
               <FocusButton

@@ -809,6 +809,32 @@ input {
   background: color-mix(in srgb, var(--me) 35%, #fff);
 }
 
+.ability {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 12px 8px 0;
+  padding: 8px 12px;
+  text-align: left;
+  font-size: 1.2rem;
+  line-height: 1.15;
+  overflow-wrap: anywhere; /* a 28-letter feature word in a 116 px column at 320 px wide */
+  border: 2px solid var(--ink);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--me) 35%, #fff);
+}
+
+.ability-icon {
+  flex: none;
+  font-size: 2.6rem;
+  line-height: 1;
+}
+
+.ability strong {
+  display: block;
+  font: 800 1.2rem/1.1 var(--display);
+}
+
 /* ---------- controller ---------- */
 
 body.racing {
@@ -855,7 +881,7 @@ body.racing #app {
 .tap-pad {
   position: relative;
   flex: 1;
-  min-height: 220px;
+  min-height: min(220px, 33dvh); /* below ~512 px tall the fixed 220 pushes the speaker row off screen */
   display: grid;
   place-items: center;
   border: 4px solid var(--ink);
@@ -870,7 +896,8 @@ body.racing #app {
     box-shadow 0.06s ease-out;
 }
 
-.tap-pad.pressed {
+.tap-pad.pressed,
+.tap-pad.holding {
   transform: translateY(6px) scale(0.99);
   box-shadow: 0 2px 0 var(--ink);
 }
@@ -962,6 +989,43 @@ body.racing #app {
 .btn.roar {
   --bg: #ff8a3d;
   --r: 0.8deg;
+}
+
+.extras {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.extras .mic {
+  flex: 1;
+  min-width: 0;
+}
+
+.sound-btn {
+  flex: none;
+  width: 48px;
+  height: 48px;
+  padding: 6px;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.sound-btn svg {
+  width: 100%;
+  height: 100%;
+}
+
+.sound-btn[aria-pressed='true'] .mute,
+.sound-btn[aria-pressed='false'] .waves {
+  display: none;
+}
+
+/* The open mic mutes every sound (see sfx), and the meter needs the row's width. */
+.extras:has(.meter) .sound-btn {
+  display: none;
 }
 
 .mic {

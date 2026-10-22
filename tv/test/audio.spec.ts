@@ -79,4 +79,22 @@ describe('audio', () => {
     ]);
     jest.useRealTimers();
   });
+
+  it('race: a ROAR while a clip plays is dropped, the next count cuts the one before', async () => {
+    jest.useFakeTimers({doNotFake: ['setImmediate']});
+    mockLog.length = 0;
+    narrator('three');
+    await flush();
+    narrator('roar'); // busy: dropped
+    await flush();
+    hush(); // what Race does before each count
+    narrator('two');
+    await flush();
+    hush();
+    expect(mockLog).toEqual([
+      'append@3', 'seek@3', 'play', 'pause',
+      'append@4', 'seek@4', 'play', 'pause',
+    ]);
+    jest.useRealTimers();
+  });
 });

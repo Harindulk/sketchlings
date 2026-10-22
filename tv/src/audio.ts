@@ -1,6 +1,6 @@
 // Creature voices + narrator through Vega's W3C media stack (notes/audio.md): AAC-LC in fragmented MP4. Creature
 // lines come from the server (/voice/<id>/<line>.m4a), narrator clips are bundled. Never throws, never blocks the UI.
-// The race is silent.
+// The race plays only short narrator clips: 3-2-1-GO, ROAR and a photo finish.
 //
 // One AudioPlayer, one MediaSource and one SourceBuffer for the whole session (notes/tv.md F13): each clip is
 // appended after the previous one and played from its start, then paused. The player's source is never swapped:

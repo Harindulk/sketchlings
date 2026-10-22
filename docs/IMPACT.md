@@ -1,6 +1,6 @@
 # Sketchlings: launch memo
 
-Sketchlings is for one household type: kids aged about 4 to 10, their siblings, and the adults on the couch with them. Today it runs on the Vega Virtual Device with a relay on a Mac. This memo is the plan for turning it into a Fire TV Appstore game: who it serves, what a creature costs, how it pays for itself, how it keeps kids safe, and what is still missing. Numbers are measured unless they say "estimate".
+Sketchlings is for one household type: kids aged about 4 to 10, their siblings, and the adults on the couch with them. Today it runs on the Vega Virtual Device with a relay on a Mac. This memo is the plan for turning it into a Fire TV Appstore game: who it serves, what a creature costs, how it pays for itself, how it keeps kids safe, and what is still missing. Numbers are measured unless they say "estimate". No Fire TV hardware performance has been measured: the app timings in the README are engineering observations on the Vega Virtual Device, which Amazon's docs list as "Not supported for performance testing".
 
 ## What does a family need in the living room?
 
@@ -15,35 +15,38 @@ The game itself needs no account and no key: without a Claude key every creature
 
 ## Who it is for, and why they come back
 
-- **Kids create, and can win.** Their drawing becomes the character, with a name, a voice and stats that match what they drew. What they draw changes how they play: wings fly over ink blots, wheels roll faster on flat ground, long legs jump higher, a big body ROARs the blots away. Little kids get a visible "+40% boost", big kids "+20%", and whoever falls behind gets a Doodle Boost.
+- **Kids create, and can win** (simulated, not yet playtested; see below). Their drawing becomes the character, with a name, a voice and stats that match what they drew. What they draw changes how they play: wings fly over ink blots, wheels roll faster on flat ground, long legs jump higher, a big body ROARs the blots away. Little kids get a visible "+40% boost", big kids "+20%", and whoever falls behind gets a Doodle Boost.
 - **Parents get screen time that starts with crayons.** Every round begins on paper. The race gets hands and voices going. No accounts, no ads, no chat.
 - **Reasons to come back:** the household Hall of Fame keeps the newest 200 creatures with the artist's first name; **Race again** puts a saved creature back in the next race; every new drawing is a new character, and each creature keeps its voice.
 - **Phone access.** Each racer joins from a browser by scanning the TV's QR code. A family with fewer phones than kids can take turns between parties, or play Demo party with the remote; two players on one phone isn't built. The tap pad counts every finger, so a small child can drum it with both hands. The race engine and the protocol already support a "hold to run" input (4 taps a second, for the littlest), but the phone controller doesn't send it yet (see the checklist).
 
-## Evidence: family playtest
+## Evidence: kids' drawings and a cold test
 
-Playtest on Thursday 22 Oct. Kept as placeholders until it happens; never rounded up.
+Plan from 22 Oct: no children play or appear on camera. Relatives' kids draw creatures at home and we scan them with a grown-up's OK, and adults who have never seen the game do a cold test ([`playtest/cold-test.md`](playtest/cold-test.md)). Target-child playtesting remains a limitation: whether little kids manage the controller, enjoy it and really win is untested. Only real results may fill a placeholder; never rounded up.
 
 | Measure | Result |
 |---|---|
-| Players (first names or initials, ages) | TBD |
-| Minutes played | TBD |
-| Races played | TBD |
-| Races won by the youngest player, with the boost | TBD |
-| Did the youngest play without adult help? | TBD |
+| Kids' drawings scanned (first names or initials, ages) | TBD |
 | Median time from snapping the photo to the creature on the TV | TBD |
 | Persona source (Claude or offline) and median Claude time | TBD |
 | Googly eyes placed correctly | TBD |
 | Ability matched the drawn feature (wings, wheels, legs, big body) | TBD |
 | Re-snaps needed | TBD |
-| Unprompted "again!" requests | TBD |
-| A kid's exact words | TBD |
-| A parent's exact words | TBD |
-| One design change the kids caused | TBD |
+| Cold-test testers (adults who had never seen the game) | TBD |
+| Got two creatures into a race without help | TBD |
+| Median time from the instruction to the first race | TBD |
+| Started a second race on their own | TBD |
+| Most common question | TBD |
+| A tester's exact words | TBD |
+| One design change the cold test caused | TBD |
+
+Not tested, because no child played: races won by the youngest, whether a little kid can play without help, and kids' reactions. The cold test runs on the Vega Virtual Device on a laptop, with the keyboard as the remote, so it says nothing about race smoothness or speed.
+
+**Fairness, simulated, not playtested** ([FAIRNESS.md](FAIRNESS.md)): the real race engine with assumed tap rates, 2,000 races per row. A little kid beats a grown-up who is trying in about 1 race in 4 with the +40% boost (27.7%), and about 1 in 100 without it. In a family of four the youngest wins 14.5% (a fair share is 25%) and grown-ups still win 60%. The result depends most on how fast little kids really tap, which only a real race can measure.
 
 ## Unit economics
 
-**Cost per creature, measured.** One Claude call per drawing: over 11 real scans on 21 Oct (`claude-opus-5-5`, effort low), 2.4k to 2.7k tokens in and 210 to 255 out, so **about $0.015 per creature** ($0.014 to $0.016) at the Claude API list price for Opus 5.5 ($4 / $20 per million input / output tokens, Oct 2026). Latency: median about 4.3 s (3.7 to 5.3 s; the first, cold call 7.2 s). Voices are made locally with Kokoro-82M: about 4.3 s for a creature's three lines on an M5 MacBook, no fee.
+**Cost per creature, measured.** One Claude call per drawing: over 11 real scans on 21 Oct (`claude-opus-5-5`, effort low), 2.4k to 2.7k tokens in and 210 to 255 out, so **about $0.015 per creature** ($0.014 to $0.016) at the Claude API list price for Opus 5.5 ($4 / $20 per million input / output tokens, Oct 2026). Latency: median about 4.3 s (3.7 to 5.3 s; the first, cold call 7.2 s). Voices are made locally with Kokoro-82M on the home relay (a Mac today), not on the TV and not in the cloud: about 4.3 s for a creature's three lines on an M5 MacBook, no fee.
 
 | Family | AI creatures a month | Claude cost a month |
 |---|---|---|
@@ -68,7 +71,7 @@ Playtest on Thursday 22 Oct. Kept as placeholders until it happens; never rounde
 | Sprites and voice clips | `server/data/` on the Mac | **S3 with a 24-hour lifetime**; the TV keeps its Hall of Fame copy |
 | Finding the relay | `HOST = '10.0.2.2:8787'` hard-coded in `tv/src/config.ts` | The TV connects to the cloud relay's address; no Mac on the LAN |
 
-**Monthly cost estimate.** Assumes 20 AI creatures per household a month (between light and heavy; to be replaced with playtest numbers), Claude Opus 5.5 on Bedrock through global cross-region inference, which lists at the same $4 / $20 per million tokens as the Claude API (a regional endpoint costs 10% more, $4.40 / $22), and AWS list prices for US East (N. Virginia): Graviton Fargate $0.03238 per vCPU-hour and $0.00356 per GB-hour, an Application Load Balancer $0.0225 an hour plus $0.008 per capacity-unit-hour, public IPv4 addresses $0.005 an hour each, S3 $0.005 per 1,000 writes, and data out to the internet free for the first 100 GB a month, then $0.09 per GB. Estimate (list prices, Oct 2026), not measured: check before launch.
+**Monthly cost estimate.** Assumes 20 AI creatures per household a month (between light and heavy; to be replaced with real usage numbers), Claude Opus 5.5 on Bedrock through global cross-region inference, which lists at the same $4 / $20 per million tokens as the Claude API (a regional endpoint costs 10% more, $4.40 / $22), and AWS list prices for US East (N. Virginia): Graviton Fargate $0.03238 per vCPU-hour and $0.00356 per GB-hour, an Application Load Balancer $0.0225 an hour plus $0.008 per capacity-unit-hour, public IPv4 addresses $0.005 an hour each, S3 $0.005 per 1,000 writes, and data out to the internet free for the first 100 GB a month, then $0.09 per GB. Estimate (list prices, Oct 2026), not measured: check before launch.
 
 | Item | 1,000 households | 10,000 households |
 |---|---|---|
@@ -96,20 +99,22 @@ What that means in detail:
 - **Fire TV Appstore kids plan:** list in the kids and family category, support Amazon Kids profiles, a privacy policy, a parent gate on every purchase. Amazon's Child-Directed App (COPPA) policy (checked Oct 2026) covers children under 13 (under 16 in the EU, Australia and Japan) and asks for age-appropriate content, COPPA compliance with verifiable parental consent before collecting a child's personal information, no Amazon Advertising or Associates, and only child-suitable SDKs. The category, Amazon Kids support and the parent gate are our own choices: we found no Appstore page that requires them.
 - **Delete early.** In the cloud version drawings and voice clips are deleted by the relay itself as soon as the TV has fetched them (at most 24 hours later); an S3 lifecycle rule (whole-day granularity, asynchronous) is only the backstop. The Hall of Fame lives on the Fire TV. A parent **Clear Hall of Fame** button deletes it.
 - **Known risk: handwriting.** A child may write their full name on the drawing. It would be in the cut-out, sent to Claude (the prompt tells it to ignore any writing) and shown on the TV. Mitigations: "Don't write your name" on the draw screen, and blurring text on the phone before upload (not built).
-- **Kind-only content.** The prompt allows only kind, playful text: never mock a drawing; nothing scary, violent, gross, sad or romantic; no weapons, real people, characters or brands. Every answer is checked against a schema and clamped. A refusal, timeout or bad answer gives the offline persona, built from curated word lists.
+- **Kind-only content.** The prompt allows only kind, playful text: never mock a drawing; nothing scary, violent, gross, sad or romantic; no weapons, real people, characters or brands. Every answer is checked against a schema and clamped. A refusal, timeout or bad answer gives the offline persona, built from curated word lists. **Built:** a word guard (`server/src/persona.ts`) checks every line Claude writes (name, title, personality, catchphrase, intro, win line, ability) against a short list of whole words in six groups: violence and death, weapons, sexual words, drugs and alcohol, insults and body-shaming, real brands and characters. A hit swaps only that field for its offline version and logs one line. It is a backstop, not moderation: a fixed English list misses misspellings and other languages, and player names typed on the phones are not checked.
 - **Room codes in the cloud.** A 4-letter code is guessable on a public server. The QR will carry a long random join token, the TV shows everyone who joins, and a grown-up can remove a player. Codes already avoid vowels, so they never spell words.
 
 ## Missing before launch
 
-- [ ] Test on Fire TV hardware running Vega OS; soak the race start there (FRICTION_LOG.md #1), and move the race loop to vsync-aligned `requestAnimationFrame` if it is sane on hardware (#4).
+- [ ] Test on Fire TV hardware running Vega OS and measure performance there (the VVD numbers are not hardware performance); soak the race start there (FRICTION_LOG.md #1), and move the race loop to vsync-aligned `requestAnimationFrame` if it is sane on hardware (#4).
 - [ ] Cloud relay (above), with the TV connecting to it instead of `10.0.2.2`.
-- [ ] Grown-up consent step and parent gate; Family Pass through Amazon In-App Purchasing.
+- [ ] Grown-up consent step and parent gate; Family Pass through Amazon In-App Purchasing (`@amazon-devices/keplerscript-appstore-iap-lib`, which the Vega docs say can be tested on the device and the VVD).
 - [ ] Privacy policy and a children's-privacy review.
 - [ ] Parent "Clear Hall of Fame" button; long join tokens for cloud rooms.
+- [ ] A playtest with children aged 4 to 10, counting little kids' real taps a second before tuning the age boost ([FAIRNESS.md](FAIRNESS.md)).
 - [ ] "Hold to run" on the phone controller (the race engine already supports it).
 - [ ] Voices in parallel: with six scans at once, the last creature's voice can take 30 to 40 s today.
 - [ ] Creature voices and real mic shouting heard on a real Fire TV and real phones.
-- [ ] User-generated content safeguards per the Appstore content policy: moderate each drawing before it is shown (Claude already describes it; add an explicit unsafe-content check), a way to report a creature, and a parent-only Hall of Fame delete.
+- [x] A word guard on every line Claude writes (a backstop only; "Kind-only content" above says what it misses).
+- [ ] User-generated content safeguards per the Appstore content policy: moderate each drawing before it is shown (Claude already describes it, and its text now passes the word guard, but the drawing itself is not checked; add an explicit unsafe-content check), check typed player names, a way to report a creature, and a parent-only Hall of Fame delete.
 
 ## Sources (prices checked 21 Oct 2026)
 
@@ -124,3 +129,5 @@ What that means in detail:
 - Appstore revenue share (70/30 standard, 80/20 under $1 million a year): https://developer.amazon.com/docs/reports-promo/small-business-accelerator.html
 - In-App Purchasing item types, annual subscriptions and price range: https://developer.amazon.com/docs/in-app-purchasing/iap-create-and-submit-iap-items.html
 - Child-Directed App (COPPA) policy: https://developer.amazon.com/docs/policy-center/privacy-children.html
+- Vega In-App Purchasing (`@amazon-devices/keplerscript-appstore-iap-lib`; 2.12.2 and later can be tested on the device and the VVD): https://developer.amazon.com/docs/vega/0.24/vega-iap-overview.html
+- VVD "Not supported for performance testing" (checked 22 Oct 2026): https://developer.amazon.com/docs/vega/0.24/run-apps-overview.html

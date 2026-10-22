@@ -7,6 +7,6 @@ export const HTTP_BASE = `http://${HOST}`;
 export const WS_URL = `ws://${HOST}/ws`;
 
 // Creature voices + narrator (src/audio.ts). On the Vega Virtual Device the clips play and the emulator holds an
-// output stream on the Mac's speakers (notes/tv.md, Audio outcome), but screenrecord captures no audio.
+// output stream on the Mac's speakers; `adb emu screenrecord` records them too (notes/tv.md, Audio outcome).
 // false = no media stack at all (MUTE=1 builds: automated runs, screen recording).
 export const SOUND = true;

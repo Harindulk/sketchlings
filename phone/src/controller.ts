@@ -1,5 +1,7 @@
 // Race controller: giant multi-touch TAP pad, swipe up / JUMP, ROAR button and optional mic shouting.
 import {AGE_BOOST, type AgeGroup, type InputKind} from '../../shared/protocol';
+import {holdTracker} from './hold';
+import * as sound from './sound';
 import {buzz, h, icons, svg} from './ui';
 
 export interface Racer {
@@ -25,8 +27,8 @@ export function raceView(racer: () => Racer, send: (kind: InputKind) => void): {
   const counter = h('span', {class: 'tap-count', 'aria-hidden': 'true'}, '0');
   const pad = h(
     'button',
-    {type: 'button', class: 'tap-pad', 'aria-label': 'Tap fast to run. Swipe up to jump.'},
-    h('span', {class: 'tap-label'}, 'TAP!', h('small', null, 'tap fast · swipe up to jump')),
+    {type: 'button', class: 'tap-pad', 'aria-label': 'Tap fast or hold to run. Swipe up to jump.'},
+    h('span', {class: 'tap-label'}, 'TAP!', h('small', null, 'tap or hold · swipe up to jump')),
     counter,
   );
 
@@ -37,6 +39,10 @@ export function raceView(racer: () => Racer, send: (kind: InputKind) => void): {
   };
   const tap = (x?: number, y?: number) => {
     send('tap');
+    tapped(x, y);
+  };
+  const tapped = (x?: number, y?: number) => {
+    sfx(sound.tick);
     taps++;
     counter.textContent = String(taps);
     buzz(8);
@@ -52,14 +58,35 @@ export function raceView(racer: () => Racer, send: (kind: InputKind) => void): {
   };
   const jump = () => {
     send('jump');
+    sfx(sound.boing);
     buzz(25);
     flash('JUMP!');
   };
   const roar = () => {
     send('shout');
+    sfx(sound.roar);
     buzz([30, 40, 30]);
     flash('ROAR!');
   };
+
+  // A finger kept down runs on its own; the pad ticks and counts 4 a second, as the TV does.
+  let pulse = 0;
+  const holds = holdTracker(
+    () => {
+      send('hold');
+      pad.classList.add('holding');
+      let beat = 0;
+      pulse = window.setInterval(() => {
+        if (++beat % 2 === 0) send('hold'); // again every 0.5 s: the TV drops input during 3-2-1, and a reconnect forgets it
+        tapped();
+      }, 250);
+    },
+    () => {
+      send('release');
+      pad.classList.remove('holding');
+      clearInterval(pulse);
+    },
+  );
 
   // Every finger counts as a tap; a quick upward flick of any finger is a jump.
   const starts = new Map<number, {y: number; t: number; jumped: boolean}>();
@@ -68,6 +95,7 @@ export function raceView(racer: () => Racer, send: (kind: InputKind) => void): {
     const r = pad.getBoundingClientRect();
     tap(e.clientX - r.left, e.clientY - r.top);
     starts.set(e.pointerId, {y: e.clientY, t: performance.now(), jumped: false});
+    holds.down(e.pointerId);
   });
   pad.addEventListener('pointermove', (e) => {
     const s = starts.get(e.pointerId);
@@ -77,9 +105,15 @@ export function raceView(racer: () => Racer, send: (kind: InputKind) => void): {
       jump();
     }
   });
-  const lift = (e: PointerEvent) => starts.delete(e.pointerId);
+  const lift = (e: PointerEvent) => {
+    starts.delete(e.pointerId);
+    holds.up(e.pointerId);
+  };
   pad.addEventListener('pointerup', lift);
   pad.addEventListener('pointercancel', lift);
+  pad.addEventListener('pointerleave', lift); // a mouse dragged off the pad never sends pointerup here
+  const onHide = () => document.hidden && holds.clear(); // a backgrounded page may never get the finger's pointerup
+  document.addEventListener('visibilitychange', onHide);
   pad.addEventListener('click', (e) => {
     if (e.detail === 0) tap(); // keyboard activation (Enter/Space) of the focused pad
   });
@@ -114,6 +148,13 @@ export function raceView(racer: () => Racer, send: (kind: InputKind) => void): {
     flash('ROAR!');
   });
 
+  const speaker = h('button', {type: 'button', class: 'sound-btn', 'aria-label': 'Sound', 'aria-pressed': String(sound.soundOn())}, svg(icons.speaker));
+  speaker.addEventListener('click', () => {
+    sound.setSound(!sound.soundOn());
+    speaker.setAttribute('aria-pressed', String(sound.soundOn()));
+    sfx(sound.tick);
+  });
+
   const avatar = h('span', {class: 'avatar'});
   const who = h('span', {class: 'who'});
   const boost = h('span', {class: 'boost'});
@@ -134,12 +175,14 @@ export function raceView(racer: () => Racer, send: (kind: InputKind) => void): {
     h('div', {class: 'racer'}, avatar, who, boost),
     pad,
     h('div', {class: 'actions'}, actionBtn('jump', icons.up, 'JUMP', jump), actionBtn('roar', icons.roar, 'ROAR', roar)),
-    mic.el,
+    h('div', {class: 'extras'}, speaker, mic.el),
   );
   return {
     el,
     update,
     destroy() {
+      holds.clear();
+      document.removeEventListener('visibilitychange', onHide);
       document.removeEventListener('keydown', onKey);
       document.body.classList.remove('racing');
       mic.stop();
@@ -155,6 +198,11 @@ function closeMic() {
   mic = null;
 }
 addEventListener('pagehide', closeMic);
+
+// The shouting mic hears the speaker (echo cancellation is off): stay quiet while it's open, or ticks would ROAR.
+function sfx(play: () => void) {
+  if (!mic) play();
+}
 
 /**
  * "Enable shouting": mic loudness spikes become shouts. Browsers only allow getUserMedia on

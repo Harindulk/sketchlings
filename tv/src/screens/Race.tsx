@@ -18,7 +18,7 @@ import {
   TRACK,
 } from '../game/race';
 import {C, F, W} from '../theme';
-import {audioStatus, hush} from '../audio';
+import {audioStatus, hush, narrator} from '../audio';
 
 interface Props {
   racers: Player[];
@@ -35,6 +35,8 @@ const FINISH_REST = 770; // ...and stops when the finish line reaches this scree
 const TRAIL_MIN = 250; // keep the last runner right of this screen x if possible
 const LEADER_MAX = W - 80; // but never lose the leader off the right edge
 const TILE = W; // doodle + lane tiles are 960 dp wide
+const COUNT_CLIP = ['go', 'one', 'two', 'three']; // narrator clips for 3-2-1
+const PHOTO_FINISH = 0.5; // s between the first two finishers that earns "Photo finish!"
 
 // googly-eye physics (normalised pupil units)
 const EYE_K = 70,
@@ -140,7 +142,7 @@ export function Race({racers, bots, onInput, onFinish}: Props) {
   // the game loop
   useEffect(() => {
     let alive = true;
-    hush(); // the race is silent: drop a Reveal line still queued and stop the one playing
+    hush(); // drop a Reveal line still queued and stop the one playing: the countdown starts on a quiet player
     const eyes = racers.map(() => ({
       ox: 0,
       oy: 0.3,
@@ -224,7 +226,11 @@ export function Race({racers, bots, onInput, onFinish}: Props) {
       }
       if (c === shownCount) return;
       shownCount = c;
-      setCount(c); // no narration: the race is silent (audio work on the VVD slowed JS, notes/tv.md F7)
+      setCount(c);
+      if (c === null) return;
+      // bundled clips (~0.6 s) on the one-MediaSource player; each count cuts the one before (a pause is safe, F13)
+      hush();
+      narrator(c === 'GO!' ? 'go' : COUNT_CLIP[c]);
     };
     // only cross to native when a value really moved (idle runners, countdown, finished racers cost nothing)
     const sent = new Map<Animated.Value, number>();
@@ -337,6 +343,7 @@ export function Race({racers, bots, onInput, onFinish}: Props) {
         if (stunned !== f.stun) pulse(v.stun, (f.stun = stunned));
         const roaring = r.roarT > 0;
         if (roaring && !f.roar) {
+          narrator('roar'); // dropped while another clip plays, so ROARs never pile up
           flash(v.roar, 600);
           Animated.sequence(
             [10, -9, 7, -5, 3, 0].map((toValue) =>
@@ -356,7 +363,14 @@ export function Race({racers, bots, onInput, onFinish}: Props) {
         }
       });
 
-      if (race.finishOrder.length !== Object.keys(placesRef.current).length) {
+      const placed = Object.keys(placesRef.current).length;
+      if (race.finishOrder.length !== placed) {
+        if (placed < 2 && race.finishOrder.length >= 2) {
+          const [a, b] = race.finishOrder
+            .slice(0, 2)
+            .map((id) => race.runners.find((r) => r.id === id)!.finishedAt);
+          if (b - a < PHOTO_FINISH) narrator('photo-finish');
+        }
         const next: Record<string, number> = {};
         race.finishOrder.forEach((id, k) => (next[id] = k + 1));
         placesRef.current = next;

@@ -1,6 +1,6 @@
 # Sketchlings
 
-**Kids draw a creature on paper. Seconds later it walks onto the Fire TV, says hello in its own voice, and races the family. What you draw changes how you play, and the youngest can really win.**
+**Kids draw a creature on paper. Seconds later it walks onto the Fire TV, says hello in its own voice, and races the family. What you draw changes how you play, and age boosts give the youngest a real shot at winning.**
 
 A native Fire TV app built with **React Native for Vega** on the **Vega SDK 0.24**. Phones join with a QR code, snap the drawing and cut it out on the phone, then become race controllers. A small relay on the home network gives each creature a name, stats, an ability and a voice, with **Claude vision** or a fully offline generator.
 
@@ -70,7 +70,7 @@ Demo party tries the relay's Hall of Fame for 3 seconds, then uses the bundled s
 - Animation graphs are built once and memoised; googly-eye pupils ride a spring.
 - The media stack loads lazily, so it costs nothing at launch.
 
-**KPIs, measured on the Vega Virtual Device (headless, Apple-silicon host, no Fire TV hardware).**
+**KPIs, measured on the Vega Virtual Device (headless, Apple-silicon host, no Fire TV hardware).** These are engineering observations, not Fire TV hardware performance: Amazon's own docs list the VVD as "Not supported for performance testing" ([Run Your App Overview](https://developer.amazon.com/docs/vega/0.24/run-apps-overview.html)). Performance on hardware is not yet verified.
 
 | KPI | Vega target | Sketchlings | How, when |
 |---|---|---|---|
@@ -100,13 +100,13 @@ The absolute phone-to-TV time can't be measured from the VVD, whose clock ran 2 
 | Voices (Kokoro-82M, three lines) | about 4.3 s on an M5 MacBook; with Claude, clips ready 7-13 s after the upload |
 | Cutout on the phone | under 0.4 s for a 900×675 photo in a desktop browser; not yet timed on a phone |
 
-**Voices made at home.** Kokoro-82M (Apache-2.0) speaks each creature's intro, catchphrase and win line. The voice is picked from the creature's name, title and stats (10 base voices, pitch shifted -3.1 to +5.1 semitones), so a creature always sounds the same. ffmpeg normalises to -18 LUFS and encodes AAC in fragmented MP4 for w3cmedia.
+**Voices made at home.** Kokoro-82M (Apache-2.0) speaks each creature's intro, catchphrase and win line. It runs on the home relay (a Mac today), not on the TV and not in the cloud. The voice is picked from the creature's name, title and stats (10 base voices, pitch shifted -3.1 to +5.1 semitones), so a creature always sounds the same. ffmpeg normalises to -18 LUFS and encodes AAC in fragmented MP4 for w3cmedia.
 
 **Robust in a living room.** Phones reconnect with backoff and rejoin as the same player after a reload. If the relay restarts, the TV recreates its room under the same code, so the QR code on screen stays valid. Every WebSocket frame is validated (64 KB cap), uploads are checked for type and size, and the Hall of Fame file is written atomically.
 
 **Built with Amazon Devices Builder Tools.** The ADBT steering doc ([`CLAUDE.md`](CLAUDE.md)) and Vega skills ran inside Claude Code. The media-player skill pointed at missing `[wants]` services as the cause of silent playback, which is where audio setup went wrong; the performance skill led to the KPI Visualizer numbers above. ADBT's `symbolicate_acr` failed on the VVD (FRICTION_LOG #11), which is why we wrote `acr-stacks.py`, and its `analyze_perfetto_traces` couldn't find the Vega Perf CLI, so the cool-start traces were not analysed (#24).
 
-**Tests** (run on 21 Oct): **113 automated tests**. 60 for the relay over real HTTP and WebSocket (`cd server && bun test`; 3 skip without ffmpeg or the voice model), 39 for doodle-cutout (`cd packages/doodle-cutout && bun test`), 14 Jest tests for the race simulation, ability balance and Demo party (`cd tv && npx jest`). The phone app is typechecked (`cd phone && npm run typecheck`).
+**Tests** (run on 22 Oct): **120 automated tests**. 63 for the relay over real HTTP and WebSocket (`cd server && bun test`; 3 skip without ffmpeg or the voice model), 39 for doodle-cutout (`cd packages/doodle-cutout && bun test`), 16 Jest tests for the race simulation, ability balance, Demo party and the voice player (`cd tv && npx jest`), 2 for the phone app (`cd phone && bun test`). The phone app is also typechecked (`cd phone && npm run typecheck`).
 
 ## Design
 
@@ -117,15 +117,15 @@ The absolute phone-to-TV time can't be measured from the VVD, whose clock ran 2 
 - **What you draw changes how you play.** Wings fly over ink blots, wheels roll faster on flat ground, long legs jump higher, a big body's ROAR knocks blots away. The Lobby, How to play and the phone tell kids this before they draw, and the race pops WINGS!, WHEELS!, SPRINGS! or BIG ROAR! when it helps.
 - **Characters, not sprites.** Each drawing tears out of the paper, gets googly eyes on its own drawn eyes and introduces itself in its own voice. Every voiced line is also on screen as a caption.
 - **A look that matches the activity.** Notebook paper, sticker cards that lift, glow and wobble when focused, readable from 10 feet. TV and phone share it. All art is ours.
-- **Changed by the playtest:** TBD
+- **Changed by the cold test:** TBD
 
 ## Potential Impact
 
 - **Who it is for:** households with kids aged about 4 to 10, and the adults on the couch with them. Kids make the content and can beat an older sibling; parents get screen time that starts with crayons.
 - **Why families come back:** the Hall of Fame keeps every creature (the newest 200) with the artist's name, and **Race again** brings a saved creature back into the next race.
-- **Evidence:** TBD
-- **It pays for itself:** about $0.015 of Claude per creature (measured). Plan: a free game with offline personas, plus a $4.99-a-year Family Pass through Amazon In-App Purchasing for up to 200 AI creatures, behind a parent gate.
-- **Launch plan:** a cloud relay on AWS Fargate with Claude through Amazon Bedrock, about $0.32-0.38 per household a month at 1,000-10,000 households (estimate), a grown-up consent step, COPPA-minded data rules. Details: [docs/IMPACT.md](docs/IMPACT.md).
+- **Evidence:** no child has played it yet. Kids' drawings, scanned with a grown-up's OK (no children filmed): TBD. [Cold test](docs/playtest/cold-test.md) with adults who had never seen the game and got one instruction, "Get two creatures into a race": TBD. Fairness is simulated, not playtested ([docs/FAIRNESS.md](docs/FAIRNESS.md)): with assumed tap rates and the real race engine, a little kid beats a grown-up who is trying in about 1 race in 4 with the +40% boost, and about 1 in 100 without it.
+- **It pays for itself:** about $0.015 of Claude per creature (measured). Plan: a free game with offline personas, plus a $4.99-a-year Family Pass through Amazon In-App Purchasing (not built yet) for up to 200 AI creatures, behind a parent gate. A free household costs about 2 cents a month to run, and the Pass's 200-creature cap means it costs at most about $3.25 a year against the $3.49 the store passes on (estimates at 10,000 households; at 1,000 a fully used Pass costs about $4.15 and loses money, while a light family still fits).
+- **Launch plan:** a cloud relay on AWS Fargate with Claude through Amazon Bedrock, a grown-up consent step, COPPA-minded data rules. If every household made 20 AI creatures a month it would cost about $0.40 a household a month at 1,000 households and $0.32 at 10,000 (estimate), with Claude three-quarters to over 90% of it. Details: [docs/IMPACT.md](docs/IMPACT.md).
 
 ## Quality of the Idea
 
@@ -136,7 +136,8 @@ The absolute phone-to-TV time can't be measured from the VVD, whose clock ran 2 
 
 ## Known limits
 
-- **Vega Virtual Device only.** Never run on Fire TV hardware. All KPIs are VVD numbers.
+- **Vega Virtual Device only.** Never run on Fire TV hardware. All KPIs are VVD engineering observations; Amazon says the VVD is not for performance testing, so hardware performance is not yet verified.
+- **No child playtest.** No child plays or is filmed: the evidence plan is kids' drawings scanned with a grown-up's OK and a cold test with adults. Whether little kids manage the controller, enjoy it and really win is still untested.
 - **The race loop is paced with `setTimeout`, not vsync.** On the headless VVD `requestAnimationFrame` free-runs at about 7,600 a second (FRICTION_LOG #4), and fewer JS tasks keep the watchdog deadlock away (#1). We'll move to `requestAnimationFrame` once it is tested on hardware.
 - **The deadlock is less likely, not ruled out.** It is a platform bug; the app only avoids feeding it.
 - **The race is silent.** Audio work can stall or hang the JS thread on the VVD (#5), so voices play only on Reveal and Results, and captions carry every line. Voices play through the Vega W3C media player; a media-player crash (a new MediaSource per clip) was root-caused and fixed with one long-lived source, 0 crashes over 73 screens since ([FRICTION_LOG #5](FRICTION_LOG.md#5-audio-work-stalls-or-hangs-the-js-thread-on-the-vvd)). The VVD's audio reaches the Mac's speakers, but we couldn't record it.
@@ -150,9 +151,10 @@ The absolute phone-to-TV time can't be measured from the VVD, whose clock ran 2 
 
 **With an API key, the cut-out drawing goes to Anthropic for the persona. With the HTTPS tunnel, phone traffic passes through Cloudflare. In offline mode nothing leaves the home network.**
 
+- **The path of a drawing:** the photo stays on the phone → the phone cuts the drawing out → only the cut-out PNG goes to the relay → Claude, today only when the relay has an API key, at launch only after a grown-up's consent (offline mode skips this step) → a structured, schema-checked, word-guarded persona → the TV.
 - **What leaves the phone:** the cut-out drawing (PNG, at most 1024 px a side), a first name, an age group and race taps. The room photo never leaves the phone. The microphone, when enabled, is analysed on the phone for loudness only.
 - **What goes to Claude:** the cut-out drawing, a note of its shape and colours, and creature names already taken. No child's name, age or taps.
-- **Kind by design:** no accounts, ads, purchases or chat. The prompt allows only kind, playful text, must never mock a drawing and must ignore any writing in the image; every answer is schema-checked, and anything odd falls back to curated offline word lists.
+- **Kind by design:** no accounts, ads, purchases or chat. The prompt allows only kind, playful text, must never mock a drawing and must ignore any writing in the image; every answer is schema-checked, and anything odd falls back to curated offline word lists. A word guard then checks every line Claude writes against a short list (violence, weapons, sexual words, drugs and alcohol, insults, brands and characters); a hit swaps that field for its offline version and is logged. It is a fixed English list, so it misses misspellings and other languages, and names typed on the phones are not checked.
 - **Stored on the Mac:** `server/data/hall.json` (the newest 200 creatures with the artist's first name), their sprites and voice clips (deleted when a creature drops out of the newest 200), and a voice cache by text (never pruned today). Clearing everything means stopping the relay and deleting `server/data/`; a parent "Clear Hall of Fame" button is on the launch checklist.
 - Launch plan (consent step, COPPA, Appstore kids rules, data deletion): [docs/IMPACT.md](docs/IMPACT.md#kids-safety-and-privacy).
 

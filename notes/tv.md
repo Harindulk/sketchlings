@@ -157,13 +157,16 @@ from the package typings.
   Not checked: whether it also appears with the app silent (`MUTE=1`). The
   instance config has `hw.audioOutput = true` / `hw.audioInput = yes` (`~/vega/sdk/.../vvd/instances/*/
   hardware-qemu.ini`), so the emulator also opens the **Mac microphone** ("audio-in BuiltInMicrophoneDevice" for the same
-  PID). Not proven: that the samples are non-silent. Nothing on the Mac can capture the VVD's output (no loopback
-  device installed, `screenrecord` has no audio track), so audibility still needs ears or a real Fire TV.
-- The race is silent since 21 Oct (no countdown narration, no ROAR sound, no catchphrase at the finish; captions carry
-  all of it). Voice and narrator play only on Reveal and Results, one clip at a time, never interrupted by another
-  clip. When the race mounts, `hush()` drops a queued Reveal line and (since F13) pauses the one playing, so the
-  countdown has no media events at all. Every voiced line has an on-screen caption: Reveal intro = speech bubble, narrator "meet the Sketchlings"
-  = header, "winner is" = "<name> wins!" title, winLine = Results bubble; the finish catchphrase is a caption only.
+  PID). Correction (22 Oct): `adb emu screenrecord` does record the VVD's audio. Its webm has a Vorbis 44.1 kHz
+  stereo track, and the countdown clips are in it, in sync with the picture (see "22 Oct, evening" below). Still not
+  heard on a real Fire TV.
+- The race was silent from 21 to 22 Oct. Since 22 Oct it plays short bundled narrator clips again: "Three!", "Two!",
+  "One!", "Go!" on the countdown, "ROAR!" when a ROAR starts, "Photo finish!" when the first two finish within 0.5 s
+  (see "22 Oct, evening"). Creature voices still play only on Reveal and Results, one clip at a time. When the race
+  mounts, `hush()` drops a queued Reveal line and pauses the one playing, so the countdown starts on a quiet player.
+  Every voiced line has an on-screen caption: Reveal intro = speech bubble, narrator "meet the Sketchlings" = header,
+  "winner is" = "<name> wins!" title, winLine = Results bubble, 3-2-1-GO = the big numbers, ROAR = the ROAR! pill,
+  photo finish = the FINISH! banner; the finish catchphrase is a caption only.
 - `MUTE=1` (sets `SOUND = false`, no media stack at all) is still there for silent recordings; since the F13 fix the
   sound-on build passed the crash and race-start soaks (F13), so it is no longer needed for stability.
 
@@ -233,8 +236,9 @@ race start on a loaded Mac.
 *Fix (Race.tsx, 21 Oct).* Starve the bug of messages instead of working around symptoms: the frame loop is exactly
 one `setTimeout` task per frame; race values are native from birth (`new Animated.Value(v, {useNativeDriver: true})`),
 so the ~40 attach animations and their callbacks at race start are gone; the race is silent (no w3cmedia work, queued
-voice lines dropped at mount). Removed the 20 Oct workarounds that targeted a wrong theory (commit fence, loop
-"kick" restarts: a blocked JS thread runs nothing, so they could never help). Soak: see "Soak record" below.
+voice lines dropped at mount; since 22 Oct it plays short narrator clips again, soaked clean, see "22 Oct,
+evening"). Removed the 20 Oct workarounds that targeted a wrong theory (commit fence, loop "kick" restarts: a blocked
+JS thread runs nothing, so they could never help). Soak: see "Soak record" below.
 Severity: critical (an app hangs for good and the watchdog misses it). Suggestion to Amazon: don't hold the deferred
 mutex across `send()`, make the trigger non-blocking and coalescing (one pending wake-up is enough, e.g. an eventfd
 or `MSG_DONTWAIT`), and don't post/cancel a watchdog timer for every JS task (stamp an atomic and check it from a
@@ -259,8 +263,10 @@ Suggestion: `vega` could use its own adb port or report the version clash.
 clip replaces the `srcObject`, frames drop to 0-15 fps and the countdown stalls; `ended` never fires for the replaced
 clip. Workaround: never interrupt a playing clip; build with `MUTE=1` for recordings. Unknown if real hardware is affected.
 The 13:22 ACR on 20 Oct (`LCM_ANR_REASON: Thread Monitor`) shows the JS thread blocked on a mutex inside
-`libW3CMedia.so` with a JS frame in the w3cmedia bundle: another way audio can hang JS. Since 21 Oct the race plays
-no audio at all.
+`libW3CMedia.so` with a JS frame in the w3cmedia bundle: another way audio can hang JS. From 21 to 22 Oct the race
+played no audio. Since 22 Oct it plays ~0.6 s narrator clips on the one-MediaSource player (F13: a pause and a seek,
+never a source swap); 30 race starts with them, 0 frozen (one checked late, see the soak table and "22 Oct,
+evening").
 
 **F8. Docs/tooling gaps.** `expo-font` is "not supported" for RN 0.83, but plain `assets/fonts/*.ttf` +
 `fontFamily: '<file name>'` works (the family name does not). `loggingctl log -v <pkg>` shows native logs and fatal
@@ -286,6 +292,32 @@ and came back. The new view was a `rotate: '6deg'` "Racing next!" tag inside the
 "✓" glyph from a fallback font). A straight tag inside the corners and no ✓ fixed it (a pick and three focus moves after
 it redraw fine; which of the two did it was not isolated). `virtual_device.err` is full of `sPrepareTexImage2D ...
 failed validation`. Not checked on real hardware. Suggestion: fix or document the clip path; the app gets no error at all.
+*22 Oct: the "second visit" freeze (dress rehearsal) is a different hang: F4.* Repro: sound-on release build, server
+running (74 Hall of Fame entries), `adb emu screenrecord` running (as when filming), then Home -> Hall of Fame -> Right
+-> Down -> Back, repeated. It froze on the 4th visit of one run and the 9th of another (2 of 13 visits); without
+screenrecord, 0 of 11 visits froze (two app sessions, up to 9 visits in one, one of them after a race). Frozen state:
+the screen alternates two stale frames (only the details sprite differs, as in the first F11 picture) and
+Right/Down/Back/OK change nothing. The JS thread is stopped, not just the picture: the native
+`MountingManager::SurfaceTelemetryLogger` line (every 5 s) kept `mutations=43510 transactions=416` for over 2
+minutes, and Back + OK, which on a live app opens the Hall of Fame again and fetches `/api/hall-of-fame`, sent no
+request (a logging proxy in front of the server saw one fetch per visit up to the frozen one, none after). After the
+first freeze the Home key and a `launch-app` gave a cold start (the old process was gone, no ACR). After the second
+the Home key left the frozen app in the background, and reinstalling the app ~3 min later wrote `crash_1792683444`
+(AppNotResponding, `LCM_ANR_REASON: Lifecycle Callback`, "No JavaScript code is currently being executed").
+`acr-stacks.py` on it shows exactly the F4 three-thread deadlock: the JS thread (tid 18) in `send()` <-
+`aceAsync_triggerSend` <- `aceAsync_deferredRemove` <- `AsyncHandler::cancel` <- `ThreadMonitor::stopTimer` <-
+`resetTimer` <- `KeplerScriptThreadMonitor::sendHeartbeat`; the watchdog loop (tid 20) in `pthread_mutex_lock` <-
+`aceAsync_deferredPoll`; the main thread in `pthread_mutex_lock` <- `appMovedToBackground` <- `onBackground`. The
+likely trigger (the fix below stopped it) is the Hall of Fame mounting all 74 cards at once: 74 network images plus
+each card's `FocusButton` animated nodes in one commit, like the 66 ink blots at race start. Fix (`HallOfFame.tsx`):
+mount only the rows down to two below the focused one (9 cards at first, 3 more per row of scrolling; never
+unmounted). Tilted cards with rounded
+clipped corners, the "…" and curly-quote glyphs and the idle eyes all stay, so the only change is how much mounts at
+once. With it: **27 visits, 0 frozen**, same screenrecord setup (3 runs of 9, load average 17-19). At the old rate
+(2 in 13), 27 clean visits in a row has p = (11/13)^27 = 0.01. Also 5 race starts after a Hall of Fame visit
+(`soak.mjs 5 --guests 3`) on this build, 0 frozen.
+The rehearsal advice (film the Hall of Fame soon after an app restart) should no longer be needed with this build, but
+F4 itself is a platform bug the app can only starve, so keep the Mac quiet when filming.
 
 ## Soak record (race starts on the VVD, `tv/scripts/soak.mjs`)
 
@@ -304,6 +336,10 @@ failed validation`. Not checked on real hardware. Suggestion: fix or document th
 | F13 one-MediaSource audio, sound on, `--screens 44` (21 Oct 05:34-05:58 UTC) | demo, 5 lanes | 21 | 1 (first start: a 6 s Reveal voice played into the countdown) |
 | + `hush()` pauses the playing clip at race mount (d301384), sound on | demo, 6 lanes | **10** | **0** |
 | same build, sound on, `--screens 44 --guests 3` | demo, 4-6 lanes | **25** | **0** (0 crashes over 51 Reveal/Results screens) |
+| race audio (3-2-1-GO, ROAR, photo finish; 22 Oct), sound on, `--guests 2` | demo, 5 lanes | **10** | **0** |
+| same, `--guests 3` | demo, 6 lanes | **10** (1 checked on a Reveal card after an OCR misread, see 22 Oct; its race was seen running in the wait shots) | **0** |
+| same + fixed room (soak-only), `--live 6 --room BNDR` | live, 6 fake phones | **5** | **0** |
+| + Hall of Fame row window (final build, 22 Oct), `--guests 3` | demo, 6 lanes | **5** | **0** |
 
 Final build: 20 race starts, 0 frozen; 42 since the fix. Sessions that lost keys to adb restarts (F6) or hit a VVD
 crash (F5) never reached a race and are not counted. Shots of every race (+4.5 s and +6 s) were checked by the soak
@@ -317,7 +353,8 @@ heavy load; the VVD itself kept crashing under the same load on 21 Oct (F5).
 
 - F4 is a platform deadlock; the app now gives it far less to chew on but cannot rule it out. Soak on a real Fire TV
   before filming there; on the VVD film with `MUTE=1` and keep the Mac's memory free (F5).
-- Audio audibility unverified (the VVD's output reaches the Mac speakers, see Audio outcome, but nothing captured it).
+- Audio: the countdown clips are in the VVD's screenrecord audio track, in sync (22 Oct); not yet heard on a real
+  Fire TV. "Photo finish!" is not verified on the VVD (no recording of a finish within 0.5 s yet).
 - The Hall of Fame on the server is full of test creatures (fake-phone uploads: 41 entries, mostly "Little
   Marshmallow" / "Professor Tumble"); the Demo party now shows them. Clear `server/data` before filming.
 - Audio on the VVD is fragile beyond F7: an ACR from a soak on 21 Oct (18:55 UTC) is a SIGSEGV inside
@@ -464,8 +501,9 @@ Installed on the VVD now: the sound-on release build of d301384 (`tv/build/sketc
 
 *What is audible now (sound-on build):* Reveal: the narrator's "Let's meet our Sketchlings!", then each creature's intro
 as its card shows (a newer intro waits for the one playing; the latest wins; with fast Next presses some intros are
-skipped). Results: the narrator's "And the winner is...", then the winner's win line. The race is silent; a Reveal line
-still playing when the race mounts is cut off. Every line is also a caption.
+skipped). Results: the narrator's "And the winner is...", then the winner's win line. The race was silent until
+22 Oct (now: 3-2-1-GO, ROAR, photo finish); a Reveal line still playing when the race mounts is cut off. Every line is
+also a caption.
 
 *Suggestion to Amazon:* make a source change safe at any time (stop the old pipeline's event delivery before freeing
 its MediaSource/SourceBuffer contexts), fire `emptied`/`abort` for the old source, and document how to play many short
@@ -481,3 +519,47 @@ MCP: `read_document` (`react_native_for_vega_get_started.md`, `react_native_for_
 .../temp_acr_debugFs/acr_libraries.txt to emulator-5554" (F8), so `acr-stacks.py` read the stacks. The package's own
 README and JS (`node_modules/@amazon-devices/react-native-w3cmedia/dist`) showed what a
 `srcObject` change does.
+
+## 22 Oct, evening (20:00-21:25 IST): race audio back on, Hall of Fame freeze fixed
+
+Setup for everything below: VVD headless, sound-on release builds through `vbuild.sh`, Mac output muted for the whole
+run (and restored after), server on the Mac with offline personas (no API key; `server/data` restored from a copy
+afterwards, so the live soak's 6 fake-phone creatures are gone again), Unity closed. The host was busy with
+other jobs: load average 15-22, 9.7-9.9 of 10-11 GB swap in use, the VVD at ~530 % CPU. These are VVD numbers, not
+Fire TV numbers (the VVD is not a performance test device, F12).
+
+**Race audio (`Race.tsx`).** The countdown plays the bundled narrator clips "Three!", "Two!", "One!", "Go!" (~0.6 s
+each, counts 0.9 s apart); each count calls `hush()` first, which pauses the one before on the one-MediaSource player
+(F13: a pause and a seek, never a source swap). A ROAR start plays "ROAR!" and the second finisher crossing within
+0.5 s of the first plays "Photo finish!"; both are dropped while another clip plays, so they never pile up. Race mount
+still hushes a queued Reveal line. The frame loop is unchanged (one `setTimeout` per frame, 20 Hz until GO): audio
+calls happen only on a count change, a ROAR start and the second finish, never per frame, with no extra React render.
+Unit test `test/audio.spec.ts`: a ROAR while a clip plays is dropped; hush + the next count plays at once.
+
+| check | silent race (HEAD de25070) | race audio |
+|---|---|---|
+| loop Hz, 5-lane demo race, overlay read ~1/s (seconds 2-24) | 23-58, median 49.5 (n 22) | 28-58, median 51 (n 23) |
+| loop Hz, 6-lane demo race | 49-59, median 53 (n 23) | 47-59, median 53 (n 23) |
+| JS ms/frame, 6 lanes | 0.3-0.8, median 0.4 | 0.3-1.5, median 0.4 |
+| race starts soaked (soak table) | - | **30, 0 frozen, 0 app crashes** (25 + 5 on the final build; 1 checked late, below) |
+| new ACR files on the VVD | - | none during the race soaks (16 before and after); the evening's one new ACR is the Hall of Fame freeze (F11) |
+
+Both builds were measured the same way within 35 minutes of each other, so the A/B is fair; both are below the
+55-62 Hz of 21 Oct because the host was busier. In one 5-lane race the overlay's clip counter (session total) went
+7 -> 11 -> 16 between ~3 s and ~20 s.
+
+*Audible in a recording.* `adb emu screenrecord start --time-limit 20 --fps 30` over Results -> Play again -> the
+countdown. The webm has a Vorbis 44.1 kHz stereo track. Loudness per 50 ms: four ~0.5 s bursts starting at 3.60,
+4.55, 5.55 and 6.40 s, silence between; the picture (frames read at 5 fps) shows 3 at 3.4 s, 2 at 4.4 s, 1 at 5.4 s and
+GO! at 6.4 s, so sound and picture agree within ~0.2 s. Matching log-band spectrograms against the bundled clips puts
+"three" at 3.60 s (r 0.64), "one" at 5.56 s (0.74) and "go" at 6.41 s (0.55); the second burst matches all four
+weakly (0.33-0.35). Then three ROAR-length bursts at 10.0, 13.5 and 16.7 s. (Scripts and files in a temp folder, not kept.)
+
+*Soak runs.* `soak.mjs 10 --guests 2` (5 lanes): 10 of 10. `--guests 3` (6 lanes): 10 of 10, but the first session's
+lobby count was misread by Vision ("showl (6)"), so the soak pressed 4 of 6 Reveal cards and checked that start on a
+Reveal card; the race then started on its own and its clock was seen running in the wait shots (`soak.mjs` now
+accepts the misread and reads twice). Live with 6 fake phones (`ROOM=BNDR` build, `--live 6 --room BNDR`): 5 of 5,
+6 lanes confirmed on screen. 0 app crashes over all Reveal cards and Results screens.
+
+**Hall of Fame freeze (F11, second part).** Reproduced with screenrecord running (2 of 13 visits), root-caused from
+an ACR as the F4 watchdog deadlock, fixed by mounting only the rows near the focus; 27 visits clean. Details in F11.
