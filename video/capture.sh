@@ -5,14 +5,19 @@
 # Ctrl-C stops the recording early. ADB=... and SERIAL=... override the defaults below.
 set -euo pipefail
 cd "$(dirname "$0")"
-ADB="${ADB:-/Applications/Unity/Hub/Editor/6000.6.0f1/PlaybackEngines/AndroidPlayer/SDK/platform-tools/adb}"
+# The emulator records one file at a time, and our stop would also cut a session's chunk without a word.
+case "$(ps -p "$(cat clips/.session/main.pid 2>/dev/null || echo 0)" -o command= 2>/dev/null)" in
+  *session.sh*) echo "A session is recording the TV (scripts/session.sh): use scripts/session.sh take ${1:-<name>}" >&2; exit 1 ;;
+esac
+# the PATH adb (Homebrew), as vega and scripts/session.sh use: two adb versions kill each other's server (F6)
+ADB="${ADB:-$(command -v adb || true)}"
 SERIAL="${SERIAL:-emulator-5554}"
 usage() { echo "usage: ./capture.sh <name> <seconds>   (name: letters, digits, . _ -; seconds: 1-180)" >&2; exit 2; }
 
 name="${1:-}"; secs="${2:-}"
 [[ "$name" =~ ^[A-Za-z0-9._-]+$ ]] || usage
 [[ "$secs" =~ ^[0-9]+$ ]] && (( 10#$secs >= 1 && 10#$secs <= 180 )) || usage
-[ -x "$ADB" ] || { echo "adb not found at $ADB (set ADB=...)" >&2; exit 1; }
+[ -x "$ADB" ] || { echo "adb not found on PATH (brew install --cask android-platform-tools, or set ADB=...)" >&2; exit 1; }
 mkdir -p clips
 out="$PWD/clips/$name.webm" # the emulator writes the file itself, so the path must be absolute
 [ -e "$out" ] && { echo "clips/$name.webm exists: delete it or pick another name" >&2; exit 1; }
