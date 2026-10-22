@@ -375,7 +375,8 @@ input {
 
 .ages {
   display: grid;
-  gap: 16px; /* the tilted buttons need it: at 10px they sat 2-6 px apart */
+  gap: 18px; /* the tilted buttons need it: at 10px they sat 2-6 px apart */
+  margin-bottom: 8px;
 }
 
 .age {
@@ -525,13 +526,19 @@ input {
     max-width: 170px;
   }
 
-  /* Keep "Bring it to life!" on screen on a 360x640 phone. */
-  .checker {
+  /* Keep "Bring it to life!" on screen on a 360x640 phone (more specific than the plain rules further down). */
+  .screen .checker {
     min-height: 220px;
   }
 
-  .sprite {
+  .checker .sprite {
     max-height: 220px;
+  }
+
+  /* Keep "Use my drawing" on screen now that the colours are 48 px. */
+  .pad-wrap {
+    width: 80%;
+    align-self: center;
   }
 }
 
@@ -662,7 +669,7 @@ input {
 .swatches {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 12px;
   justify-content: center;
 }
 
@@ -1370,4 +1377,9 @@ body.racing #app {
   .sparkle {
     display: none;
   }
+}
+
+/* The picked power keeps its size, so it doesn't crowd its neighbours. */
+.powers .age[aria-pressed='true'] {
+  transform: rotate(-1deg);
 }
