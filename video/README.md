@@ -4,6 +4,11 @@ Everything to cut the under-3-minute demo video. The middle of the video is the 
 `./build.sh` turns footage, narration, cards and music into a 1080p30 H.264 MP4 at -14 LUFS. Every clip in `edl.json`
 is a named footage slot; a slot without its file becomes a labelled placeholder, so a draft always builds.
 
+**No kids' footage?** Do not mark the `kids-*` slots optional (that cuts 0:10-1:26). Use the no-kids backup cut
+instead (`video/out/backup-final.mp4`, built with EDL=edl-backup.json): the real phone page recorded
+with Playwright, the VVD, cards and narration. Set `impact.html` to "Playtest with kids: not yet" and delete
+"Filmed at our playtest..." from the YouTube description.
+
 ```
 video/
   build.sh, build.mjs   the edit: edl.json -> out/*.mp4   (./build.sh --slots lists the footage slots)
@@ -34,7 +39,7 @@ For Fri 23 Oct, 3-7 pm. Mac muted while scrubbing (house rule); listen to the dr
 2. **Set the numbers in `edl.json`.** `ss` per slot; both `ss` of `kids-race` (Syncing below), then `ss` of
    `kids-results` and `kids-again` (the podium, the OK on Play again: same recording); `crop` for `open-race` and
    `ab-*` if the creature is small; `speed` of `open-card` (its guide has the formula; the build writes "Sped up Nx"
-   on screen by itself); `audioLag` once for all VVD segments (Race sound below).
+   on screen by itself); `audioLag` per recording (Race sound below).
 3. **Type the words.** Every `TBD` in `edl.json`: the playtest tag on `kids-draw` (how many children, their ages) and
    each `say` line, with the exact words and an age ("age 6"), never a name. Delete a `say` line nobody spoke. Then
    the cards: `impact.html` ("Playtest with kids": a real result, or "not yet"), `claude.html` (the cold-open
@@ -89,11 +94,11 @@ is covered. Creature lines need no caption: the TV shows each one in its own spe
 | Metrics after the hook, labelled | KPI and deadlock cards at 2:13-2:32: "VVD observations", "Engineering observations on a simulator, not Fire TV hardware performance", loop rate in ticks/s ("timer-driven, not vsync"), input "Wi-Fi not included". |
 | No children in the evidence | 0:10-1:26 is the 23 Oct playtest: join, snap, the ability card, Reveal with voices, race, Results, race 2 without a restart, their own words. |
 | Silent race | The phones' race sounds are real (room camera). Music never passes for game sound. |
-| Parent gate, AI consent | `grownups` slot (optional, if it ships tonight): AI personas on/off, Clear Hall of Fame. |
+| Parent gate, AI consent | `grownups` slot: `vvd-grownups` (parent gate, AI OFF/ON, Clear Hall then Keep). |
 | Hold-to-run not sent | `open-input` and `kids-hold` show it. |
 | "The youngest can really win" without evidence | Not claimed. The impact card shows the mechanism (+40% speed for 7 and under) and the playtest result only once it exists. |
-| Economics | VO "Under two cents a creature"; card "~1.6 cents a creature ($0.0159)" from the 60-run benchmark; price model TBD (your call). |
-| Where does Kokoro run? | Architecture card ("on the relay server, offline") and VO ("on our own server"). |
+| Economics | VO "Under two cents a creature"; card "~1.6 cents a creature ($0.0159)" from the 60-run benchmark; price model: a free offline game plus a $4.99-a-year Family Pass (plan, not built). |
+| Where does Kokoro run? | Architecture card ("on the relay server, offline") and VO ("on a Mac at home"). |
 | AI output safety | Claude card ("Asked for 5-year-old-safe output; every field is checked and clamped") and VO. |
 
 ## Storyboard
@@ -156,12 +161,35 @@ put a sticker on a creature whose card disagrees.
 2. **Abilities (D1-D4).** Four phones (or "Not <name>? Switch player" on fewer), `./capture.sh vvd-races 170`, race;
    repeat as `vvd-races2` until there is a WINGS!, WHEELS!, SPRINGS! and BIG ROAR! (point an `ab-*` slot's `src` at
    the file that has it).
-3. **Grown-ups**, if it ships tonight: `./capture.sh vvd-grownups 30`, the parent gate, then the two switches. Don't
+3. **Grown-ups**: `./capture.sh vvd-grownups 30`, the parent gate, then the two switches. Don't
    clear the Hall.
 4. **Remote** (optional): only if a remote types arrow keys and Enter into the live view (a USB air-mouse remote does;
    check the focus moves). Film the hand and the TV focus moving in one shot. No Fire TV remote as a prop.
 5. **You** (optional): `clips/who.mp4`, 7 s on camera without live sound, or the StarFun logo as `clips/who.png`.
 6. **Narration** into `vo/` (table below).
+
+**Status, 23 Oct 04:30 (VVD-only footage, sound on, Mac muted).** Filmed with the Demo party (bots, no phones) on a
+clean hall of 6 test creatures (synthetic art, Claude personas, real voices); `server/data` was backed up and restored
+(hall.json sha unchanged). Every file is 1920x1080 VP9 + Vorbis; the only decode warnings are the known audio
+timestamp gaps.
+- Done: `vvd-home` (16 s), `vvd-grownups` (45 s: gate, AI OFF/ON, Clear Hall then Keep, Done; `grownups` slot),
+  `vvd-lobby` (24 s: Start party, QR, room code), `vvd-races` (180 s: Demo Lobby, Reveal of 4, countdown, race,
+  Results; the `ab-*` slots), `vvd-race2` (89 s: Play again, race 2 to its finish, Results), `vvd-hall` (55 s:
+  browse, OK: Race again; `hall` slot until the kids' creatures exist), `vvd-lobby-guest` (16 s: the Hall of Famer
+  in a new Lobby), `vvd-reveal-cold` (75 s: Demo party right after an app launch, Reveal, race start).
+- `ab-*` in `vvd-races.webm` (pop = first frame of the word): WINGS! 66.5, WHEELS! 68.25, SPRINGS! 71.25,
+  BIG ROAR! 69.0, so `ss` 65.5 / 67.2 / 70.3 / 68.0. Synced 4.5 s cuts of the same moments: `clips/ab-fly.mp4`,
+  `ab-roll.mp4`, `ab-hop.mp4`, `ab-walk.mp4` (H.264/AAC, pop at 1.2 s: `ss` 0.2, no `audioLag`; `ab-hop` has no game
+  sound at that moment).
+- `audioLag` measured on the countdown (3-2-1-GO digits against their sounds): 0.4 s in `vvd-races` (10 fps), about
+  1.1 s in `vvd-reveal-cold` (2 fps). It differs per recording: measure each one.
+- Reveal voices run one card late in both recordings (filmed before `258959b`, which fixed it: intros now start
+  1.1-1.4 s into their own card): each intro starts 3.6-6 s after its card, plays over the next creature's card,
+  and the last is cut by the race. Pick Reveal moments by ear, cut to the card that matches the voice, or
+  re-record the Reveal on the current build.
+- 21 Oct recordings (old build) moved to `clips/old-21oct/`.
+- Still for the morning (hands, camera, phones): the open (`open-*`, D1 on a real phone), `open-race` (D1's own
+  WINGS!), the remote (optional), `who` (optional), narration. All `kids-*` slots are the playtest.
 
 ### Tomorrow 1-3 pm: the kids' playtest
 
@@ -194,15 +222,15 @@ it if it froze on a second visit (runsheet 7, `notes/tv.md` F11).
 ## Race sound
 
 The VVD recording's own sound is the TV's sound: VVD segments set `liveDb` and `audioLag`. The recorder writes the
-sound about 1.5 s late (21 Oct rehearsal). Measure it once: the Reveal's "Meet the Sketchlings!" narrator line starts
+sound about 1.5 s late (21 Oct rehearsal). Measure it for each recording: the Reveal's "Meet the Sketchlings!" narrator line starts
 on the Reveal's first frame, so
 
 ```sh
 ffmpeg -i clips/open-reveal.webm -af silencedetect=n=-40dB:d=0.3 -f null - 2>&1 | grep silence_end
 ```
 
-gives the sound's start; `audioLag` = that time minus the time of the Reveal's first frame. Set it on every VVD
-segment. Check a recording carries sound without playing it:
+gives the sound's start; `audioLag` = that time minus the time of the Reveal's first frame. Set it on every
+segment cut from that recording. Check a recording carries sound without playing it:
 `ffmpeg -i clips/<name>.webm -af ebur128 -f null - 2>&1 | grep ' I:'`.
 
 - The phones make the race sounds (Web Audio, speaker toggle on). The room camera records them; segments with the
@@ -210,7 +238,7 @@ segment. Check a recording carries sound without playing it:
 - The TV race plays the narrator's 3-2-1-GO, ROAR and photo-finish clips. `note-music` says "Race sounds are the
   app's own." while music plays under the race. If the TV's race is silent in the footage (`MUTE=1`), set
   `RACE_HAS_SOUND = false` in `cards/note-music.html` and render it.
-- Sound-on build unstable on the VVD (`notes/tv.md` F7, F13): film with `MUTE=1`, drop `liveDb` from the VVD
+- If a sound-on build crashes on the VVD (the old F7/F13 crash in `notes/tv.md`, fixed on 21 Oct): film with `MUTE=1`, drop `liveDb` from the VVD
   segments and lay the voices in as cues with `"note": true` (Voice clips below).
 
 ## Capture the VVD
@@ -219,9 +247,9 @@ segment. Check a recording carries sound without playing it:
 ./capture.sh kids-r1-race1 180   # -> clips/kids-r1-race1.webm, 1920x1080 VP9 30 fps; Ctrl-C stops early
 ```
 
-It runs `adb -s emulator-5554 emu screenrecord start --time-limit N --fps 30 <abs path>` with Unity's adb (override
+It runs `adb -s emulator-5554 emu screenrecord start --time-limit N --fps 30 <abs path>` with the adb on PATH (override
 with `ADB=...`, `SERIAL=...`), waits for the file and prints its length. Before filming: keep the Mac's memory free
-(`notes/tv.md` F5, F12: quit other apps) and use a build from d301384 or later.
+(`notes/tv.md` F5, F12: quit other apps) and use a build from 258959b or later.
 
 What the 21 Oct dress rehearsal showed: the race (about 60 s) is longer than its split (19 s), so the split starts
 mid-race at the same moment in both files; OK on Results is Play again, so OK at the finish skips Results; the
@@ -257,11 +285,11 @@ are read by macOS `say` in drafts (marked `TTS`). Each line fits its segment at 
 | `vo/ab-roll.m4a` | ab-roll (2.9 s) | Draw wheels, and it zooms on flat ground. |
 | `vo/ab-hop.m4a` | ab-hop (2.9 s) | Draw long legs, and it jumps higher. |
 | `vo/ab-walk.m4a` | ab-walk (2.9 s) | Draw a big body, and its ROAR clears the ink. |
-| `vo/arch.m4a` | arch (8.2 s) | Phones open a web page, no install. Our Bun relay links them to the TV and voices every creature with Kokoro, on our own server. |
+| `vo/arch.m4a` | arch (8.2 s) | Phones open a web page, no install. Our Bun relay links them to the TV and voices every creature with Kokoro, on a Mac at home. |
 | `vo/cutout.m4a` | cutout (6.7 s) | Our open-source library, doodle-cutout, turns a phone photo into a clean sticker, right in the phone's browser. |
-| `vo/claude.m4a` | claude (8.7 s) | Claude reads the drawing and decides how it plays. Its prompt asks for five-year-old-safe answers, and every field is checked before the TV sees it. |
+| `vo/claude.m4a` | claude (8.7 s) | Claude reads the drawing and suggests how it plays; the child has the last word. It's asked for five-year-old-safe answers, and every field is checked before the TV sees it. |
 | `vo/kpi.m4a` | kpi (8.7 s) | Engineering observations on the virtual device, not Fire TV hardware: first frame in two thirds of a second, memory well under the limit. |
-| `vo/deadlock.m4a` | deadlock (9.7 s) | Races sometimes froze at the start; the crash dump showed a watchdog deadlock. After the fix, fifty-two starts on the virtual device, zero freezes. |
+| `vo/deadlock.m4a` | deadlock (9.7 s) | Races sometimes froze at the start; the crash dump showed a watchdog deadlock. After the fix, a hundred and five starts on the virtual device, zero freezes. |
 | `vo/who.m4a` | who (6.5 s) | I'm a solo developer at StarFun Games in Sri Lanka. I built this so our screen time starts with crayons. |
 | `vo/impact.m4a` | impact (9.9 s) | It's for families with kids four to ten. Little ones race with a visible speed boost. Under two cents a creature, first names only, no accounts. |
 
@@ -282,10 +310,12 @@ are drawn: `svg.to`). The build renders a card only when its PNG is missing; aft
 - Not in the timeline: `title`, `super` (for a thumbnail), `caption-think`, `caption-offline`, `clock`.
 
 Still to fill (they say **TBD** on screen):
-- `impact.html`: "Playtest with kids: TBD" (a real result from tomorrow, or "not yet") and "Price model: TBD".
-- `claude.html`: shows Captain Bleep, a real `source: "claude"` persona (walk). After tomorrow, paste the cold-open
-  creature's real JSON from the Hall of Fame into `P`, copy its sprite to `cards/img/` and set `SPRITE`. Never type a
-  persona by hand.
+- `impact.html`: "Playtest with kids: TBD" (a real result from tomorrow, or "not yet").
+- `claude.html`: shows Captain Bleep, a real `source: "claude"` persona (walk). To swap in a better one, paste a
+  team-drawn creature's real JSON from the Hall of Fame into `P`, copy its sprite to `cards/img/` and set `SPRITE`.
+  Never a child's creature: `cards/` (the HTML, `img/` and the rendered PNGs) is tracked in git, so a child's drawing,
+  persona or first name never goes there. Children's creatures appear only in footage (`clips/`, `out/`, not in git).
+  Never type a persona by hand.
 - `note-music.html`: `RACE_HAS_SOUND` (Race sound).
 
 ## Honesty rules for the edit
@@ -315,7 +345,7 @@ Still to fill (they say **TBD** on screen):
 > Sketchlings turns a child's crayon drawing into a talking racer on the TV. Draw on paper, snap it with a phone,
 > and watch it peel off the page, get a name, stats and an ability from Claude vision, speak in its own voice, and race
 > the whole family. What you draw changes how you play: wings float over ink, wheels zoom, long legs jump, a big body
-> ROARs. Filmed at our playtest with TBD children aged TBD on 23 Oct 2026.
+> ROARs. Filmed at our playtest with TBD children aged TBD on 23 Oct 2026. [Delete this sentence if no children played.]
 >
 > Built for Fire TV on Vega OS with React Native for Vega; shown running on Amazon's Vega Virtual Device (the Fire TV
 > simulator), not on Fire TV hardware. Phones join with a QR code, no app install, and race with taps, holds, jumps and
@@ -323,9 +353,9 @@ Still to fill (they say **TBD** on screen):
 >
 > How it works: a phone web app cuts the drawing out with doodle-cutout (our open-source MIT library), a small Bun
 > relay links the phones and the TV over WebSocket, Claude vision writes each creature's persona (asked for
-> 5-year-old-safe output, every field checked, an offline generator as the fallback) and Kokoro, running on our own
-> server, gives it a voice. Privacy: first names only, no accounts; only the cut-out leaves the phone, and drawings go
-> to Claude only to create the character.
+> 5-year-old-safe output, every field checked, an offline generator as the fallback) and Kokoro, running on a Mac on
+> the home network, gives it a voice. Privacy: first names only, no accounts; only the cut-out leaves the phone, and
+> it goes to Claude only when a grown-up turns AI personas on.
 >
 > Code: https://github.com/Harindulk/sketchlings
 > doodle-cutout: https://github.com/Harindulk/doodle-cutout
@@ -340,4 +370,4 @@ Still to fill (they say **TBD** on screen):
 > 2:38 Who it's for
 
 Chapters follow the timeline with every slot filled; take the times from the final build's printout (YouTube needs
-each chapter to be at least 10 s). Fill both TBDs. Upload as Public, in English (contest rules).
+each chapter to be at least 10 s). Fill both TBDs, or delete that sentence (and its brackets) if no children played. Upload as Public, in English (contest rules).

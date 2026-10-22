@@ -14,7 +14,7 @@ const FINAL = process.env.FINAL === '1';
 const KEEP = process.env.KEEP === '1';
 const SLOTS = process.argv[2] === '--slots';
 const OUT = (!SLOTS && process.argv[2]) || 'out/sketchlings.mp4';
-const E = JSON.parse(readFileSync('edl.json', 'utf8'));
+const E = JSON.parse(readFileSync(process.env.EDL || 'edl.json', 'utf8')); // EDL=edl-backup.json ./build.sh builds another timeline
 const {fps: FPS, width: W, height: H} = E;
 const TMP = 'out/tmp';
 const CACHE = 'out/cache'; // rendered slates, captions and tags, reused by later builds

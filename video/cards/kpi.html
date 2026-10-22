@@ -25,7 +25,8 @@
   <div class="grid" id="grid"></div>
   <div class="wide sticker" id="wide"></div>
   <script>
-    // Values from notes/tv.md "Performance (measured on VVD)", 21 Oct 2026. Edit here, then cards/render.sh kpi.
+    // Values from notes/tv.md "Performance (measured on VVD)", 21 Oct 2026; the race loop from its 23 Oct section (4 lanes,
+    // race audio on); the freezes from the soak since the last fix (FRICTION_LOG #1). Edit here, then cards/render.sh kpi.
     // Cool start: KPI Visualizer, 10 runs, loaded host. Memory: `vega exec perf activity-monitor` (the KPI Visualizer's
     // memory, UI fluidity and focus KPIs need an Appium server; its warm-start test opens the Fire TV launcher, which
     // the VVD lacks, so those can't run on the VVD). The race number is the JS game-loop rate from the perf overlay.
@@ -34,10 +35,10 @@
     const KPI = [
       {label: 'Time to first frame', value: '0.67', unit: 's', target: 'target < 1.5 s', ok: true, tape: 'var(--red)'},
       {label: 'Time to fully drawn', value: '0.67', unit: 's', target: 'target < 8 s', ok: true, tape: 'var(--blue)'},
-      {label: 'Race loop, 6 lanes', value: '55-62', unit: 'ticks/s', target: 'timer-driven, not vsync', tape: 'var(--yellow)'},
+      {label: 'Race loop, 4 lanes', value: '54-59', unit: 'ticks/s', target: 'timer-driven, not vsync', tape: 'var(--yellow)'},
       {label: 'Memory on Home', value: '124', unit: 'MiB', target: 'target < 400 MiB', ok: true, tape: 'var(--green)'},
       {label: 'Memory after 3 races', value: '233', unit: 'MiB', target: 'target < 400 MiB', ok: true, tape: 'var(--purple)'},
-      {label: 'Race-start freezes', value: '0', unit: 'in 52', target: 'soak, fixed builds', ok: true, tape: 'var(--orange)'},
+      {label: 'Race-start freezes', value: '0', unit: 'in 105', target: 'since the last fix', ok: true, tape: 'var(--orange)'},
     ];
     // Phone -> TV input: receive -> applied 6-9 ms (n = 300, 6 live lanes); absolute end-to-end not measurable on the
     // VVD (its clock ran 2 h 11 min behind), so the jitter above the best delivery is shown instead.

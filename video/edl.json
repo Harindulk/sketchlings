@@ -127,7 +127,7 @@
      "cues": [{"src": "vo/ab-walk.m4a", "at": 0.1, "text": "Draw a big body, and its ROAR clears the ink."}]},
 
     {"id": "arch", "bp": "how", "type": "card", "dur": 8.5, "in": "fade", "src": "cards/architecture.png",
-     "cues": [{"src": "vo/arch.m4a", "at": 0.3, "text": "Phones open a web page, no install. Our Bun relay links them to the TV and voices every creature with Kokoro, on our own server."}]},
+     "cues": [{"src": "vo/arch.m4a", "at": 0.3, "text": "Phones open a web page, no install. Our Bun relay links them to the TV and voices every creature with Kokoro, on a Mac at home."}]},
     {"id": "cutout", "bp": "how", "type": "card", "dur": 7, "in": "fade", "src": "cards/cutout.png",
      "cues": [{"src": "vo/cutout.m4a", "at": 0.3, "text": "Our open-source library, doodle-cutout, turns a phone photo into a clean sticker, right in the phone's browser."}]},
     {"id": "claude", "bp": "how", "type": "card", "dur": 9, "in": "fade", "src": "cards/claude.png",
@@ -135,7 +135,7 @@
     {"id": "kpi", "bp": "VVD notes", "type": "card", "dur": 9, "in": "fade", "src": "cards/kpi.png",
      "cues": [{"src": "vo/kpi.m4a", "at": 0.3, "text": "Engineering observations on the virtual device, not Fire TV hardware: first frame in two thirds of a second, memory well under the limit."}]},
     {"id": "deadlock", "bp": "VVD notes", "type": "card", "dur": 10, "in": "fade", "src": "cards/deadlock.png",
-     "cues": [{"src": "vo/deadlock.m4a", "at": 0.3, "text": "Races sometimes froze at the start; the crash dump showed a watchdog deadlock. After the fix, fifty-two starts on the virtual device, zero freezes."}]},
+     "cues": [{"src": "vo/deadlock.m4a", "at": 0.3, "text": "Races sometimes froze at the start; the crash dump showed a watchdog deadlock. After the fix, a hundred and five starts on the virtual device, zero freezes."}]},
     {"id": "who", "bp": "close", "type": "clip", "dur": 6.8, "in": "fade", "src": "clips/who.mp4", "ss": 0, "optional": true,
      "label": "YOU ON CAMERA (no live sound), or the StarFun Games logo as clips/who.png",
      "guide": "Any 6.8 s. The narration carries the words. Left out of the final if not filmed.",
