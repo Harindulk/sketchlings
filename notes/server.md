@@ -56,21 +56,22 @@ Default `claude-opus-5-5` (override with `SKETCHLINGS_MODEL`). It is the current
 strongest at image understanding, and reading a 6-year-old's scribble well is the whole feature. To keep it fast:
 `output_config.effort: "low"` (thinking can't be turned off on Opus 5.5; effort is the control), a short JSON-only
 answer, structured outputs (`output_config.format` json_schema), 12 s client timeout, `maxRetries: 0`.
-Cost is roughly a cent per scan (about 1.5k image+prompt tokens in, a few hundred out at $4/$20 per MTok).
+Cost: measured about $0.016 a creature (below).
 Server-side refusal fallback (`fallbacks: "default"`, beta `server-side-fallback-2026-07-01`) is on for Opus 5/5.5,
 Sonnet 5.5 and Fable 5.1, as Anthropic's Claude API reference recommends; a refusal or anything else still ends in the offline persona.
 
-**Not measured against the real API** (no key here). Each scan logs `[persona] <model> answered in N ms`. If real scans
-take more than about 6-8 s, set `SKETCHLINGS_MODEL=claude-sonnet-5-5` (or `claude-haiku-5-5`, fastest).
-The first request after a schema change pays a one-time schema compile (cached 24 h): do one test scan before a demo.
+Each scan logs `[persona] <model> answered in N ms`. Measured since (below): median 4.7 s, so Opus stays. If real
+scans take more than about 6-8 s, set `SKETCHLINGS_MODEL=claude-sonnet-5-5` (or `claude-haiku-5-5`, fastest; eye and
+ability quality not checked). The first request after a schema change pays a one-time schema compile (cached 24 h): do
+one test scan before a demo.
 
 ## Dev notes
 
 - Layout: `src/png.ts` (IHDR + 8-bit RGB/RGBA non-interlaced decode with node:zlib, all five filters),
   `src/persona.ts` (features, offline generator, clamping, Claude call), `src/rooms.ts` (rooms, frame validation, relay),
   `src/server.ts` (HTTP + WS wiring, hall of fame), `src/index.ts` (env + start).
-- Tests: 60 tests over real HTTP + WS on port 0 with temp data dirs and `claude: null`, so `bun test` never calls the
-  API even when `server/.env` has a key. The Claude request shape (headers, `?beta=true`, body, no `Authorization`
+- Tests: 79 tests in 7 files (23 Oct; 3 skip without ffmpeg or the voice model), over real HTTP + WS on port 0 with
+  temp data dirs and `claude: null`, so `bun test` never calls the API even when `server/.env` has a key. The Claude request shape (headers, `?beta=true`, body, no `Authorization`
   header, explicit base URL) and the 12 s timeout were checked once against a local mock API.
 - Room codes use `BCDFGHJKMNPRSTVWXZ`: no vowels so codes never spell words, no I/L/O/Q.
 - Rooms with nobody connected for 6 h are purged when a new room is created (no timers).
@@ -101,3 +102,28 @@ The first request after a schema change pays a one-time schema compile (cached 2
 - Tokens per scan: 2.4-2.7k in, 210-255 out, about $0.014-0.016 per creature at list price ($4/$20 per MTok).
 - Names were repetitive ("Bobble ..." x5) until the request listed names already taken in the room and recent hall of fame; after that: Zippy Sprinkle, Sunny Jellybean, Captain Bleep, Mister Fizzwhistle, Wiggle Muffin, Peachy Plum.
 - Keys not scoped to a workspace need `ANTHROPIC_WORKSPACE_ID` in server/.env (400 "must include the anthropic-workspace-id header").
+
+## Measured since (22-23 Oct)
+- Persona benchmark, 22 Oct: 60 calls (12 test images, 9 drawings, none by a child), median 4.7 s (p90 5.9 s, 3.7-8.3 s,
+  first call 8.0 s), median $0.0159 a creature ($0.014-0.016), 60 of 60 answered, 0 fallbacks, 0 word-guard hits.
+  It replaces the 11-scan sample above. Details: `notes/bench-persona.md`, verdicts: `docs/ABILITY_AUDIT.md`.
+- 23 Oct, on the VVD with fake phones and the real API: personas 4.8-5.2 s; an injected failure
+  (`SKETCHLINGS_FAIL_EVERY=4`) fell back to offline in 29 ms; upload->voices 13.3-13.5 s with 3 scans at once.
+- 23 Oct, Kokoro, intros first, 6 uploads at once (offline personas, load average about 9): intro frames 2.7-16.3 s
+  after the uploads, full voices 18.4-27.7 s.
+- `[net] race rtt ms` and `[race] inputs` lines have only been seen on localhost (0-1 ms median rtt; 4.5-4.9 taps/s
+  from fake phones). Real phones over Wi-Fi: not measured yet.
+
+## Added 22-23 Oct (details in `server/README.md`)
+- Consent flag: TV hello `aiPersonas: false` means offline personas for that room, logged once as `[consent]`. The
+  drawing still goes to this relay and into the Hall of Fame; only the Claude call stops.
+- Names: first word, letters only (ZWNJ/ZWJ kept for Sinhala and Tamil), at most 12, word guard, else `Artist`.
+- Persona text all-or-none: the six text lines come all from Claude or all from the offline persona.
+- The 12 s Claude limit covers the response body too (`AbortSignal.timeout`).
+- Voice queue: every waiting intro first, and a `sketchling` frame with `voice: {intro}` as soon as it is ready.
+- Ability correction (`ability {kind}`, `chosenBy: 'artist'`), `clearHall`, `removePlayer`, `deleteCreature`. Only
+  `clearHall` has a TV control (Grown-ups); the other two have no UI yet.
+- Tunnel: requests with `Cf-Connecting-IP` or `Cf-Ray` get no Hall of Fame, no voice clips and only live rooms'
+  sprites, and a TV hello through the tunnel is refused. Tested with fake headers, not through a real cloudflared.
+- Logs per race: `[net] race rtt ms` (server-side WebSocket pings) and `[race] inputs` (taps a second per player).
+- Failure injection for soaks: `SKETCHLINGS_FAIL_EVERY=N`.
