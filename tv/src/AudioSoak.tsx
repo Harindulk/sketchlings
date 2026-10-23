@@ -40,7 +40,7 @@ async function loop() {
 export const AudioSoak = () => {
   const [, tick] = useState(0);
   useEffect(() => {
-    music('menu'); // the game plays music under every voice, so the soak does too
+    music(true); // the game plays music under every voice, so the soak does too
     loop();
     const t = setInterval(() => tick((n) => n + 1), 1000);
     return () => clearInterval(t);

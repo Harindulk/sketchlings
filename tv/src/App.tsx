@@ -47,17 +47,17 @@ export const App = () => {
     return () => clearTimeout(t);
   }, [leaving]);
   const appState = useKeplerAppStateManager();
-  const track = screen === 'race' ? ('race' as const) : ('menu' as const);
-  const trackRef = useRef(track);
-  trackRef.current = track;
-  useEffect(() => music(track), [track]);
+  const menuMusic = screen !== 'race'; // the race stays silent apart from its narrator clips (F1)
+  const musicRef = useRef(menuMusic);
+  musicRef.current = menuMusic;
+  useEffect(() => music(menuMusic), [menuMusic]);
   useEffect(() => {
     // backgrounded (Home button, another app): stop the voice lines and the music; the players stay (F7: no deinit)
     const sub = appState.addAppStateListener('change', (st) => {
       if (st === 'background') {
         hush();
-        music(null);
-      } else if (st === 'active') music(trackRef.current);
+        music(false);
+      } else if (st === 'active') music(musicRef.current);
     });
     return () => sub.remove();
   }, [appState]);
