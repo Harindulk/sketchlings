@@ -235,7 +235,14 @@ export function useParty(mode: PartyMode | null) {
     return () => void listeners.current.delete(l);
   }, []);
 
-  return {state, sendPhase, onInput};
+  // Called from inside the race's frame task, so it must never throw.
+  const sendHit = useCallback((playerId: string) => {
+    try {
+      if (ws.current?.readyState === 1) ws.current.send(JSON.stringify({t: 'hit', playerId}));
+    } catch {}
+  }, []);
+
+  return {state, sendPhase, sendHit, onInput};
 }
 
 export type Party = ReturnType<typeof useParty>;

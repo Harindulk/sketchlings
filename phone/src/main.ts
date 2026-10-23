@@ -16,7 +16,7 @@ import {drawPad} from './drawpad';
 import {cleanName} from './name';
 import {Link, type LinkStatus} from './net';
 import {debugImage, decodeImage, PAD_OPTIONS, processImage, upload, type Sprite} from './scan';
-import {fanfare, unlock} from './sound';
+import {fanfare, splat, unlock} from './sound';
 import {buzz, drawIllo, h, icons, logo, mascot, medal, store, svg} from './ui';
 
 type View = {el: HTMLElement; update?(): void; destroy?(): void};
@@ -142,6 +142,12 @@ function onMessage(m: ServerMsg) {
       S.joined = false;
       link.stop();
       break;
+    case 'hit': // our racer hit an ink blot; only the race screen cares (an old TV never sends it)
+      if (S.phase === 'race') {
+        splat();
+        buzz(40);
+      }
+      return;
     default:
       return;
   }

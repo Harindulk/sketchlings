@@ -192,6 +192,7 @@ export const App = () => {
           racers={racers}
           bots={mode === 'demo'}
           onInput={party.onInput}
+          onHit={mode === 'live' ? party.sendHit : undefined}
           onFinish={finish}
         />
       );

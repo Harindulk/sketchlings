@@ -25,6 +25,7 @@ interface Props {
   bots: boolean; // demo party: everyone is a bot (the remote can take over player 1)
   onInput: (l: InputListener) => () => void;
   onFinish: (placements: string[]) => void;
+  onHit?: (playerId: string) => void; // a phone player's racer hit an ink blot: its phone plays a splat
 }
 
 const TOP = 72;
@@ -65,7 +66,7 @@ const nowMs = () => (perf ? perf.now() : Date.now());
  *  graph (no React render, no JS style diffing) and no attach animations or completion callbacks are needed. */
 const nativeValue = (v: number) => new Animated.Value(v, {useNativeDriver: true});
 
-export function Race({racers, bots, onInput, onFinish}: Props) {
+export function Race({racers, bots, onInput, onFinish, onHit}: Props) {
   const n = racers.length;
   const laneH = (BOTTOM - TOP) / n;
   const size = Math.min(laneH * 0.66, 100); // leaves headroom so a jump stays inside its own lane band
@@ -340,7 +341,11 @@ export function Race({racers, bots, onInput, onFinish}: Props) {
         const boosting = r.boost > 1.12;
         if (boosting !== f.boost) pulse(v.boost, (f.boost = boosting));
         const stunned = r.stunT > 0;
-        if (stunned !== f.stun) pulse(v.stun, (f.stun = stunned));
+        if (stunned !== f.stun) {
+          pulse(v.stun, (f.stun = stunned));
+          // one send per hit while the race runs (never during 3-2-1 or after the finish), no other work in the frame
+          if (stunned && running.current && !r.bot && r.finishedAt < 0) onHit?.(r.id);
+        }
         const roaring = r.roarT > 0;
         if (roaring && !f.roar) {
           narrator('roar'); // dropped while another clip plays, so ROARs never pile up

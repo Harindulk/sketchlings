@@ -95,7 +95,10 @@ export type RemovePlayerMsg = {t: 'removePlayer'; playerId: string};
 // tv -> server: delete one creature (a Sketchling id) from the Hall of Fame with its sprite and voice. A player in a live
 // room who still has it is left without a creature. Answer: CreatureDeletedMsg.
 export type DeleteCreatureMsg = {t: 'deleteCreature'; id: string};
-export type ClientMsg = HelloTv | HelloPhone | PhaseMsg | InputMsg | PingMsg | AbilityMsg | ClearHallMsg | RemovePlayerMsg | DeleteCreatureMsg;
+// tv -> server, only while a race runs: this player's racer just hit an ink blot. The server tells that phone alone
+// (PhoneHitMsg), which plays a splat. Anything else drops it silently.
+export type HitMsg = {t: 'hit'; playerId: string};
+export type ClientMsg = HelloTv | HelloPhone | PhaseMsg | InputMsg | PingMsg | AbilityMsg | ClearHallMsg | RemovePlayerMsg | DeleteCreatureMsg | HitMsg;
 
 // ---------- server -> client ----------
 export type RoomMsg = {t: 'room'; code: string; joinUrl: string}; // to tv after hello
@@ -106,6 +109,7 @@ export type ScanStatusMsg = {t: 'scan'; playerId: string; status: 'processing' |
 export type RelayedInputMsg = {t: 'input'; playerId: string; kind: InputKind; at: number}; // to tv
 export type HallClearedMsg = {t: 'hallCleared'; removed: number}; // to the TV that sent clearHall; removed = creatures deleted
 export type CreatureDeletedMsg = {t: 'creatureDeleted'; id: string; removed: number}; // to the TV that sent deleteCreature; 0 = no such id
+export type PhoneHitMsg = {t: 'hit'}; // to one phone: its racer hit an ink blot (HitMsg)
 // removed: the TV took this player out (RemovePlayerMsg); the phone should stop reconnecting.
 export type ErrorMsg = {t: 'error'; code: 'no_room' | 'room_full' | 'bad_message' | 'removed'; message: string};
 export type ServerMsg =
@@ -119,6 +123,7 @@ export type ServerMsg =
   | HallClearedMsg
   | CreatureDeletedMsg
   | ErrorMsg
+  | PhoneHitMsg
   | {t: 'pong'};
 
 // ---------- HTTP ----------

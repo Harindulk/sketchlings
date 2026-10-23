@@ -65,6 +65,15 @@ export function boing(): void {
   if (a) tone(a, 'triangle', 150, 700, a.currentTime, 0.28, 0.35);
 }
 
+const splatGate = limiter(600);
+/** Our racer hit an ink blot (the TV says so): a short wet thud. */
+export function splat(): void {
+  const a = live();
+  if (!a || !splatGate(performance.now())) return;
+  tone(a, 'sine', 320, 70, a.currentTime, 0.22, 0.4);
+  tone(a, 'square', 180, 90, a.currentTime, 0.09, 0.08);
+}
+
 const roarGate = limiter(250);
 export function roar(): void {
   const a = live();

@@ -463,3 +463,29 @@ describe('the TV removes a player or deletes one creature', () => {
     app.stop();
   });
 });
+
+describe('ink-blot hits (tv -> one phone)', () => {
+  test('the TV relays a hit to that phone only, during a race; phones, other phases and unknown players are dropped', async () => {
+    const app = startTestServer({tts: async () => fakeTts});
+    const p = await party(app);
+    const leo = await connect(app.wsUrl);
+    leo.send({t: 'hello', role: 'phone', room: p.code, name: 'Leo'});
+    await leo.next('joined');
+    p.tv.send({t: 'hit', playerId: p.playerId}); // not racing yet: dropped
+    p.tv.send({t: 'phase', phase: 'race'});
+    await p.mia.next('phase');
+    await leo.next('phase');
+    p.mia.send({t: 'hit', playerId: p.playerId}); // phones can't send it: dropped, no answer
+    p.tv.send({t: 'hit', playerId: 'nobody'}); // unknown player: dropped
+    p.tv.send({t: 'hit', playerId: p.playerId});
+    expect(await p.mia.next('hit')).toEqual({t: 'hit'});
+    p.tv.send({t: 'phase', phase: 'results'}); // a frame after the hit, so a stray second hit would show first
+    expect((await p.mia.next('phase')).phase).toBe('results');
+    const count = (c: {queue: any[]}, t: string) => c.queue.filter(m => m.t === t).length;
+    expect(count(p.mia, 'hit')).toBe(0); // exactly the one hit (taken above), not the early or the unknown one
+    expect(count(leo, 'hit')).toBe(0); // never broadcast
+    expect(count(p.tv, 'error') + count(p.mia, 'error')).toBe(0); // dropped silently
+    await Promise.all([p.close(), leo.close()]);
+    app.stop();
+  });
+});

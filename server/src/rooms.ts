@@ -73,6 +73,8 @@ export function parseClientMsg(raw: string | Buffer): ClientMsg | string {
       return typeof m.playerId === 'string' ? {t: 'removePlayer', playerId: m.playerId} : 'playerId must be a string';
     case 'deleteCreature':
       return typeof m.id === 'string' ? {t: 'deleteCreature', id: m.id} : 'id must be a string';
+    case 'hit':
+      return typeof m.playerId === 'string' ? {t: 'hit', playerId: m.playerId} : 'playerId must be a string';
     case 'hello':
       if (m.role === 'tv') {
         if (!optStr(m.room)) return 'room must be a string';
@@ -367,6 +369,13 @@ export function createHub(joinUrl: (code: string) => string, graceMs = 2 * 60_00
           room.pinger = setInterval(() => pingPhones(room), RTT_PING_MS);
           pingPhones(room);
         }
+        return;
+      }
+      case 'hit': {
+        // Only the room's TV, only during a race, only to that one phone; anything else is dropped without an answer.
+        if (ws.data.role !== 'tv' || !room || room.tv !== ws || room.phase !== 'race') return;
+        const slot = room.slots.get(msg.playerId);
+        if (slot) send(slot.ws, {t: 'hit'});
         return;
       }
       case 'input': {
