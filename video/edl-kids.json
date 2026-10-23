@@ -495,7 +495,7 @@
    "type": "clip",
    "dur": 8.3,
    "in": "cut",
-   "src": "clips/kids/who-styled.mp4",
+   "src": "clips/kids/who-styled-clean.mp4",
    "ss": 0,
    "liveDb": 0,
    "label": "Harindu, the developer, on camera (framed on cards/who.png, colour-graded)",
@@ -545,9 +545,17 @@
   {
    "src": "music/HappyClappyLoop.wav",
    "from": "hall",
-   "to": "impact",
+   "to": "deadlock",
    "db": -9,
    "fadeIn": 1,
+   "fadeOut": 1
+  },
+  {
+   "src": "music/HappyClappyLoop.wav",
+   "from": "impact",
+   "to": "impact",
+   "db": -9,
+   "fadeIn": 0.6,
    "fadeOut": 1.5
   },
   {
