@@ -622,3 +622,14 @@ and after). Loop 54-59 Hz, median 59, JS 0.2-0.3 ms/frame (4-lane demo race, ove
 recording), `take zz-test-take` (chunk ended, take started, `video/clips/zz-test-take.webm` link made; VP9 + Vorbis),
 stop (server, live view and its Chrome window gone; 8 s + 13 s files listed). Test files deleted.
 
+
+**F14 (23 Oct). The app stops after about 300 back-to-back audio screens, with no ACR.**
+- **What:** AUDIOSOAK=1 builds (src/AudioSoak.tsx plays Reveal and Results audio back to back) stopped once per run. There was no ACR, and audio-soak.mjs saw the app "not running" twice. The device log had rotated before it could be read.
+- **When:**
+  - with the SourceBuffer trim (audio.ts `trim`): after 1109 s / 334 screens and 1076 s / 324 screens;
+  - without the trim: after 992 s / 299 screens.
+
+  So the trim is not the cause.
+- **Scale:** a real party plays about 5 audio screens per round (4 Reveal cards plus Results), so ~300 screens is ~60 rounds.
+- **Workaround:** relaunch the app before a session (runsheet 3.8).
+- **Not checked on hardware.** The trim stays: it keeps the single SourceBuffer small, and a full one is the likely cause of the 22 Oct night's silent session (appendBuffer throwing → `broken = true`). The platform's own log also shows `evict_coded_frames`, so how full the buffer can get on the VVD is not proven.
