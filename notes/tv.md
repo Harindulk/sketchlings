@@ -632,4 +632,5 @@ stop (server, live view and its Chrome window gone; 8 s + 13 s files listed). Te
   So the trim is not the cause.
 - **Scale:** a real party plays about 5 audio screens per round (4 Reveal cards plus Results), so ~300 screens is ~60 rounds.
 - **Workaround:** relaunch the app before a session (runsheet 3.8).
+- **Confounded:** during all three runs a scripts/session.sh run was still recording the VVD in 2-minute chunks (`emu screenrecord stop/start` every 120 s, plus a live view and 4 idle phone pages). A clean re-run is pending, so this finding is not yet trusted.
 - **Not checked on hardware.** The trim stays: it keeps the single SourceBuffer small, and a full one is the likely cause of the 22 Oct night's silent session (appendBuffer throwing → `broken = true`). The platform's own log also shows `evict_coded_frames`, so how full the buffer can get on the VVD is not proven.
