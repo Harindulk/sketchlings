@@ -545,17 +545,9 @@
   {
    "src": "music/HappyClappyLoop.wav",
    "from": "hall",
-   "to": "deadlock",
-   "db": -9,
-   "fadeIn": 1,
-   "fadeOut": 1
-  },
-  {
-   "src": "music/HappyClappyLoop.wav",
-   "from": "impact",
    "to": "impact",
    "db": -9,
-   "fadeIn": 0.6,
+   "fadeIn": 1,
    "fadeOut": 1.5
   },
   {
