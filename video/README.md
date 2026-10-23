@@ -1,13 +1,13 @@
 # Sketchlings demo video kit
 
-Everything to cut the under-3-minute demo video. The middle of the video is the kids' playtest of 23 Oct.
+Everything to cut the under-3-minute demo video. The middle of the main cut is kept for the kids' playtest of 23 Oct.
 `./build.sh` turns footage, narration, cards and music into a 1080p30 H.264 MP4 at -14 LUFS. Every clip in `edl.json`
 is a named footage slot; a slot without its file becomes a labelled placeholder, so a draft always builds.
 
 **No kids' footage?** Do not mark the `kids-*` slots optional (that cuts 0:10-1:26). Use the no-kids backup cut
-instead (`video/out/backup-final.mp4`, built with EDL=edl-backup.json): the real phone page recorded
-with Playwright, the VVD, cards and narration. Set `impact.html` to "Playtest with kids: not yet" and delete
-"Filmed at our playtest..." from the YouTube description.
+instead (`video/out/backup-final.mp4`, built with `EDL=edl-backup.json FINAL=1 ./build.sh out/backup-final.mp4`): the real
+phone page recorded with Playwright, the VVD, cards and narration. Set `impact.html` to "Playtest with kids: not yet"
+and leave the "Playtest with kids" chapter out of the YouTube description.
 
 ```
 video/
@@ -26,7 +26,7 @@ Needs ffmpeg/ffprobe, node and a headless Chrome. `cards/render.sh` uses Playwri
 is installed (it is on this Mac: about 0.4 s a shot, exits clean, same PNGs as Chrome). It falls back to the full
 Google Chrome app, which leaked about 1.4 GB per launch here: then render few cards at a time. `CHROME=...` overrides.
 
-## Tomorrow's edit in 5 steps
+## The edit in 5 steps
 
 For Fri 23 Oct, 3-7 pm. Mac muted while scrubbing (house rule); listen to the draft on headphones.
 
@@ -81,9 +81,9 @@ narration shrinks into the top 88 % of the frame and its caption sits in the nav
 is covered. Creature lines need no caption: the TV shows each one in its own speech bubble (Reveal) or on the podium
 (Results).
 
-## What the reviews asked for
+## What the video has to show
 
-| Review point | Where the video answers it |
+| Goal | Where the video answers it |
 |---|---|
 | Open on the transformation, not a disclaimer | 0:00-0:10: the drawing, a real phone snap and cut-out, the ability card, a match-cut to the same creature on the VVD with its own voice, the wing + FLOATS icon, a thumb on the phone, the creature floating over an ink blot. |
 | VVD label, a subtle lower-third the whole time | `badge-vvd` ("Running on Amazon's Vega Virtual Device", small, bottom right) on every shot of the VVD's picture, captures and the room TV alike; the split frame carries the same line. The big lower third ("the Fire TV simulator, on a Mac") shows once, on `kids-join`. Nothing claims Fire TV hardware. |
@@ -92,11 +92,11 @@ is covered. Creature lines need no caption: the TV shows each one in its own spe
 | Time compression labelled | Any clip with `speed` gets "Sped up Nx" from the build; the open's other cuts are hard cuts between shots. |
 | The remote in a hand | `remote` slot (optional): only a remote that really drives the VVD through the live view. |
 | Metrics after the hook, labelled | KPI and deadlock cards at 2:13-2:32: "VVD observations", "Engineering observations on a simulator, not Fire TV hardware performance", loop rate in ticks/s ("timer-driven, not vsync"), input "Wi-Fi not included". |
-| No children in the evidence | 0:10-1:26 is the 23 Oct playtest: join, snap, the ability card, Reveal with voices, race, Results, race 2 without a restart, their own words. |
-| Silent race | The phones' race sounds are real (room camera). Music never passes for game sound. |
+| Real children in the evidence | 0:10-1:26 is the 23 Oct playtest: join, snap, the ability card, Reveal with voices, race, Results, race 2 without a restart, their own words. |
+| No silent race | The phones' race sounds are real (room camera). Music never passes for game sound. |
 | Parent gate, AI consent | `grownups` slot: `vvd-grownups` (parent gate, AI OFF/ON, Clear Hall then Keep). |
-| Hold-to-run not sent | `open-input` and `kids-hold` show it. |
-| "The youngest can really win" without evidence | Not claimed. The impact card shows the mechanism (+40% speed for 7 and under) and the playtest result only once it exists. |
+| Show hold-to-run | `open-input` and `kids-hold` show it. |
+| No "the youngest can really win" without evidence | Not claimed. The impact card shows the mechanism (+40% speed for 7 and under) and the playtest result only once it exists. |
 | Economics | VO "Under two cents a creature"; card "~1.6 cents a creature ($0.0159)" from the 60-run benchmark; price model: a free offline game plus a $4.99-a-year Family Pass (plan, not built). |
 | Where does Kokoro run? | Architecture card ("on the relay server, offline") and VO ("on a Mac at home"). |
 | AI output safety | Claude card ("Asked for 5-year-old-safe output; every field is checked and clamped") and VO. |
@@ -146,7 +146,7 @@ http://localhost:8799/, full screen, on a real TV over HDMI if possible), whose 
 it refuses a name that exists). Camera phones: landscape, 1080p30 or 4K30, **HDR video off**, focus and exposure
 locked on the screen.
 
-### Tonight, 22 Oct: you, your drawings, the VVD (no kids)
+### Shoot 1: your drawings on the VVD (no kids)
 
 D1: a round body with two huge wings spread sideways, two big circle eyes. D2 wheels, D3 long legs, D4 a big chunky
 body. Thick dark marker, crayon inside, one per sheet. Claude decides the ability: check each ability card, and never
@@ -191,7 +191,7 @@ timestamp gaps.
 - Still for the morning (hands, camera, phones): the open (`open-*`, D1 on a real phone), `open-race` (D1's own
   WINGS!), the remote (optional), `who` (optional), narration. All `kids-*` slots are the playtest.
 
-### Tomorrow 1-3 pm: the kids' playtest
+### Shoot 2: the kids' playtest
 
 `docs/playtest/runsheet.md` runs the session (sections 5 and 6 say who films what, and its capture names are the
 slots' file names). Its rules hold for the edit: hands, phones, paper and the screen; a child's face only with their
@@ -214,7 +214,7 @@ files into `clips/` (or point slots at them).
 | Questions 1 and 2 (5.2), only children with a Voice tick | `kids-words1`, `kids-words2` | handheld or room camera, no face |
 | Teachers' cold test (4), optional | `kids-adult` | as they ticked |
 | Hall of Fame in free play (5.5): `video/capture.sh vvd-hall 20` | `hall` | VVD |
-| A child's creature that got wings (optional) | `open-*` instead of tonight's D1 | all three |
+| A child's creature that got wings (optional) | `open-*` instead of Shoot 1's D1 | all three |
 
 The Hall of Fame keeps earlier creatures (runsheet 3.8): move the focus onto the children's. Reinstall the app before
 it if it froze on a second visit (runsheet 7, `notes/tv.md` F11).
@@ -304,7 +304,7 @@ are drawn: `svg.to`). The build renders a card only when its PNG is missing; aft
 - Not in the timeline: `title`, `super` (for a thumbnail), `caption-think`, `caption-offline`, `clock`.
 
 Still to fill (they say **TBD** on screen):
-- `impact.html`: "Playtest with kids: TBD" (a real result from tomorrow, or "not yet").
+- `impact.html`: "Playtest with kids" (a real result once the playtest has run, or "not yet").
 - `claude.html`: shows Captain Bleep, a real `source: "claude"` persona (walk). To swap in a better one, paste a
   team-drawn creature's real JSON from the Hall of Fame into `P`, copy its sprite to `cards/img/` and set `SPRITE`.
   Never a child's creature: `cards/` (the HTML, `img/` and the rendered PNGs) is tracked in git, so a child's drawing,
@@ -339,7 +339,7 @@ Still to fill (they say **TBD** on screen):
 > Sketchlings turns a child's crayon drawing into a talking racer on the TV. Draw on paper, snap it with a phone,
 > and watch it peel off the page, get a name, stats and an ability from Claude vision, speak in its own voice, and race
 > the whole family. What you draw changes how you play: wings float over ink, wheels zoom, long legs jump, a big body
-> ROARs. Filmed at our playtest with TBD children aged TBD on 23 Oct 2026. [Delete this sentence if no children played.]
+> ROARs.
 >
 > Built for Fire TV on Vega OS with React Native for Vega; shown running on Amazon's Vega Virtual Device (the Fire TV
 > simulator), not on Fire TV hardware. Phones join with a QR code, no app install, and race with taps, holds, jumps and
@@ -364,4 +364,5 @@ Still to fill (they say **TBD** on screen):
 > 2:38 Who it's for
 
 Chapters follow the timeline with every slot filled; take the times from the final build's printout (YouTube needs
-each chapter to be at least 10 s). Fill both TBDs, or delete that sentence (and its brackets) if no children played. Upload as Public, in English (contest rules).
+each chapter to be at least 10 s). If the cut has the kids' playtest, add one sentence with the real number of children
+and their ages; with the backup cut, drop the "Playtest with kids" chapter. Upload as Public, in English (contest rules).
