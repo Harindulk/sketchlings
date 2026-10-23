@@ -3,7 +3,7 @@
 // (notes/tv.md F13). tv/scripts/audio-soak.mjs launches it, reads the counters off the screen and counts crashes.
 import React, {useEffect, useState} from 'react';
 import {Text, View} from 'react-native';
-import {audioStatus, hush, narrator, prefetch, say} from './audio';
+import {audioStatus, hush, music, narrator, prefetch, say} from './audio';
 import {HTTP_BASE} from './config';
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
@@ -40,6 +40,7 @@ async function loop() {
 export const AudioSoak = () => {
   const [, tick] = useState(0);
   useEffect(() => {
+    music('menu'); // the game plays music under every voice, so the soak does too
     loop();
     const t = setInterval(() => tick((n) => n + 1), 1000);
     return () => clearInterval(t);
