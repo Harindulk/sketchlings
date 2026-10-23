@@ -75,18 +75,18 @@ Real problems hit while building a React Native for Vega app, worst first. Every
   |---|---|---|---|
   | Fix step 1: one task per frame, silent race | Demo | 12 | 0 |
   | + native-from-birth values, abilities | Demo | 10 | 0 |
-  | Final (commit `afdb370`), sound on outside the race | Demo | 10 | 0 |
+  | Final (commit `146293c`), sound on outside the race | Demo | 10 | 0 |
   | Final, 4 simulated phones | Live | 10 | 0 |
   | 6 lanes (Hall of Fame guests), before the blot fix | Demo | 7 | **3** |
   | + ink blots mount one lane per 300 ms during 3-2-1, 20 Hz loop until GO | Demo, 6 lanes | 10 | 0 |
-  | #19/#20 build `4c25958`, sound on outside the race, and `MUTE=1` | Demo, 6 lanes | 31 | 0 |
+  | #19/#20 build `fcdf97a`, sound on outside the race, and `MUTE=1` | Demo, 6 lanes | 31 | 0 |
   | One MediaSource audio (#5); a 6 s Reveal voice ran into the first countdown | Demo, 5 lanes | 21 | 1 |
-  | + race mount pauses the playing clip (`d301384`) | Demo, 4-6 lanes | 35 | 0 |
+  | + race mount pauses the playing clip (`8955830`) | Demo, 4-6 lanes | 35 | 0 |
   | Race audio: 3-2-1-GO, ROAR, photo finish (22 Oct) | Demo 5-6 lanes; live, 6 fake phones | 30 | 0 |
-  | 23 Oct build `d8a8f4e` (Grown-ups screen, hold expiry, fly speed), race audio | Demo, 5-6 lanes | 40 | 0 |
+  | 23 Oct build `2a2639b` (Grown-ups screen, hold expiry, fly speed), race audio | Demo, 5-6 lanes | 40 | 0 |
   | **Total since the fix** (4-6 lanes) | | **216** | **4**: 3 on the 6-lane build before the blot fix, 1 with a Reveal voice in the countdown |
 
-  Since the last fix (`d301384`): 105 starts, 0 frozen. Zero in 105 still allows a freeze rate of up to about 3% at 95% confidence. The Reveal-audio change after `d8a8f4e` (`258959b`: the Lobby warms the voice player, a new Reveal card cuts the last line) then soaked on the final build `998da27`: 20 more starts, 0 frozen (23 Oct).
+  Since the last fix (`8955830`): 105 starts, 0 frozen. Zero in 105 still allows a freeze rate of up to about 3% at 95% confidence. The Reveal-audio change after `2a2639b` (`f4c038a`: the Lobby warms the voice player, a new Reveal card cuts the last line) then soaked on the final build `ad21d03`: 20 more starts, 0 frozen (23 Oct).
 
   With 6 lanes the freeze came back (3 of 7 starts, 21 Oct, Mac at load 14-20 with 11-14 GB swap in use; this time no ACR was written and Back did not kill the app). A 6-lane build without the ink-blot images ran 8 of 8, so the trigger was ~66 blot images mounting in the same instant as the race (81 image loads within 0.3 ms in the log): a burst of native-to-JS callbacks, each one a watchdog message, on an already starved host (#23). Spreading the blots over the countdown (one lane every 300 ms) and running the loop at 20 Hz until GO ran 10 of 10 six-lane starts clean on the same loaded Mac.
 
@@ -142,7 +142,7 @@ Real problems hit while building a React Native for Vega app, worst first. Every
   - An ACR from 20 Oct (13:22, `LCM_ANR_REASON: Thread Monitor`) shows the JS thread blocked on a mutex inside `libW3CMedia.so`, with a JS frame in the w3cmedia bundle: audio can hang the JS thread by itself.
   - An ACR from a soak on 21 Oct (18:55 UTC) is a SIGSEGV inside `libkepler_media_player.so` on the media thread. During another hang (#6), w3cmedia kept logging "No Time update even in Playing state: 0.951" every 250 ms: a player stuck mid-clip.
   - Race starts with narration playing froze more often in #1.
-  - On 21 Oct, with sound on (build `4c25958`), three ACRs are a SIGSEGV at `libW3CMedia.so + 0x63e844` on thread 0: one while pressing Next through the Reveal cards every 1.4 s, two as Results opened (the narrator's "winner is", then the creature's win line). The app drops to the launcher. None with `MUTE=1`.
+  - On 21 Oct, with sound on (build `fcdf97a`), three ACRs are a SIGSEGV at `libW3CMedia.so + 0x63e844` on thread 0: one while pressing Next through the Reveal cards every 1.4 s, two as Results opened (the narrator's "winner is", then the creature's win line). The app drops to the launcher. None with `MUTE=1`.
   - **Root cause of the SIGSEGV (21 Oct, F13 in `notes/tv.md`):** each clip assigned a new `MediaSource` to the player's `srcObject`, and the next queued line started straight from the `ended` handler. That detaches the old source and its SourceBuffer while the old pipeline is still finishing; a long-lived libW3CMedia thread then dereferences it. Five ACRs (three from the morning, two from a repro) share the same 6-frame stack, read from the core dumps' thread stacks with symbol names, and the device log shows `ended` → source swap → `DetachMediaSource` → the old pipeline still posting → SIGSEGV within 120 ms. **Fix:** one `AudioPlayer`, one `MediaSource` and one SourceBuffer for the whole session; each clip is appended after the last and played from its start, paused when it ends; `hush()` also stops a playing clip so the countdown starts on a quiet player. Repro on the old code: 5 crashes in 216 clips; after the fix 0 in 193 clips, and 0 crashes over 73 Reveal/Results screens with 0 race-start freezes in 35 starts (sound on). Since then: 0 crashes in the 22 Oct race-audio soaks, and 0 over 95 Reveal cards and Results screens on 23 Oct. **Suggestion:** reassigning `srcObject` while the previous source is draining must not crash the native player; document a supported pattern for short sequential clips (or ship a sound-effect/voice API that doesn't need MSE).
 - **Severity:** High. It can hang or crash the app, and the cause isn't obvious.
 - **Workaround:**
@@ -160,7 +160,7 @@ Real problems hit while building a React Native for Vega app, worst first. Every
 - **Expected:** the tag appears.
 - **Actual:** the picture stopped updating: two stale frames alternated and parts of the screen went blank. JS kept running: Back really went Home, but nothing redrew until the app went to the background and came back. `virtual_device.err` filled with `sPrepareTexImage2D ... failed validation`. The app got no error and nothing in the app's logs.
 - **Severity:** Medium. The screen freezes with no error anywhere, so it looks like an app hang. Once found, it is easy to avoid.
-- **Workaround:** a straight tag placed inside the corners, and no "✓" glyph (commit `afdb370`). A pick and three focus moves after it redraw fine. We did not isolate which of the two caused it, and did not check hardware.
+- **Workaround:** a straight tag placed inside the corners, and no "✓" glyph (commit `146293c`). A pick and three focus moves after it redraw fine. We did not isolate which of the two caused it, and did not check hardware.
 - **Suggestion:** fix or document the clip path for transformed children of rounded, clipped views. Report renderer validation failures somewhere an app developer will see them.
 
 ## 7. The build fails when the project path contains a space

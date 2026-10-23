@@ -3,7 +3,7 @@
 ## Performance (measured on VVD)
 
 Measured on the Vega Virtual Device, headless, Apple-silicon host (10 cores, 16 GB), 21 Oct 2026 09:02-09:39 IST,
-release build with sound on (cool start: commit 8864823; the rest: the #19/#20 build, 4c25958). Host load: 1-min load average 20.6 at the start of the cool-start run and 15.1 at its end,
+release build with sound on (cool start: commit a98acda; the rest: the #19/#20 build, fcdf97a). Host load: 1-min load average 20.6 at the start of the cool-start run and 15.1 at its end,
 9-14 during the memory runs and the soak; 11.7-13.7 GB of 13-14 GB swap in use; Unity open (~170 % CPU); the VVD
 process itself at 700-810 % CPU with the app in the foreground (software rendering, F12). Every timing here is
 pessimistic for real hardware. Raw reports: KPI Visualizer `output/2026-10-21_09-02-34` (cool start).
@@ -326,15 +326,15 @@ F4 itself is a platform bug the app can only starve, so keep the Mac quiet when 
 | 20 Oct final (before the fix), sound on | demo | 12 (run on 21 Oct) | 0 |
 | fix step 1 (1 task/frame, silent race, no fence/kick) | demo | 12 | 0 |
 | + native-from-birth values + abilities (21 Oct, ~00:00) | demo | 10 | 0 |
-| **final** (21 Oct, commit afdb370), sound on | demo | **10** | **0** |
+| **final** (21 Oct, commit 146293c), sound on | demo | **10** | **0** |
 | **final** + fixed room code (soak-only) | live, 4 fake phones (10 rounds) | **10** | **0** |
 | 6 lanes before the blot fix (21 Oct afternoon) | demo + 2 guests | 7 | **3** |
-| + blot fix, 2ee4b14 | demo, 6 lanes | 10 | 0 |
-| + #19 callouts, #20 layout (21 Oct morning, 4c25958), sound on | demo, 6 lanes | **10** | **0** |
+| + blot fix, 0dac204 | demo, 6 lanes | 10 | 0 |
+| + #19 callouts, #20 layout (21 Oct morning, fcdf97a), sound on | demo, 6 lanes | **10** | **0** |
 | same build, sound on, final soak | demo, 6 lanes | 11 | 0 (2 sessions ended by a libW3CMedia SIGSEGV at Results, see below) |
 | same build, `MUTE=1` (the filming setup) | demo, 6 lanes | **10** | **0** |
 | F13 one-MediaSource audio, sound on, `--screens 44` (21 Oct 05:34-05:58 UTC) | demo, 5 lanes | 21 | 1 (first start: a 6 s Reveal voice played into the countdown) |
-| + `hush()` pauses the playing clip at race mount (d301384), sound on | demo, 6 lanes | **10** | **0** |
+| + `hush()` pauses the playing clip at race mount (8955830), sound on | demo, 6 lanes | **10** | **0** |
 | same build, sound on, `--screens 44 --guests 3` | demo, 4-6 lanes | **25** | **0** (0 crashes over 51 Reveal/Results screens) |
 | race audio (3-2-1-GO, ROAR, photo finish; 22 Oct), sound on, `--guests 2` | demo, 5 lanes | **10** | **0** |
 | same, `--guests 3` | demo, 6 lanes | **10** (1 checked on a Reveal card after an OCR misread, see 22 Oct; its race was seen running in the wait shots) | **0** |
@@ -400,17 +400,17 @@ heavy load; the VVD itself kept crashing under the same load on 21 Oct (F5).
   from `activity-monitor`; warm start, the KPI Visualizer's memory KPIs, UI fluidity and focus response can't run on the
   VVD (Fire TV launcher hard-coded in the warm-start prep; Appium required). Ready for FRICTION_LOG:
   the warm-start launcher, Appium for memory, and ADBT `analyze_perfetto_traces` not finding the Perf CLI.
-- **#20 layout fixes (22fa1b2):** How to play text clears the Got it! glow (cards 256 tall, button 30 dp lower),
+- **#20 layout fixes (0b67272):** How to play text clears the Got it! glow (cards 256 tall, button 30 dp lower),
   Results places 4-6 in a row under the podium (podium floor 462 when there are 4+ racers) and the crown rides in the
   winner's MoveIdle, seated from the sprite box, Reveal bubble has no tail and no progress dot for a single creature,
   Lobby shows "Waiting for a drawing…" as a dashed status like the empty slots (no dead button). Shots 07c, 02h, 03f, 05d.
-- **#19 race callouts (4c25958):** Doodle Boost! is a white ink-bordered pill above the runner ring (bottom 10 dp into
+- **#19 race callouts (fcdf97a):** Doodle Boost! is a white ink-bordered pill above the runner ring (bottom 10 dp into
   the ring, right edge at 30 % of the sprite box, behind the creature); dizzy stars are one hand-drawn PNG
   (`art-src` `dizzy`, three stars on a ring) mounted 150 + 300 x lane ms after race mount, between the ink-blot steps;
   the WINGS!/SPRINGS! pill is a wide absolute wrapper with the pill shrink-wrapped by `alignItems` (absolute views wrap
   at their parent's width on Vega); fixed slots from the ground: ability pop at box bottom - 22, ROAR! (24 px font,
   -4 deg) 8 dp above it, 1st! in the same band as ROAR! but left of it. Shots 04k, 04l, 04m. Soak: 10 of 10 clean.
-- **Docs and cards (211a1e2, 2aa23fe):** no KPI placeholders left in README, the Devpost text, PRODUCT_FEEDBACK; kpi.png and
+- **Docs and cards (662495a, c0a19db):** no KPI placeholders left in README, the Devpost text, PRODUCT_FEEDBACK; kpi.png and
   deadlock.png re-rendered (52 race starts, 0 freezes on the fixed builds); tv-overview.png recaptured.
 - **Tests:** `npx jest` 14 of 14 (2 suites), `tsc --noEmit` clean.
 - **New, important: libW3CMedia SIGSEGV with sound on.** Three ACRs on this build, all `SIGSEGV` at
@@ -475,7 +475,7 @@ the removed source/buffer context. Starting the next clip from the `ended` handl
 possible. No JS error, nothing of ours runs on that thread. (Also seen: the library keeps every MediaSource in
 `GlobalMediaSources` and every SourceBuffer in its event router when `srcObject` is set directly, a small leak per clip.)
 
-*Workaround / fix (`tv/src/audio.ts`, d301384): never swap the source.* One AudioPlayer, one MediaSource, one SourceBuffer for the
+*Workaround / fix (`tv/src/audio.ts`, 8955830): never swap the source.* One AudioPlayer, one MediaSource, one SourceBuffer for the
 session. Each clip is appended at `timestampOffset` = the end of what is buffered, the player seeks to the clip's start
 and plays, and pauses 400 ms after `waiting` follows `playing` (the clip ran out of data; `waiting` comes ~0.1 s before
 the last samples are heard). `timeupdate` was no use as an end signal (with "position within 50 ms of the buffered end"
@@ -492,7 +492,7 @@ picture). Unit test: `tv/test/audio.spec.ts` (fake w3cmedia: one `srcObject` for
 | game, one MediaSource, `--screens 44 --guests 2` | 24 Reveal cards + 20 Results | **0** | 21 | 1 (see above) |
 | game, + `hush()` pauses, `soak.mjs 10 --guests 3 --rounds 5` | 12 Reveal cards + 10 Results | **0** | **10** | **0** |
 | game, + `hush()` pauses, `--screens 44 --guests 3 --rounds 5` (06:11-06:43 UTC) | 26 Reveal cards + 25 Results | **0** | **25** (4-6 lanes) | **0** |
-| **final build (d301384), total** | **38 Reveal cards + 35 Results = 73 screens** | **0** | **35** | **0** |
+| **final build (8955830), total** | **38 Reveal cards + 35 Results = 73 screens** | **0** | **35** | **0** |
 
 Morning, old code: 3 crashes, about 1 in 8 Reveal/Results screens; at that rate 73 clean screens in a row would
 happen by chance with p = (7/8)^73 = 0.00006. No new Sketchlings ACR on the VVD after the repro's two (copy-logs at
@@ -500,7 +500,7 @@ happen by chance with p = (7/8)^73 = 0.00006. No new Sketchlings ACR on the VVD 
 trusted one `is-app-running` answer and counted an adb hiccup as a crash; both soak scripts now need "not running"
 twice, 3 s apart.
 
-Installed on the VVD now: the sound-on release build of d301384 (`tv/build/sketchlings_aarch64.vpkg`).
+Installed on the VVD now: the sound-on release build of 8955830 (`tv/build/sketchlings_aarch64.vpkg`).
 
 *What is audible now (sound-on build):* Reveal: the narrator's "Let's meet our Sketchlings!", then each creature's intro
 as its card shows (a newer intro waits for the one playing; the latest wins; with fast Next presses some intros are
@@ -539,7 +539,7 @@ still hushes a queued Reveal line. The frame loop is unchanged (one `setTimeout`
 calls happen only on a count change, a ROAR start and the second finish, never per frame, with no extra React render.
 Unit test `test/audio.spec.ts`: a ROAR while a clip plays is dropped; hush + the next count plays at once.
 
-| check | silent race (HEAD de25070) | race audio |
+| check | silent race (HEAD ce18ea7) | race audio |
 |---|---|---|
 | loop Hz, 5-lane demo race, overlay read ~1/s (seconds 2-24) | 23-58, median 49.5 (n 22) | 28-58, median 51 (n 23) |
 | loop Hz, 6-lane demo race | 49-59, median 53 (n 23) | 47-59, median 53 (n 23) |

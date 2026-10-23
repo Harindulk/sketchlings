@@ -127,7 +127,7 @@ What that means in detail:
 - [x] "Hold to run" on the phone controller.
 - [x] Intros first: with several scans at once, every creature's intro is voiced before anyone's other lines (six at once: intros within about 16 s, everything within about 28 s, 23 Oct).
 - [ ] Voices in parallel, so six scans at once take less than 28 s.
-- [x] Reveal voices in step with their cards (`258959b`; on the VVD intros start 1.1-1.4 s into their card; before, 3.6-6 s late).
+- [x] Reveal voices in step with their cards (`f4c038a`; on the VVD intros start 1.1-1.4 s into their card; before, 3.6-6 s late).
 - [ ] Creature voices and real mic shouting heard on a real Fire TV and real phones.
 - [x] A word guard on every line Claude writes and on typed first names (a backstop only; "Kind-only content" above says what it misses).
 - [ ] User-generated content safeguards per the Appstore content policy: moderate each drawing before it is shown (Claude already describes it, and its text passes the word guard, but the drawing itself is not checked; add an explicit unsafe-content check), a moderation check for typed player names beyond the word list, and a way to report a creature.

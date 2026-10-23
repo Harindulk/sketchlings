@@ -54,7 +54,7 @@ The pages load screenshots straight from the repo (`notes/shots`, `phone/docs/sc
 | 665 ms to first frame, cool start, measured on the Vega Virtual Device | `README.md` KPI table (mean of 10 runs, 21 Oct) |
 | Claude: median 4.7 s, about $0.016 a creature, 60 calls (`claude-opus-5-5`), timed on the Mac relay | `notes/bench-persona.md` (median $0.0159), `README.md` |
 | Voices: 4-7 s per creature on an M5 MacBook | `README.md` (speed table), `server/README.md` (Voices, Speed) |
-| 149 tests: 79 relay, 42 doodle-cutout, 20 TV, 8 phone | `README.md` (Tests, run on 23 Oct); recounted in `server/test`, `packages/doodle-cutout/test`, `tv/test`, `phone/test` at 236ce20 |
+| 149 tests: 79 relay, 42 doodle-cutout, 20 TV, 8 phone | `README.md` (Tests, run on 23 Oct); recounted in `server/test`, `packages/doodle-cutout/test`, `tv/test`, `phone/test` at 5d6086e |
 | Race-start freeze: about 1 start in 4 froze on "3", AppNotResponding; JS thread blocked in `send()` while holding the watchdog loop's mutex; 6 lanes: about 66 blot images, 3 of 7 froze; fix; 105 race starts since the last fix, 0 freezes, 70 of them with race audio | `FRICTION_LOG.md` #1 (soak table), `README.md` |
 | Hall of Fame form of the same deadlock: 42 visits since its fix, 0 frozen (2 of 13 before) | `FRICTION_LOG.md` #1, `README.md` KPI table |
 | Media crash: SIGSEGV in libW3CMedia, a new MediaSource per clip, five crash reports with the same 6-frame stack, one long-lived source, 0 crashes over 168 Reveal/Results screens (73 on 21 Oct, 95 on 23 Oct), 5 crashes in 216 clips on the old code | `FRICTION_LOG.md` #5, `README.md` |
