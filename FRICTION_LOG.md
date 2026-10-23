@@ -85,7 +85,7 @@ Real problems hit while building a React Native for Vega app, worst first. Every
   | 23 Oct build `d8a8f4e` (Grown-ups screen, hold expiry, fly speed), race audio | Demo, 5-6 lanes | 40 | 0 |
   | **Total since the fix** (4-6 lanes) | | **216** | **4**: 3 on the 6-lane build before the blot fix, 1 with a Reveal voice in the countdown |
 
-  Since the last fix (`d301384`): 105 starts, 0 frozen. Zero in 105 still allows a freeze rate of up to about 3% at 95% confidence. The Reveal-audio change after `d8a8f4e` (`258959b`: the Lobby warms the voice player, a new Reveal card cuts the last line) was not soaked.
+  Since the last fix (`d301384`): 105 starts, 0 frozen. Zero in 105 still allows a freeze rate of up to about 3% at 95% confidence. The Reveal-audio change after `d8a8f4e` (`258959b`: the Lobby warms the voice player, a new Reveal card cuts the last line) then soaked on the final build `998da27`: 20 more starts, 0 frozen (23 Oct).
 
   With 6 lanes the freeze came back (3 of 7 starts, 21 Oct, Mac at load 14-20 with 11-14 GB swap in use; this time no ACR was written and Back did not kill the app). A 6-lane build without the ink-blot images ran 8 of 8, so the trigger was ~66 blot images mounting in the same instant as the race (81 image loads within 0.3 ms in the log): a burst of native-to-JS callbacks, each one a watchdog message, on an already starved host (#23). Spreading the blots over the countdown (one lane every 300 ms) and running the loop at 20 Hz until GO ran 10 of 10 six-lane starts clean on the same loaded Mac.
 
