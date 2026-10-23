@@ -7,7 +7,7 @@ A native Fire TV app built with **React Native for Vega** on the **Vega SDK 0.24
 Fire TV track, Amazon "Build, Ship, Shape" hackathon 2026. Built and tested on the **Vega Virtual Device only**: not yet run on Fire TV hardware, not on the Appstore. MIT licence. Made by Harindu, StarFun Games, Sri Lanka.
 
 - Video (under 3 minutes): link added on submission day
-- Open-source library from this project: **doodle-cutout**, [github.com/Harindulk/doodle-cutout](https://github.com/Harindulk/doodle-cutout) (MIT, 42 tests; also in [`packages/doodle-cutout`](packages/doodle-cutout))
+- Open-source library from this project: **doodle-cutout**, [github.com/Harindulk/doodle-cutout](https://github.com/Harindulk/doodle-cutout) (MIT, 42 tests; linked here as the git submodule [`packages/doodle-cutout`](packages/doodle-cutout). Cloned without `--recursive`? Run `git submodule update --init`)
 - [Friction log](FRICTION_LOG.md) · [Product feedback](docs/PRODUCT_FEEDBACK.md) · [Impact and launch memo](docs/IMPACT.md) · [Fairness simulation](docs/FAIRNESS.md) · [How it came to be](docs/journey/)
 
 ![The TV app on the Vega Virtual Device: Home with the Grown-ups button, the Grown-ups settings behind the parent gate, the Lobby with the join QR code, the Reveal with its ability, the Doodle Dash race with age boosts and ability callouts, the finish, the Results podium, and the Hall of Fame](docs/preview/tv-overview.png)
@@ -27,7 +27,7 @@ No phones, no relay, no API key. Four sample Sketchlings introduce themselves (t
 You need the Vega SDK 0.24 with the Vega Virtual Device (Amazon's one-line installer), Node 22.14 or newer, and `adb` (Android SDK platform-tools) to drive a headless VVD. Tested on an Apple-silicon Mac only. `npm install` and the build take about a minute each.
 
 ```sh
-git clone https://github.com/Harindulk/sketchlings.git ~/sketchlings   # a path WITHOUT spaces (FRICTION_LOG #7)
+git clone --recursive https://github.com/Harindulk/sketchlings.git ~/sketchlings   # a path WITHOUT spaces (FRICTION_LOG #7); --recursive fetches doodle-cutout
 source ~/vega/env
 vega virtual-device start --no-gui --timeout 300   # headless; on macOS 27 the VVD window crashes (FRICTION_LOG #2)
 cd ~/sketchlings/tv && npm install                 # plain install, no .npmrc (FRICTION_LOG #8)

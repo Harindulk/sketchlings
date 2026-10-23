@@ -1,0 +1,3 @@
+[submodule "packages/doodle-cutout"]
+	path = packages/doodle-cutout
+	url = https://github.com/Harindulk/doodle-cutout.git
