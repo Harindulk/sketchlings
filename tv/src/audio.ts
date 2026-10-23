@@ -114,14 +114,14 @@ async function setup() {
   audioStatus.mode = 'MSE';
 }
 
-function append(bytes: Uint8Array) {
+function append(bytes: Uint8Array, to = sb!) {
   return new Promise<void>((resolve) => {
     const done = () => {
-      sb!.removeEventListener('updateend', done);
+      to.removeEventListener('updateend', done);
       resolve();
     };
-    sb!.addEventListener('updateend', done);
-    sb!.appendBuffer(bytes); // whole clip = init segment + one fragment
+    to.addEventListener('updateend', done);
+    to.appendBuffer(bytes); // whole clip = init segment + one fragment
   });
 }
 
@@ -139,6 +139,7 @@ function trim(before: number) {
 function finished() {
   if (!until) return;
   until = 0;
+  duck(false);
   clearTimeout(endTimer);
   player?.pause();
   audioStatus.state = 'ended';
@@ -178,6 +179,7 @@ async function play(bytes: Uint8Array, my: number, voice: boolean) {
     busyUntil = Date.now() + ms + 2000;
     player.currentTime = start;
     until = appended;
+    duck(true);
     heard = false;
     endTimer = setTimeout(finished, ms + 1500); // in case 'waiting' never comes
     await player.play();
@@ -209,4 +211,75 @@ export function decode64(s: string): Uint8Array {
     if (o < out.length) out[o++] = n & 255;
   }
   return out;
+}
+
+// ---------- music: CC0 loops (server/CREDITS.md) on a second long-lived player ----------
+// Both tracks are appended once at setup, a second apart, and looped and switched by seeking only: after setup
+// there is no append and no source swap (F13). Quiet, and quieter still under any voice or narrator line.
+type Track = 'menu' | 'race';
+const VOLUME = 0.3;
+const DUCKED = 0.08;
+let mPlayer: InstanceType<W3C['AudioPlayer']> | null = null;
+let mReady: Promise<void> | null = null;
+const spans: Record<Track, [number, number]> = {menu: [0, 0], race: [0, 0]};
+let mPlaying: Track | null = null;
+let mWant: Track | null = null;
+let mTimer = 0;
+let mOff = false;
+
+/** Background music for a screen: 'menu', 'race', or null for none. Never throws. */
+export function music(track: Track | null) {
+  mWant = track;
+  if (!sound.enabled || mOff) return;
+  mReady ??= setupMusic();
+  mReady.then(applyMusic, (e) => {
+    if (!mOff) console.log('[audio] music off:', String(e)); // shortcut: like the voices, off for the session
+    mOff = true;
+  });
+}
+
+function duck(on: boolean) {
+  if (mPlayer) mPlayer.volume = on ? DUCKED : VOLUME;
+}
+
+async function setupMusic() {
+  const lib = require('@amazon-devices/react-native-w3cmedia') as W3C;
+  const tracks = require('./assets/music').MUSIC as Record<Track, string>;
+  const p = new lib.AudioPlayer(lib.AudioContentType.CONTENT_TYPE_MUSIC, lib.AudioUsageType.USAGE_GAME);
+  await p.initialize();
+  const ms = new lib.MediaSource();
+  await new Promise<void>((resolve) => {
+    ms.onsourceopen = () => resolve();
+    p.srcObject = ms; // once per session
+  });
+  const buf = ms.addSourceBuffer(MIME);
+  let at = 0;
+  for (const t of ['menu', 'race'] as const) {
+    buf.timestampOffset = at;
+    await append(decode64(tracks[t]), buf);
+    const b = buf.buffered;
+    const end = b.length ? b.end(b.length - 1) : at;
+    spans[t] = [at, end];
+    at = Math.ceil(end) + 1; // a gap, so a late loop check stalls for a moment instead of playing the other track
+  }
+  p.volume = VOLUME;
+  mPlayer = p;
+}
+
+function applyMusic() {
+  const p = mPlayer;
+  if (!p || mWant === mPlaying) return;
+  mPlaying = mWant;
+  clearInterval(mTimer);
+  if (!mPlaying) {
+    p.pause();
+    return;
+  }
+  const [start, end] = spans[mPlaying];
+  p.currentTime = start;
+  p.volume = until ? DUCKED : VOLUME;
+  p.play().catch((e: unknown) => console.log('[audio] music play:', String(e)));
+  mTimer = setInterval(() => {
+    if (p.currentTime >= end - 0.12 || p.currentTime < start) p.currentTime = start; // loop
+  }, 100);
 }
