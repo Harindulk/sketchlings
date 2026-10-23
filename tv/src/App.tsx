@@ -2,7 +2,7 @@ import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {BackHandler, Dimensions, StyleSheet, View} from 'react-native';
 import {useKeplerAppStateManager} from '@amazon-devices/react-native-kepler';
 import type {Player, ResultsData, Sketchling} from '../../shared/protocol';
-import {hush, music, prefetch} from './audio';
+import {hush, music, prefetch, type Track} from './audio';
 import {ScreenIn} from './components/Bits';
 import {Paper} from './components/Paper';
 import type {PartyMode} from './game/party';
@@ -47,16 +47,17 @@ export const App = () => {
     return () => clearTimeout(t);
   }, [leaving]);
   const appState = useKeplerAppStateManager();
-  const menuMusic = screen !== 'race'; // the race stays silent apart from its narrator clips (F1)
-  const musicRef = useRef(menuMusic);
-  musicRef.current = menuMusic;
-  useEffect(() => music(menuMusic), [menuMusic]);
+  // the race stays silent apart from its narrator clips (F1); the podium gets its own tune
+  const track: Track | null = screen === 'race' ? null : screen === 'results' ? 'results' : 'menu';
+  const musicRef = useRef(track);
+  musicRef.current = track;
+  useEffect(() => music(track), [track]);
   useEffect(() => {
     // backgrounded (Home button, another app): stop the voice lines and the music; the players stay (F7: no deinit)
     const sub = appState.addAppStateListener('change', (st) => {
       if (st === 'background') {
         hush();
-        music(false);
+        music(null);
       } else if (st === 'active') music(musicRef.current);
     });
     return () => sub.remove();

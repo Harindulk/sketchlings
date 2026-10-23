@@ -213,23 +213,25 @@ export function decode64(s: string): Uint8Array {
   return out;
 }
 
-// ---------- music: a CC0 loop (server/CREDITS.md) on a second long-lived player ----------
-// Menus only: the race stays silent apart from its narrator clips, because the race-start freeze fix needs no audio
-// work during the countdown (notes/tv.md F1). The loop is appended once at setup and looped by seeking, one timer per
-// pass: after setup there is no append and no source swap (F13). Quiet, and quieter still under any voice line.
+// ---------- music: CC0 loops (server/CREDITS.md) on a second long-lived player ----------
+// Menus play Happy Clappy Loop, Results plays Happy Beat, and the race stays silent apart from its narrator clips: the
+// race-start freeze fix needs no audio work during the countdown (notes/tv.md F1). Both loops are appended once at
+// setup, a second apart, then looped and switched by seeking, one timer per pass: no append and no source swap after
+// setup (F13). Quiet, and quieter still under any voice line.
+export type Track = 'menu' | 'results';
 const VOLUME = 0.3;
 const DUCKED = 0.08;
 let mPlayer: InstanceType<W3C['AudioPlayer']> | null = null;
 let mReady: Promise<void> | null = null;
-let mEnd = 0; // length of the loop (s)
-let mOn = false; // playing now
-let mWant = false;
+const spans: Record<Track, [number, number]> = {menu: [0, 0], results: [0, 0]};
+let mOn: Track | null = null; // playing now
+let mWant: Track | null = null;
 let mTimer = 0;
 let mOff = false;
 
-/** Menu music on (true) or off (false, e.g. the race). Never throws. */
-export function music(on: boolean) {
-  mWant = on;
+/** Background music for a screen, or null for none (the race). Never throws. */
+export function music(track: Track | null) {
+  mWant = track;
   if (!sound.enabled || mOff) return;
   mReady ??= setupMusic();
   mReady.then(applyMusic, (e) => {
@@ -244,6 +246,7 @@ function duck(on: boolean) {
 
 async function setupMusic() {
   const lib = require('@amazon-devices/react-native-w3cmedia') as W3C;
+  const tracks = require('./assets/music').MUSIC as Record<Track, string>;
   const p = new lib.AudioPlayer(lib.AudioContentType.CONTENT_TYPE_MUSIC, lib.AudioUsageType.USAGE_GAME);
   await p.initialize();
   const ms = new lib.MediaSource();
@@ -252,9 +255,15 @@ async function setupMusic() {
     p.srcObject = ms; // once per session
   });
   const buf = ms.addSourceBuffer(MIME);
-  await append(decode64(require('./assets/music').MUSIC as string), buf);
-  const b = buf.buffered;
-  mEnd = b.length ? b.end(b.length - 1) : 0;
+  let at = 0;
+  for (const t of ['menu', 'results'] as const) {
+    buf.timestampOffset = at;
+    await append(decode64(tracks[t]), buf);
+    const b = buf.buffered;
+    const end = b.length ? b.end(b.length - 1) : at;
+    spans[t] = [at, end];
+    at = Math.ceil(end) + 1; // a gap, so a late loop stalls for a moment instead of playing the other track
+  }
   p.volume = VOLUME;
   mPlayer = p;
 }
@@ -262,13 +271,14 @@ async function setupMusic() {
 function loop() {
   const p = mPlayer;
   if (!p || !mOn) return;
-  const left = mEnd - p.currentTime;
-  if (left > 0.15) {
+  const [start, end] = spans[mOn];
+  const left = end - p.currentTime;
+  if (left > 0.15 && p.currentTime >= start) {
     mTimer = setTimeout(loop, (left - 0.1) * 1000);
     return;
   }
-  p.currentTime = 0;
-  mTimer = setTimeout(loop, (mEnd - 0.1) * 1000);
+  p.currentTime = start;
+  mTimer = setTimeout(loop, (end - start - 0.1) * 1000);
 }
 
 function applyMusic() {
@@ -280,8 +290,9 @@ function applyMusic() {
     p.pause();
     return;
   }
-  p.currentTime = 0;
+  const [start, end] = spans[mOn];
+  p.currentTime = start;
   p.volume = until ? DUCKED : VOLUME;
   p.play().catch((e: unknown) => console.log('[audio] music play:', String(e)));
-  mTimer = setTimeout(loop, (mEnd - 0.1) * 1000);
+  mTimer = setTimeout(loop, (end - start - 0.1) * 1000);
 }

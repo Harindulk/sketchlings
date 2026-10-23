@@ -33,14 +33,15 @@ licensed, public domain and synthetic audio). The narrator uses `af_heart`.
 
 ## Music (in the TV app)
 
-`assets/music/menu.m4a` is re-encoded (AAC, mono, quieter) from a CC0 1.0 track the demo video also uses
-(`video/music/CREDITS.md`). The TV app bundles it (`tv/scripts/bundle-music.mjs`) and plays it on every screen but
-the race, which stays silent apart from its narrator clips. No attribution is
+`assets/music/menu.m4a` and `results.m4a` are re-encoded (AAC, mono, quieter) from the two CC0 1.0 tracks the demo
+video uses. The TV app bundles them (`tv/scripts/bundle-music.mjs`). The race stays silent
+apart from its narrator clips. No attribution is
 required; we credit the authors anyway.
 
 | File | Title | Author | Source | Licence |
 |---|---|---|---|---|
-| `menu.m4a` (Home, Lobby, Reveal, Results, Hall of Fame) | Happy Clappy Loop | OwlishMedia | https://opengameart.org/content/happy-clappy-loop | CC0 1.0 |
+| `menu.m4a` (Home, Lobby, Reveal, Hall of Fame) | Happy Clappy Loop | OwlishMedia | https://opengameart.org/content/happy-clappy-loop | CC0 1.0 |
+| `results.m4a` (the Results podium) | Happy Beat | burabotti | https://opengameart.org/content/happy-beat | CC0 1.0 |
 
 ## Generated audio
 
