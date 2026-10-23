@@ -490,6 +490,24 @@
    ]
   },
   {
+   "id": "who",
+   "bp": "close",
+   "type": "clip",
+   "dur": 8.3,
+   "in": "cut",
+   "src": "clips/kids/who.mov",
+   "ss": 0.9,
+   "liveDb": 0,
+   "label": "Harindu, the developer, on camera",
+   "overlays": [
+    {
+     "tag": "Harindu · StarFun Games, Sri Lanka",
+     "from": 0.2,
+     "to": 8.1
+    }
+   ]
+  },
+  {
    "id": "impact",
    "bp": "close",
    "type": "card",
