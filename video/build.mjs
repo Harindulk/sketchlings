@@ -138,7 +138,11 @@ function buildSegment(s, i) {
     const sp = v.speed ?? 1;
     const k = input(['-ss', String(v.ss ?? 0), '-t', String(d * sp), '-i', p]);
     const crop = v.crop ? `crop=${v.crop[2]}:${v.crop[3]}:${v.crop[0]}:${v.crop[1]},` : '';
-    fl.push(`[${k}:v]setpts=(PTS-STARTPTS)/${sp},${crop}${fit(w, h)},tpad=stop_mode=clone:stop_duration=${d},trim=duration=${d},setpts=PTS-STARTPTS,format=yuv420p[${tag}]`);
+    // fit: 'contain' keeps a portrait phone clip whole: full height in the middle, over a blurred copy of itself
+    const fitted = v.fit === 'contain'
+      ? `split[c${tag}][f${tag}];[c${tag}]${fit(w, h)},boxblur=40:2,eq=brightness=-0.12[b${tag}];[f${tag}]scale=${w}:${h}:force_original_aspect_ratio=decrease,setsar=1,fps=${FPS}[g${tag}];[b${tag}][g${tag}]overlay=(W-w)/2:(H-h)/2`
+      : fit(w, h);
+    fl.push(`[${k}:v]setpts=(PTS-STARTPTS)/${sp},${crop}${fitted},tpad=stop_mode=clone:stop_duration=${d},trim=duration=${d},setpts=PTS-STARTPTS,format=yuv420p[${tag}]`);
     if (v.liveDb === undefined || sp !== 1 || !hasAudio(p)) return null;
     // The VVD recorder writes its sound late (README): audioLag reads the sound from that many seconds further in.
     return {k: v.audioLag ? input(['-ss', String((v.ss ?? 0) + v.audioLag), '-t', String(d), '-i', p]) : k, db: v.liveDb};
