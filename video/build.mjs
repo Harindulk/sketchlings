@@ -220,7 +220,7 @@ function buildSegment(s, i) {
 
   const out = `${TMP}/seg-${String(i).padStart(2, '0')}.mkv`;
   ff([...args, '-filter_complex', fl.join(';'), '-map', '[vout]', '-map', '[aout]', '-t', String(d),
-    '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '16', '-pix_fmt', 'yuv420p', '-r', String(FPS),
+    '-c:v', 'libx264', '-preset', 'veryfast', '-crf', process.env.CRF ? '10' : '16', '-pix_fmt', 'yuv420p', '-r', String(FPS),
     '-c:a', 'pcm_s16le', '-ar', '48000', out]);
   report.push({s, status: [placeholder ? 'PLACEHOLDER' : s.type === 'card' ? 'card' : 'footage', ...status].join(', ')});
   return out;
@@ -287,7 +287,7 @@ fx.push(
 );
 console.log('Joining, mixing ...');
 ff([...args, '-filter_complex', fx.join(';'),
-  '-map', `[${v}]`, '-an', '-c:v', 'libx264', '-preset', 'medium', '-crf', '19', '-profile:v', 'high', '-pix_fmt', 'yuv420p',
+  '-map', `[${v}]`, '-an', '-c:v', 'libx264', '-preset', 'medium', '-crf', process.env.CRF ?? '19', '-profile:v', 'high', '-pix_fmt', 'yuv420p',
   '-r', String(FPS), '-g', String(FPS * 2), `${TMP}/video.mp4`,
   '-map', '[mix]', '-c:a', 'pcm_s16le', '-ar', '48000', `${TMP}/mix.wav`]);
 
