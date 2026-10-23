@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Impact card</title><link rel="stylesheet" href="style.css">
+<style>
+  .grid { position: absolute; left: 220px; top: 300px; width: 1610px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 50px 48px; }
+  .tile { height: 250px; padding: 30px 26px 0 186px; border-radius: 32px; }
+  .tile img, .tile .ico { position: absolute; left: 26px; top: 46px; width: 140px; height: 140px; }
+  .tile h2 { margin: 0; white-space: nowrap; font-size: 50px; line-height: 1; font-weight: 800; }
+  .tile p { margin: 10px 0 0; font-size: 37px; line-height: 1.12; white-space: nowrap; color: var(--ink-soft); }
+  .tile p b { color: var(--red); font-weight: 400; }
+  .big { font-size: 64px; font-weight: 800; line-height: 140px; text-align: center; color: var(--green); text-shadow: 4px 5px 0 var(--ink); }
+  .privacy { position: absolute; left: 220px; top: 912px; width: 1610px; height: 116px; padding: 0 36px; border-radius: 30px; display: flex; align-items: center; gap: 28px;
+    background: var(--ink); color: #fff; box-shadow: 8px 10px 0 color-mix(in srgb, var(--ink) 35%, transparent); border: 6px solid var(--ink); }
+  .privacy b { font-size: 46px; font-weight: 800; white-space: nowrap; }
+  .privacy span { font-size: 40px; color: #dfe6f7; }
+</style></head>
+<body class="paper">
+  <div class="page">
+    <h1>Who it's <span class="u" style="--u: var(--red)">for</span></h1>
+    <div class="kicker">Families with kids aged 4 to 10, and the TV they already own.</div>
+  </div>
+  <div class="grid">
+    <div class="tile sticker"><span class="tape" style="--t: var(--yellow)"></span><img src="img/icon_crayon.svg" alt="">
+      <h2>Starts with crayons</h2><p class="hand">Screen time that begins on paper.<br>Every racer is a kid's own drawing.</p></div>
+    <div class="tile sticker"><span class="tape" style="--t: var(--blue)"></span><img src="img/crown.svg" alt="">
+      <h2>A boost for little ones</h2><p class="hand">+40% speed for 7 and under, on screen.<br>Playtest with kids: not yet</p></div>
+    <div class="tile sticker"><span class="tape" style="--t: var(--purple)"></span><img src="img/icon_trophy.svg" alt="">
+      <h2>Fire TV Appstore</h2><p class="hand">Next: Kids &amp; Family, from StarFun Games.<br>Free game, $4.99/yr AI pass (plan).</p></div>
+    <div class="tile sticker"><span class="tape" style="--t: var(--green)"></span><div class="ico big">1.6¢</div>
+      <h2>~1.6 cents a creature</h2><p class="hand">One Claude call per drawing ($0.0159).<br>Voices are made on a Mac at home.</p></div>
+  </div>
+  <div class="privacy">
+    <svg width="64" height="72" viewBox="0 0 64 72" aria-hidden="true"><path d="M16 32 V22 a16 16 0 0 1 32 0 V32" fill="none" stroke="#ffc531" stroke-width="8"/>
+      <rect x="6" y="30" width="52" height="38" rx="10" fill="#ffc531"/><circle cx="32" cy="48" r="6" fill="#1F2A44"/></svg>
+    <b>First names only, no accounts.</b><span class="hand">Drawings go to Claude only if a grown-up turns AI on.</span>
+  </div>
+</body></html>

@@ -1,0 +1,551 @@
+{
+ "_doc": "Backup cut with no children (REPORTS/backup-video.md): test phones run by a script drive the real app on the VVD. Same format as edl.json. Build: EDL=edl-backup.json FINAL=1 ./build.sh out/backup-final.mp4",
+ "fps": 30,
+ "width": 1920,
+ "height": 1080,
+ "fade": 0.4,
+ "maxDuration": 176,
+ "loudness": {
+  "I": -14,
+  "TP": -1.0,
+  "LRA": 11
+ },
+ "split": {
+  "left": [
+   176,
+   170,
+   592,
+   740
+  ],
+  "right": [
+   812,
+   170,
+   1056,
+   594
+  ],
+  "clock": [
+   1568,
+   806,
+   300,
+   110
+  ]
+ },
+ "segments": [
+  {
+   "id": "open-photo",
+   "bp": "open",
+   "type": "clip",
+   "dur": 2.0,
+   "src": "clips/bk-open-photo.mp4",
+   "ss": 0,
+   "label": "An example photo of a drawing on paper (a synthetic test drawing from doodle-cutout)",
+   "overlays": [
+    {
+     "tag": "Example test drawing, not a child's",
+     "from": 0.1,
+     "to": 1.95,
+     "fade": 0.2
+    }
+   ]
+  },
+  {
+   "id": "open-snap",
+   "bp": "open",
+   "type": "clip",
+   "dur": 1.5,
+   "in": "cut",
+   "src": "clips/bk2-phone-snap.mp4",
+   "ss": 1.8,
+   "label": "The real phone page (in a browser, run by a test script): the photo is cut out on the phone"
+  },
+  {
+   "id": "open-card",
+   "bp": "open",
+   "type": "clip",
+   "dur": 1.5,
+   "in": "cut",
+   "src": "clips/bk2-phone-snap.mp4",
+   "ss": 4.9,
+   "speed": 4,
+   "label": "Phone: Bring it to life! -> \"I saw pink wings -> Flies over ink blots!\""
+  },
+  {
+   "id": "open-reveal",
+   "bp": "open",
+   "type": "clip",
+   "dur": 2.0,
+   "in": "cut",
+   "src": "clips/bk3-reveal.webm",
+   "ss": 5.8,
+   "liveDb": 0,
+   "audioLag": 1.0,
+   "label": "VVD: the same creature (Flutterbug Pip) pops out on the Reveal",
+   "overlays": [
+    {
+     "png": "cards/badge-vvd.png",
+     "fade": 0
+    }
+   ]
+  },
+  {
+   "id": "open-input",
+   "bp": "open",
+   "type": "clip",
+   "dur": 1.0,
+   "in": "cut",
+   "src": "clips/bk2-phone-input.mp4",
+   "ss": 0.5,
+   "label": "Phone in the race: the TAP! pad (hold to run)"
+  },
+  {
+   "id": "open-race",
+   "bp": "open",
+   "type": "clip",
+   "dur": 2.6,
+   "in": "cut",
+   "src": "clips/bk3-race2.webm",
+   "ss": 15.0,
+   "liveDb": -4,
+   "audioLag": 1.0,
+   "label": "VVD race 2, zoomed: Flutterbug Pip floats over an ink blot (WINGS!)",
+   "overlays": [
+    {
+     "png": "cards/sticker-fly.png",
+     "fade": 0
+    },
+    {
+     "png": "cards/badge-vvd.png",
+     "fade": 0
+    }
+   ],
+   "cues": [
+    {
+     "src": "vo-backup/open.m4a",
+     "at": 0.3,
+     "text": "What you draw changes how you play."
+    }
+   ],
+   "crop": [
+    600,
+    40,
+    1280,
+    720
+   ]
+  },
+  {
+   "id": "b-lobby",
+   "bp": "demo",
+   "type": "clip",
+   "dur": 7,
+   "in": "fade",
+   "src": "clips/bk3-join.webm",
+   "ss": 22,
+   "speed": 5.5,
+   "label": "VVD Lobby: four phones join and their cut-outs pop into the chips",
+   "overlays": [
+    {
+     "png": "cards/lower-third.png",
+     "from": 0.3,
+     "to": 6.8
+    }
+   ],
+   "cues": [
+    {
+     "src": "vo-backup/hook.m4a",
+     "at": 1.2,
+     "text": "Kids draw on paper, and Sketchlings turns each drawing into a talking racer for the whole family."
+    }
+   ]
+  },
+  {
+   "id": "b-reveal",
+   "bp": "demo",
+   "type": "clip",
+   "dur": 6.5,
+   "in": "cut",
+   "src": "clips/bk3-reveal.webm",
+   "ss": 13.8,
+   "liveDb": 0,
+   "audioLag": 1.0,
+   "label": "VVD Reveal: Antenna Tootle and its own voice",
+   "overlays": [
+    {
+     "png": "cards/badge-vvd.png"
+    },
+    {
+     "tag": "Four test phones run by a script · no children in this cut",
+     "from": 0.2,
+     "to": 6.3
+    }
+   ]
+  },
+  {
+   "id": "b-race",
+   "bp": "demo",
+   "type": "split",
+   "dur": 19,
+   "in": "fade",
+   "left": {
+    "src": "clips/bk2-phone-split.mp4",
+    "ss": 0,
+    "label": "Phone 1's real controller page, run by a script"
+   },
+   "right": {
+    "src": "clips/bk3-reveal.webm",
+    "ss": 95,
+    "liveDb": 0,
+    "audioLag": 1.0,
+    "label": "VVD: the same race (ROAR at 5.3 s, then WINGS!)"
+   },
+   "overlays": [
+    {
+     "png": "cards/note-music.png"
+    },
+    {
+     "tag": "Phone and TV in sync: one race, one take",
+     "from": 0.3,
+     "to": 5
+    }
+   ]
+  },
+  {
+   "id": "b-results",
+   "bp": "demo",
+   "type": "clip",
+   "dur": 3.5,
+   "in": "cut",
+   "src": "clips/bk3-race2.webm",
+   "ss": 0,
+   "liveDb": 0,
+   "audioLag": 1.0,
+   "label": "VVD: that race's podium",
+   "overlays": [
+    {
+     "png": "cards/badge-vvd.png"
+    }
+   ]
+  },
+  {
+   "id": "b-again",
+   "bp": "demo",
+   "type": "clip",
+   "dur": 4.5,
+   "in": "cut",
+   "src": "clips/bk3-race2.webm",
+   "ss": 3.5,
+   "liveDb": 0,
+   "audioLag": 1.0,
+   "label": "VVD: OK on Play again, the same creatures line up for race 2",
+   "overlays": [
+    {
+     "tag": "Race 2: same party, no restart"
+    },
+    {
+     "png": "cards/badge-vvd.png"
+    }
+   ]
+  },
+  {
+   "id": "hall",
+   "bp": "features",
+   "type": "clip",
+   "dur": 4.3,
+   "in": "cut",
+   "src": "clips/vvd-hall.webm",
+   "ss": 12,
+   "label": "VVD: Hall of Fame with today's creatures, focus moving",
+   "guide": "Free play (runsheet 5.5) or after: focus on the children's creatures. First visit after an app restart (notes/tv.md F11).",
+   "overlays": [
+    {
+     "png": "cards/caption-saved.png",
+     "from": 0.2
+    },
+    {
+     "png": "cards/badge-vvd.png"
+    }
+   ],
+   "cues": [
+    {
+     "src": "vo-backup/modes.m4a",
+     "at": 0.2,
+     "text": "Remote for menus, phones for racing, paper for creating."
+    }
+   ]
+  },
+  {
+   "id": "grownups",
+   "bp": "features",
+   "type": "clip",
+   "dur": 5.5,
+   "in": "cut",
+   "src": "clips/vvd-grownups.webm",
+   "ss": 20,
+   "label": "VVD: Grown-ups behind the parent gate: AI personas on/off, Clear Hall of Fame",
+   "guide": "Only if it ships tonight. The gate, then the two switches; don't clear the Hall.",
+   "overlays": [
+    {
+     "png": "cards/badge-vvd.png"
+    }
+   ],
+   "cues": [
+    {
+     "src": "vo-backup/grownups.m4a",
+     "at": 0.2,
+     "text": "Behind a parent gate, grown-ups can switch AI personas off or clear the Hall of Fame."
+    }
+   ]
+  },
+  {
+   "id": "ab-fly",
+   "bp": "abilities",
+   "type": "clip",
+   "dur": 3,
+   "in": "cut",
+   "src": "clips/ab-fly.mp4",
+   "ss": 0.2,
+   "liveDb": -10,
+   "audioLag": 0,
+   "label": "VVD race: WINGS! as the wings creature floats over an ink blot",
+   "guide": "Tonight's races. In: 1 s before the pop; crop if small. Only a creature whose card says this ability.",
+   "overlays": [
+    {
+     "png": "cards/sticker-fly.png",
+     "fade": 0
+    },
+    {
+     "png": "cards/badge-vvd.png",
+     "fade": 0
+    }
+   ],
+   "cues": [
+    {
+     "src": "vo-backup/ab-fly.m4a",
+     "at": 0.1,
+     "text": "Draw wings, and it floats over the ink."
+    }
+   ]
+  },
+  {
+   "id": "ab-roll",
+   "bp": "abilities",
+   "type": "clip",
+   "dur": 3,
+   "in": "cut",
+   "src": "clips/ab-roll.mp4",
+   "ss": 0.2,
+   "liveDb": -10,
+   "audioLag": 0,
+   "label": "VVD race: WHEELS! on a flat stretch, the wheels creature pulls ahead",
+   "guide": "As ab-fly.",
+   "overlays": [
+    {
+     "png": "cards/sticker-roll.png",
+     "fade": 0
+    },
+    {
+     "png": "cards/badge-vvd.png",
+     "fade": 0
+    }
+   ],
+   "cues": [
+    {
+     "src": "vo-backup/ab-roll.m4a",
+     "at": 0.1,
+     "text": "Draw wheels, and it zooms on flat ground."
+    }
+   ]
+  },
+  {
+   "id": "ab-hop",
+   "bp": "abilities",
+   "type": "clip",
+   "dur": 3,
+   "in": "cut",
+   "src": "clips/ab-hop.mp4",
+   "ss": 0.2,
+   "liveDb": -10,
+   "audioLag": 0,
+   "label": "VVD race: SPRINGS! as the long-legs creature jumps an ink blot",
+   "guide": "As ab-fly.",
+   "overlays": [
+    {
+     "png": "cards/sticker-hop.png",
+     "fade": 0
+    },
+    {
+     "png": "cards/badge-vvd.png",
+     "fade": 0
+    }
+   ],
+   "cues": [
+    {
+     "src": "vo-backup/ab-hop.m4a",
+     "at": 0.1,
+     "text": "Draw long legs, and it jumps higher."
+    }
+   ]
+  },
+  {
+   "id": "ab-walk",
+   "bp": "abilities",
+   "type": "clip",
+   "dur": 3,
+   "in": "cut",
+   "src": "clips/ab-walk.mp4",
+   "ss": 0.2,
+   "liveDb": -10,
+   "audioLag": 0,
+   "label": "VVD race: BIG ROAR! and the ink blots ahead fly out of its lane",
+   "guide": "As ab-fly.",
+   "overlays": [
+    {
+     "png": "cards/sticker-walk.png",
+     "fade": 0
+    },
+    {
+     "png": "cards/badge-vvd.png",
+     "fade": 0
+    }
+   ],
+   "cues": [
+    {
+     "src": "vo-backup/ab-walk.m4a",
+     "at": 0.1,
+     "text": "Draw a big body, and its ROAR clears the ink."
+    }
+   ]
+  },
+  {
+   "id": "arch",
+   "bp": "how",
+   "type": "card",
+   "dur": 8.5,
+   "in": "fade",
+   "src": "cards/architecture.png",
+   "cues": [
+    {
+     "src": "vo-backup/arch.m4a",
+     "at": 0.3,
+     "text": "Phones open a web page, no install. Our Bun relay links them to the TV and voices every creature with Kokoro, on a Mac at home."
+    }
+   ]
+  },
+  {
+   "id": "cutout",
+   "bp": "how",
+   "type": "card",
+   "dur": 7,
+   "in": "fade",
+   "src": "cards/cutout.png",
+   "cues": [
+    {
+     "src": "vo-backup/cutout.m4a",
+     "at": 0.3,
+     "text": "Our open-source library, doodle-cutout, turns a phone photo into a clean sticker, right in the phone's browser."
+    }
+   ]
+  },
+  {
+   "id": "claude",
+   "bp": "how",
+   "type": "card",
+   "dur": 9,
+   "in": "fade",
+   "src": "cards/claude.png",
+   "cues": [
+    {
+     "src": "vo-backup/claude.m4a",
+     "at": 0.3,
+     "text": "Claude reads the drawing and decides how it plays. Its prompt asks for five-year-old-safe answers, and every field is checked before the TV sees it."
+    }
+   ]
+  },
+  {
+   "id": "kpi",
+   "bp": "VVD notes",
+   "type": "card",
+   "dur": 9,
+   "in": "fade",
+   "src": "cards/kpi.png",
+   "cues": [
+    {
+     "src": "vo-backup/kpi.m4a",
+     "at": 0.3,
+     "text": "Engineering observations on the virtual device, not Fire TV hardware: first frame in two thirds of a second, memory well under the limit."
+    }
+   ]
+  },
+  {
+   "id": "deadlock",
+   "bp": "VVD notes",
+   "type": "card",
+   "dur": 10,
+   "in": "fade",
+   "src": "cards/deadlock.png",
+   "cues": [
+    {
+     "src": "vo-backup/deadlock.m4a",
+     "at": 0.3,
+     "text": "Races sometimes froze at the start; the crash dump showed a watchdog deadlock. After the fix, a hundred and five starts on the virtual device, zero freezes."
+    }
+   ]
+  },
+  {
+   "id": "impact",
+   "bp": "close",
+   "type": "card",
+   "dur": 10.3,
+   "in": "fade",
+   "src": "cards/impact-backup.png",
+   "cues": [
+    {
+     "src": "vo-backup/impact.m4a",
+     "at": 0.4,
+     "text": "It's for families with kids four to ten. Little ones race with a visible speed boost. Under two cents a creature, first names only, no accounts."
+    }
+   ]
+  },
+  {
+   "id": "end",
+   "bp": "close",
+   "type": "card",
+   "dur": 7,
+   "in": "fade",
+   "src": "cards/end.png"
+  }
+ ],
+ "music": [
+  {
+   "src": "music/HappyClappyLoop.wav",
+   "from": "b-lobby",
+   "to": "b-lobby",
+   "db": -10,
+   "fadeIn": 0.8,
+   "fadeOut": 1.2
+  },
+  {
+   "src": "music/happybeat.ogg",
+   "from": "b-race",
+   "to": "b-race",
+   "db": -12,
+   "fadeIn": 1.0,
+   "fadeOut": 1.5
+  },
+  {
+   "src": "music/HappyClappyLoop.wav",
+   "from": "arch",
+   "to": "impact",
+   "db": -9,
+   "fadeIn": 1.0,
+   "fadeOut": 1.5
+  },
+  {
+   "src": "music/happybeat.ogg",
+   "from": "end",
+   "to": "end",
+   "db": -5,
+   "fadeIn": 0.3,
+   "fadeOut": 2.5
+  }
+ ]
+}
