@@ -221,17 +221,11 @@ it if it froze on a second visit (runsheet 7, `notes/tv.md` F11).
 
 ## Race sound
 
-The VVD recording's own sound is the TV's sound: VVD segments set `liveDb` and `audioLag`. The recorder writes the
-sound about 1.5 s late (21 Oct rehearsal). Measure it for each recording: the Reveal's "Meet the Sketchlings!" narrator line starts
-on the Reveal's first frame, so
-
-```sh
-ffmpeg -i clips/open-reveal.webm -af silencedetect=n=-40dB:d=0.3 -f null - 2>&1 | grep silence_end
-```
-
-gives the sound's start; `audioLag` = that time minus the time of the Reveal's first frame. Set it on every
-segment cut from that recording. Check a recording carries sound without playing it:
-`ffmpeg -i clips/<name>.webm -af ebur128 -f null - 2>&1 | grep ' I:'`.
+Don't use the VVD recording's own sound: the recorder drops most of it (non-monotonic timestamps, silent gaps mid-word,
+so creature voices stutter and warble; checked 23 Oct), so VVD segments have no `liveDb`. Lay the app's sounds in as cues
+from clean files, timed to the picture: creature lines from `server/data/voice/<id>/` (or regenerated with the app's
+`pickVoice` + Kokoro, as `vo-backup/tootle-intro.m4a`), narrator clips from `server/assets/narrator/`. The room camera's
+sound is real and stays.
 
 - The phones make the race sounds (Web Audio, speaker toggle on). The room camera records them; segments with the
   phones in frame keep their sound (`liveDb`).

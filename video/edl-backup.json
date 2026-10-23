@@ -1,5 +1,5 @@
 {
- "_doc": "Backup cut with no children (REPORTS/backup-video.md): test phones run by a script drive the real app on the VVD. Same format as edl.json. Build: EDL=edl-backup.json FINAL=1 ./build.sh out/backup-final.mp4",
+ "_doc": "Backup cut with no children (REPORTS/backup-video.md): test phones run by a script drive the real app on the VVD. Same format as edl.json. Build: EDL=edl-backup.json FINAL=1 ./build.sh out/backup-final.mp4 No live VVD sound: its recorder drops most of it (gaps mid-word), so the app sounds are cues from clean files (vo-backup/pip-catch etc., same Kokoro voices as the app), timed to the picture.",
  "fps": 30,
  "width": 1920,
  "height": 1080,
@@ -35,7 +35,7 @@
    "id": "open-photo",
    "bp": "open",
    "type": "clip",
-   "dur": 2.0,
+   "dur": 2,
    "src": "clips/bk-open-photo.mp4",
    "ss": 0,
    "label": "An example photo of a drawing on paper (a synthetic test drawing from doodle-cutout)",
@@ -73,17 +73,21 @@
    "id": "open-reveal",
    "bp": "open",
    "type": "clip",
-   "dur": 2.0,
+   "dur": 2,
    "in": "cut",
    "src": "clips/bk3-reveal.webm",
    "ss": 5.8,
-   "liveDb": 0,
-   "audioLag": 1.0,
    "label": "VVD: the same creature (Flutterbug Pip) pops out on the Reveal",
    "overlays": [
     {
      "png": "cards/badge-vvd.png",
      "fade": 0
+    }
+   ],
+   "cues": [
+    {
+     "src": "vo-backup/pip-catch.m4a",
+     "at": 0.1
     }
    ]
   },
@@ -91,7 +95,7 @@
    "id": "open-input",
    "bp": "open",
    "type": "clip",
-   "dur": 1.0,
+   "dur": 1,
    "in": "cut",
    "src": "clips/bk2-phone-input.mp4",
    "ss": 0.5,
@@ -104,9 +108,7 @@
    "dur": 2.6,
    "in": "cut",
    "src": "clips/bk3-race2.webm",
-   "ss": 15.0,
-   "liveDb": -4,
-   "audioLag": 1.0,
+   "ss": 15,
    "label": "VVD race 2, zoomed: Flutterbug Pip floats over an ink blot (WINGS!)",
    "overlays": [
     {
@@ -165,8 +167,6 @@
    "in": "cut",
    "src": "clips/bk3-reveal.webm",
    "ss": 13.8,
-   "liveDb": 0,
-   "audioLag": 1.0,
    "label": "VVD Reveal: Antenna Tootle and its own voice",
    "overlays": [
     {
@@ -176,6 +176,12 @@
      "tag": "Four test phones run by a script · no children in this cut",
      "from": 0.2,
      "to": 6.3
+    }
+   ],
+   "cues": [
+    {
+     "src": "vo-backup/tootle-intro.m4a",
+     "at": 0.3
     }
    ]
   },
@@ -193,8 +199,6 @@
    "right": {
     "src": "clips/bk3-reveal.webm",
     "ss": 95,
-    "liveDb": 0,
-    "audioLag": 1.0,
     "label": "VVD: the same race (ROAR at 5.3 s, then WINGS!)"
    },
    "overlays": [
@@ -206,6 +210,12 @@
      "from": 0.3,
      "to": 5
     }
+   ],
+   "cues": [
+    {
+     "src": "../server/assets/narrator/roar.m4a",
+     "at": 4.9
+    }
    ]
   },
   {
@@ -216,12 +226,16 @@
    "in": "cut",
    "src": "clips/bk3-race2.webm",
    "ss": 0,
-   "liveDb": 0,
-   "audioLag": 1.0,
    "label": "VVD: that race's podium",
    "overlays": [
     {
      "png": "cards/badge-vvd.png"
+    }
+   ],
+   "cues": [
+    {
+     "src": "vo-backup/bonbon-win.m4a",
+     "at": 0.3
     }
    ]
   },
@@ -233,8 +247,6 @@
    "in": "cut",
    "src": "clips/bk3-race2.webm",
    "ss": 3.5,
-   "liveDb": 0,
-   "audioLag": 1.0,
    "label": "VVD: OK on Play again, the same creatures line up for race 2",
    "overlays": [
     {
@@ -242,6 +254,16 @@
     },
     {
      "png": "cards/badge-vvd.png"
+    }
+   ],
+   "cues": [
+    {
+     "src": "../server/assets/narrator/three.m4a",
+     "at": 2.3
+    },
+    {
+     "src": "../server/assets/narrator/two.m4a",
+     "at": 3.3
     }
    ]
   },
@@ -303,8 +325,6 @@
    "in": "cut",
    "src": "clips/ab-fly.mp4",
    "ss": 0.2,
-   "liveDb": -10,
-   "audioLag": 0,
    "label": "VVD race: WINGS! as the wings creature floats over an ink blot",
    "guide": "Tonight's races. In: 1 s before the pop; crop if small. Only a creature whose card says this ability.",
    "overlays": [
@@ -333,8 +353,6 @@
    "in": "cut",
    "src": "clips/ab-roll.mp4",
    "ss": 0.2,
-   "liveDb": -10,
-   "audioLag": 0,
    "label": "VVD race: WHEELS! on a flat stretch, the wheels creature pulls ahead",
    "guide": "As ab-fly.",
    "overlays": [
@@ -363,8 +381,6 @@
    "in": "cut",
    "src": "clips/ab-hop.mp4",
    "ss": 0.2,
-   "liveDb": -10,
-   "audioLag": 0,
    "label": "VVD race: SPRINGS! as the long-legs creature jumps an ink blot",
    "guide": "As ab-fly.",
    "overlays": [
@@ -393,8 +409,6 @@
    "in": "cut",
    "src": "clips/ab-walk.mp4",
    "ss": 0.2,
-   "liveDb": -10,
-   "audioLag": 0,
    "label": "VVD race: BIG ROAR! and the ink blots ahead fly out of its lane",
    "guide": "As ab-fly.",
    "overlays": [
@@ -517,10 +531,10 @@
  "music": [
   {
    "src": "music/HappyClappyLoop.wav",
-   "from": "b-lobby",
-   "to": "b-lobby",
+   "from": "open-photo",
+   "to": "b-reveal",
    "db": -10,
-   "fadeIn": 0.8,
+   "fadeIn": 0.3,
    "fadeOut": 1.2
   },
   {
@@ -528,15 +542,15 @@
    "from": "b-race",
    "to": "b-race",
    "db": -12,
-   "fadeIn": 1.0,
+   "fadeIn": 1,
    "fadeOut": 1.5
   },
   {
    "src": "music/HappyClappyLoop.wav",
-   "from": "arch",
+   "from": "b-results",
    "to": "impact",
    "db": -9,
-   "fadeIn": 1.0,
+   "fadeIn": 1,
    "fadeOut": 1.5
   },
   {
