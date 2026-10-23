@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Who made it</title><link rel="stylesheet" href="style.css">
+<style>
+  /* the video goes inside .photo (x 250, y 170, 860 x 720) in build: keep these numbers in step with video/clips/kids/who-styled.mp4 */
+  .frame { position: absolute; left: 226px; top: 146px; width: 908px; height: 768px; background: #fff; border-radius: 22px;
+           box-shadow: 0 0 0 5px var(--ink), 12px 14px 0 5px rgba(31,42,68,0.18); }
+  .photo { position: absolute; left: 250px; top: 170px; width: 860px; height: 720px; background: #2a2f45; border-radius: 6px; }
+  .tape1 { position: absolute; left: 560px; top: 118px; width: 240px; height: 56px; background: rgba(255,214,102,0.85); transform: rotate(-4deg); border-radius: 6px; }
+  .side { position: absolute; left: 1210px; top: 230px; width: 620px; }
+  .side h1 { font-size: 104px; line-height: 1; margin: 0; font-weight: 800; }
+  .side h1 .u { --u: var(--yellow); }
+  .side .kicker { font-size: 50px; margin-top: 26px; line-height: 1.25; }
+  .side .pill { display: inline-block; margin-top: 40px; font-size: 40px; padding: 6px 30px 2px; }
+</style></head>
+<body class="paper">
+  <div class="frame"></div>
+  <div class="photo"></div>
+  <div class="tape1"></div>
+  <div class="side">
+    <h1>Hi, I'm <span class="u">Harindu</span></h1>
+    <div class="kicker hand">Solo developer at StarFun Games, Sri Lanka</div>
+    <div class="pill">Made Sketchlings</div>
+  </div>
+  <img class="deco sprite" src="img/frog.svg" style="right: 90px; bottom: 70px; width: 260px; transform: rotate(7deg)">
+</body></html>
