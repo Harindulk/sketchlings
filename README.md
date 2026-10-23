@@ -179,7 +179,7 @@ The relay logs the server side of the chain for every scan: `[scan] <player> upl
 - **It needs a relay on the home network today:** a Mac running Bun, Kokoro and ffmpeg, with `HOST = '10.0.2.2:8787'` in `tv/src/config.ts` (the VVD's address for its host). The plan to remove it is in [docs/IMPACT.md](docs/IMPACT.md).
 - **Alexa voice selection is declared, not shown.** Every button has an `aria-label` and the manifest has the `kva` category, as we read the Vega docs, but voice can't be tested on the VVD.
 - **Mic shouting works only over HTTPS** (browsers allow the microphone only on secure pages): run `scripts/tunnel.sh` for a temporary HTTPS link. On the plain-HTTP LAN page the ROAR button, which always works, is the way to ROAR.
-- **The phone app was tested in desktop and headless browsers at phone size** (360×640, 375×812 and 390×844), not yet on a real phone with real Wi-Fi.
+- **The phone app was tested in desktop and headless browsers at phone size** (360×640, 375×812 and 390×844), and on 23 Oct on the children's real phones over a phone hotspot.
 - **Wings are still the strongest ability in simulation** (30% of one-of-each races against a fair 25%, after the 23 Oct change from 37%).
 - **Voices queue on one Mac:** with six scans at once, the intros arrive within about 16 s and the last full voice in about 28 s (offline personas, 23 Oct).
 - **Phones don't send a reconnect key yet,** so a device in the same party that knows another player's id could take over that player.
