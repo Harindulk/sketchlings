@@ -63,7 +63,7 @@
     2980,
     1668
    ],
-   "label": "VVD: Granny Zippy, Poo's drawing, on the Reveal",
+   "label": "VVD: Granny Zippy, child 1's drawing, on the Reveal",
    "in": "cut",
    "overlays": [
     {
@@ -88,7 +88,7 @@
    "in": "cut",
    "src": "clips/kids/tv.mov",
    "ss": 248,
-   "label": "VVD race: Poo and Thishana's creatures",
+   "label": "VVD race: the two children's creatures",
    "overlays": [
     {
      "png": "cards/badge-vvd.png"
@@ -218,7 +218,7 @@
     2980,
     1668
    ],
-   "label": "VVD: Super Puddles, Thishana's drawing, wins",
+   "label": "VVD: Super Puddles, child 2's drawing, wins",
    "in": "cut",
    "overlays": [
     {
