@@ -44,7 +44,7 @@ Setup: MacBook (Apple silicon, 16 GB), macOS 27.0.1, Node 26.12, Bun 1.4.3, Vega
 
 **What worked well.**
 - Headless mode (`vega virtual-device start --no-gui --timeout 300`) boots in about 10 s.
-- It is an Android emulator underneath, so `adb emu screenrecord screenshot|start|stop` works, including a full-HD recording of the app with its sound.
+- It is an Android emulator underneath, so `adb emu screenrecord screenshot|start|stop` works, including a full-HD recording of the app.
 - The app reaches the host at `10.0.2.2` over HTTP and WebSocket with no extra setup.
 - Scripts can press remote keys through `inputd-cli` (`adb shell inputd-cli button_press KEY_ENTER`), so walkthroughs and soak tests can be automated without a window.
 
@@ -52,7 +52,7 @@ Setup: MacBook (Apple silicon, 16 GB), macOS 27.0.1, Node 26.12, Bun 1.4.3, Vega
 - The window crashes on boot on macOS 27 (#2). Headless, the emulator's own hang detector kills the VVD whenever the host stalls for 15 s, even with no app running (#3).
 - On the headless VVD, `requestAnimationFrame` fires about 7,600 times a second instead of once per frame (#4).
 - Audio work can stall the game or hang the JS thread (#5), and a rotated view in a rounded, clipped card froze the renderer with no error (#6).
-- Screenshots and recording are undocumented. The SDK's own adb-like tool, `vda`, has no `emu` command, so you need `adb` from Android SDK platform-tools (#10). The recording does carry the sound, but nothing says so, and how far it lags the picture varies (about 0.2 to 1.5 s, #9).
+- Screenshots and recording are undocumented. The SDK's own adb-like tool, `vda`, has no `emu` command, so you need `adb` from Android SDK platform-tools (#10). The recording does carry the sound, but nothing says so, how far it lags the picture varies (about 0.2 to 1.5 s, #9), and it drops out mid-word (silent gaps, non-monotonic timestamps), so the demo video lays the app's own clips in instead (#26).
 - Remote keys: there is no `vega` command. The docs' `inputd-cli` page uses `vega exec` and says a VVD needs developer mode first, but `adb shell inputd-cli` worked without it (#13).
 - The VVD clock ran about 2 h 11 min behind the Mac, so absolute phone-to-TV latency couldn't be measured (#18).
 - `AsyncStorage` said it saved a setting, but read back `null` after a relaunch, with no error (#25).

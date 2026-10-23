@@ -1,6 +1,6 @@
 # Ability audit: does the ability match what was drawn?
 
-**Reviewed by an AI assistant (Claude), not by children or a human panel.** The verdicts below are one AI reviewer's judgement. Re-check them by hand: open each image and compare it with the row.
+**Reviewed by an AI assistant (Claude), not by children or a human panel.** The verdicts below are one AI reviewer's judgement. Re-check them by hand: open each image and compare it with the row. The 3 `server/data/sprites` images are local relay output and are not in the repo.
 
 **No child's drawing is in this set.** The repo has no cut-out of a real child's drawing yet. These are the 12 images the persona benchmark used: 3 phone cut-outs of synthetic test photos, 3 doodle-cutout example cut-outs and the 6 TV demo drawings. They are 9 different drawings, because the monster appears as 3 cut-outs and the crayon blob as 2. The provenance of each image is in `notes/bench-persona.md`.
 
@@ -54,5 +54,5 @@
 - **Thin wings lost in the cut-out:** untested. No image in the set has thin wings.
 - **Wheels together with long legs:** untested. No image has wheels.
 - **Eye positions:** whether the returned eyes sit on the drawn eyes was not checked.
-- **Real children's drawings:** untested in this set. This is the biggest gap. Scan real drawings and re-run `server/scripts/bench-persona.ts`, then repeat this audit on them. From the 23 Oct session: TBD.
+- **Real children's drawings:** untested in this set. This is the biggest gap. Scan real drawings and re-run `server/scripts/bench-persona.ts`, then repeat this audit on them. No child's drawing has been scanned yet.
 - **Letting the child correct the ability on the phone:** built on 23 Oct, not audited here. The creature card on the phone has four big buttons (Walker, Hopper, Flyer, Roller). A pick changes the creature's ability before the race, the phone then says "You picked", and the TV's Reveal says "<artist>'s pick". Picking the drawing's own kind again restores the drawing's feature. Checked with fake phones and the real phone page in a headless browser, not with a child.

@@ -325,6 +325,6 @@ Pasted unedited, one block per tester.
 - **Quotes** are exact and credited as "Tester N, adult". No names.
 - **Anything not measured stays `___`.** No estimates, no "about".
 
-For `docs/IMPACT.md` and `docs/DEVPOST.md`, fill the blanks and keep the rest as is:
+For `docs/IMPACT.md`, fill the blanks and keep the rest as is:
 
 > Cold test: ___ adults who had never seen Sketchlings got one instruction, "Get two creatures into a race", and no other help. ___ of ___ did it without help; the median time from the instruction to the first race was ___ (fastest ___, slowest ___). The most common question was "___". Told "Race them again", ___ of ___ started a second race without us restarting anything. Asked whether their creature's power helped, they explained ___ of ___ powers the way the race works (our judgement; their exact words are in `docs/playtest/cold-test.md`). From the phone's shutter to the creature speaking on the TV took a median ___ s over ___ timed scans. Phone round trips during races: median ___ ms over ___ (Wi-Fi or the tunnel). A phone locked for 20 s in the Lobby was still in ___ of ___ times. Because of it we changed ___ (commit ___). It ran on the Vega Virtual Device on a laptop, with the keyboard as the remote.

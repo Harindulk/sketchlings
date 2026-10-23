@@ -174,7 +174,7 @@ from the package typings.
 
 **F1. Build fails when the project path contains spaces.** (The repo moved to `~/Desktop/Sketchlings` on 21 Oct, so a
 direct `npm run build:release` in `tv/` works now, but see F9.) Task: `npm run build:release` in
-`~/Library/Application Support/.../tv`. Expected: build. Actual: `/bin/sh: /Users/harindu/Library/Application: No such
+`~/Library/Application Support/.../tv`. Expected: build. Actual: `/bin/sh: /Users/.../Library/Application: No such
 file or directory` / "Unable to generate a manifest": `kepler-compatibility-metro-config` runs the manifest builder via
 `execSync` with an unquoted path. Severity: high (common macOS paths). Workaround: `tv/scripts/vbuild.sh` rsyncs the
 project to a space-free temp dir and builds there. Suggestion: quote paths / use `execFileSync`.
@@ -398,7 +398,8 @@ heavy load; the VVD itself kept crashing under the same load on 21 Oct (F5).
 
 - **KPIs:** "Performance (measured on VVD)" at the top. Cool start re-run (665 ms, 10 runs, loaded host); app memory
   from `activity-monitor`; warm start, the KPI Visualizer's memory KPIs, UI fluidity and focus response can't run on the
-  VVD (Fire TV launcher hard-coded in the warm-start prep; Appium required). Ready for FRICTION_LOG: the warm-start launcher, Appium for memory, and ADBT `analyze_perfetto_traces` not finding the Perf CLI.
+  VVD (Fire TV launcher hard-coded in the warm-start prep; Appium required). Ready for FRICTION_LOG:
+  the warm-start launcher, Appium for memory, and ADBT `analyze_perfetto_traces` not finding the Perf CLI.
 - **#20 layout fixes (22fa1b2):** How to play text clears the Got it! glow (cards 256 tall, button 30 dp lower),
   Results places 4-6 in a row under the podium (podium floor 462 when there are 4+ racers) and the crown rides in the
   winner's MoveIdle, seated from the sprite box, Reveal bubble has no tail and no progress dot for a single creature,
@@ -555,7 +556,8 @@ countdown. The webm has a Vorbis 44.1 kHz stereo track. Loudness per 50 ms: four
 4.55, 5.55 and 6.40 s, silence between; the picture (frames read at 5 fps) shows 3 at 3.4 s, 2 at 4.4 s, 1 at 5.4 s and
 GO! at 6.4 s, so sound and picture agree within ~0.2 s. Matching log-band spectrograms against the bundled clips puts
 "three" at 3.60 s (r 0.64), "one" at 5.56 s (0.74) and "go" at 6.41 s (0.55); the second burst matches all four
-weakly (0.33-0.35). Then three ROAR-length bursts at 10.0, 13.5 and 16.7 s. (Scripts and files in a temp folder, not kept.)
+weakly (0.33-0.35). Then three ROAR-length bursts at 10.0, 13.5 and 16.7 s. (Scripts and files in a temp folder,
+not kept.)
 
 *Soak runs.* `soak.mjs 10 --guests 2` (5 lanes): 10 of 10. `--guests 3` (6 lanes): 10 of 10, but the first session's
 lobby count was misread by Vision ("showl (6)"), so the soak pressed 4 of 6 Reveal cards and checked that start on a

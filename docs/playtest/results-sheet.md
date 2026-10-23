@@ -1,6 +1,6 @@
 # Sketchlings playtest results: the children's session
 
-Print version for pen on the day: [`results-sheet.html`](results-sheet.html) (A4 landscape, 3 pages). Type it into this file the same evening, then copy the headline numbers into `docs/IMPACT.md` and `docs/DEVPOST.md`, worded the way "How to report it honestly" says. The teachers' cold test has its own sheet: [`cold-test.md`](cold-test.md). The plan: [`runsheet.md`](runsheet.md).
+Print version for pen on the day: [`results-sheet.html`](results-sheet.html) (A4 landscape, 3 pages). Type it into this file the same evening, then copy the headline numbers into `docs/IMPACT.md` and the Devpost page, worded the way "How to report it honestly" says. The teachers' cold test has its own sheet: [`cold-test.md`](cold-test.md). The plan: [`runsheet.md`](runsheet.md).
 
 Rules:
 - **On paper**, first names are fine. **In this typed copy**, children are Child A to D with their age, and teachers are Tester 1 and 2. No names anywhere in the repo.
@@ -189,6 +189,6 @@ Taps a second, from the `[race]` lines:
 - **Keep it apart** from the teachers' cold test and from footage recorded the night before: never pool them.
 - **What we changed:** one line with its commit. The children did not test the change unless they did.
 
-For `docs/IMPACT.md` and `docs/DEVPOST.md`, fill the blanks and keep the rest as is:
+For `docs/IMPACT.md`, fill the blanks and keep the rest as is:
 
 > Playtest: ___ children aged ___ to ___ played in one session run by two teachers, on the Vega Virtual Device shown on a TV, with phones as controllers. ___ of ___ joined on their own and ___ of ___ snapped their drawing on their own. In ___ races the youngest (age ___) won ___ (fair share 1 in ___) and needed adult help in ___. Asked whether their creature's power helped, they explained ___ of ___ the way the race works (our judgement; their exact words are in `docs/playtest/results-sheet.md`). They asked to play again ___ times without being asked. Because of them we changed ___ (commit ___).

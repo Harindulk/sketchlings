@@ -89,7 +89,7 @@ What-if only: the same races with other little-kid boosts. The script sets these
 
 **Recommendation.** Keep 1.4 until real tap rates are measured. If a playtest shows little kids tap about 4 times a second, raise the little-kid boost to **1.5**. That gives the youngest close to a fair share in the family (22%) and party (15%) races and 40% one on one, while a trying grown-up still wins over half the races in every format. At 1.6 the little kid becomes the favourite one on one. At 1.7 the youngest wins about twice a fair share in the family and party races, which would make the game feel rigged against grown-ups. If little kids tap about 5 a second, 1.4 is already enough and should not go up: a coin flip one on one (48.3%), a little over a fair share in the family race (29.9%) and about one and a third fair shares in the party (22.1%).
 
-**Measuring it.** Since 23 Oct the relay logs every player's real rate when a race ends, in this format (example, not a measurement): `[race] inputs over <s>s: <name> <age band> taps/s <n> hold <s>s jumps <n> roars <n>` (a hold counts as 4 taps a second). Real little kids' rates: TBD.
+**Measuring it.** Since 23 Oct the relay logs every player's real rate when a race ends, in this format (example, not a measurement): `[race] inputs over <s>s: <name> <age band> taps/s <n> hold <s>s jumps <n> roars <n>` (a hold counts as 4 taps a second). Real little kids' rates: not measured yet, because no child has raced.
 
 ## What this does not model
 
@@ -213,6 +213,6 @@ bun scripts/ability-sim.ts        # 2,000 races per row, about 2.5 min on our Ma
 bun scripts/ability-sim.ts 200    # a quick look
 ```
 
-Until its fly what-if (section D) is updated for the new baseline, the script stops there with "the engine no longer has `const FLY_SPEED = 1.03;`". Sections A to C, the tables above, finish first.
+Section D reruns the fly what-if (1.03, 1, 0.97, 0.95) against today's engine.
 
 It uses the players from `scripts/fairness-sim.ts`, so editing `BANDS` there changes both simulations. It first runs a self-check with `node:assert`: the same seed gives the same result; on a flat track hop and walk finish on exactly the same frame as a plain creature and roll is faster; fly is never stunned and a plain creature is; the engine keeps the plain creature plain; one-of-each races deal every kind once; the Doodle Boost is on in the game's engine and off in the copy; and both apply the age boost from `shared/protocol.ts`.

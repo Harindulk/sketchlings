@@ -33,6 +33,7 @@ Real problems hit while building a React Native for Vega app, worst first. Every
 | 23 | The headless VVD renders in software and keeps ~7 host cores busy while an app animates | Vega Virtual Device 0.24 | Medium-high |
 | 24 | KPI Visualizer can't measure warm start (Fire TV launcher hard-coded) or memory and UI fluidity (Appium required) on the VVD; ADBT `analyze_perfetto_traces` can't find the Perf CLI | Vega Perf CLI (`kpi-visualizer`), Amazon Devices Builder Tools MCP | Medium |
 | 25 | `AsyncStorage` says a value was saved, but reads back nothing after a relaunch on the VVD | React Native for Vega (`AsyncStorage` in `react-native-kepler`), on the VVD | Medium |
+| 26 | The VVD screen recorder's sound drops out mid-word, so it can't be used in a video | Vega Virtual Device (`adb emu screenrecord`) | Medium |
 
 ---
 
@@ -194,7 +195,7 @@ Real problems hit while building a React Native for Vega app, worst first. Every
   - Without `com.amazon.audio.system` in `[wants]` the log shows "Unable connect to 'com.amazon.audio.system'. Missing the permissions". The media docs say missing `[wants]` services give silent failures.
   - Eight services are needed in the end, even for a 2-second clip: `mediametrics.service`, `mediabuffer.service`, `mediatransform.service`, `audio.stream`, `audio.control`, `audio.system`, `media.server` and `media.playersession.service` (all `com.amazon.*`).
   - With all eight, `MediaSource.isTypeSupported` returns true, and `appendBuffer`, `endOfStream` and `play()` succeed for bundled and server clips. Narrator clips fire `ended`.
-  - On 21 Oct we confirmed the VVD's audio reaches the Mac: while the app plays clips, macOS `coreaudiod` holds an "audio-out BuiltInSpeakerDevice" assertion created for the VVD's process (`pmset -g assertions`). On 22 Oct a `screenrecord` webm carried the sound: a Vorbis 44.1 kHz stereo track with the countdown clips in it, in step with the picture within about 0.2 s (#10). How far the sound lags the picture varies between recordings (from about 0.2 s to about 1.5 s on 21-23 Oct), so a video edit has to measure it each time.
+  - On 21 Oct we confirmed the VVD's audio reaches the Mac: while the app plays clips, macOS `coreaudiod` holds an "audio-out BuiltInSpeakerDevice" assertion created for the VVD's process (`pmset -g assertions`). On 22 Oct a `screenrecord` webm carried the sound: a Vorbis 44.1 kHz stereo track with the countdown clips in it, in step with the picture within about 0.2 s (#10). How far the sound lags the picture varies between recordings (from about 0.2 s to about 1.5 s on 21-23 Oct), so a video edit has to measure it each time. On 23 Oct that recorded sound turned out unusable for the video: it drops out mid-word (#26).
 - **Severity:** Medium. Voices are a core feature, and failures are quiet.
 - **Workaround:** declare all eight services (`tv/manifest.toml`). The app loads w3cmedia lazily, logs `isTypeSupported`, falls back from MSE to URL mode if appending throws (never needed on the VVD), and turns sound off for the session on the first failure so the game never blocks. Narrator clips are bundled as base64 strings in a TypeScript module, so they play without reading binary assets from the package.
 - **Suggestion:** a build-time check that warns when w3cmedia is a dependency but its services are missing from `[wants]`. A runtime error that names the missing service. A short "play a sound effect" recipe for games. State clearly whether the VVD supports audio output, and how to hear or capture it.
@@ -205,10 +206,10 @@ Real problems hit while building a React Native for Vega app, worst first. Every
 - **Task attempted:** capture screenshots and a full-length video of the app for the hackathon demo.
 - **Steps taken:** looked for a `vega` command (`vega device --help` lists none for capture) and checked the docs. No page in the Vega 0.24 docs index has screenshots or screen recording in its title or summary. Then used the emulator console through `adb` from Android SDK platform-tools: `adb -s emulator-5554 emu screenrecord screenshot <dir>`, and `... emu screenrecord start <file.webm>` / `stop`. We did not try the Appium route the docs describe for UI tests.
 - **Expected:** a `vega` command for screenshots and recording.
-- **Actual:** the docs only mention "Dump Render Tree" and "Dump Rendered Text" in the window's context menu, which doesn't exist headless (#2). The bundled emulator warns that it doesn't support `ScreenRecording`, yet `adb emu screenrecord` works, including a full-HD recording with the VVD's sound (a Vorbis 44.1 kHz stereo track; on 22 Oct the countdown clips were in it, in step with the picture). We first missed the sound track and thought it had none. The SDK ships its own adb-like tool, `vda`, but `vda help` lists no `emu` (emulator console) command, so a separate `adb` is needed.
+- **Actual:** the docs only mention "Dump Render Tree" and "Dump Rendered Text" in the window's context menu, which doesn't exist headless (#2). The bundled emulator warns that it doesn't support `ScreenRecording`, yet `adb emu screenrecord` works, including a full-HD recording with the VVD's sound (a Vorbis 44.1 kHz stereo track; on 22 Oct the countdown clips were in it, in step with the picture). We first missed the sound track and thought it had none. On 23 Oct we found that the track drops out mid-word, so the video can't use it (#26). The SDK ships its own adb-like tool, `vda`, but `vda help` lists no `emu` (emulator console) command, so a separate `adb` is needed.
 - **Severity:** Medium. Video is required for the submission, and the working route is undocumented.
 - **Workaround:** install Android SDK platform-tools for `adb`. `tv/scripts/remote.sh shot <out.png>` wraps the screenshot command, and `scripts/session.sh` wraps recording.
-- **Suggestion:** add `vega device screenshot` and `vega device record`, or add `emu` to `vda` and document the `screenrecord` route, including that it records sound.
+- **Suggestion:** add `vega device screenshot` and `vega device record`, or add `emu` to `vda` and document the `screenrecord` route, including that it records sound and how reliable that sound is (#26).
 
 ## 11. ADBT `symbolicate_acr` fails on the VVD
 
@@ -380,12 +381,23 @@ Real problems hit while building a React Native for Vega app, worst first. Every
 - **Workaround:** the storage code is gone. The AI personas switch is off at every launch, the Grown-ups screen says "Until the app closes.", the Lobby always shows "AI personas: on" or "off", and the playtest run sheet tells the grown-up to turn it on after each launch.
 - **Suggestion:** make `AsyncStorage` persist on the VVD, or fail loudly when it can't. Document where its data lives, whether the VVD keeps it across app restarts, and which storage API Vega recommends for small settings.
 
+## 26. The VVD screen recorder's sound drops out mid-word, so it can't be used in a video
+
+- **Tool / version:** `adb emu screenrecord` (emulator console, through Android SDK platform-tools adb 37.0.1) on the Vega Virtual Device (headless), bundled Android emulator 34.1.15, Vega SDK 0.24.12112.
+- **Task attempted:** use the app's own sound, as the VVD played it, in the demo video.
+- **Steps taken:** recorded demo footage of the app with sound on, with `adb -s emulator-5554 emu screenrecord start <file.webm>` / `stop` (wrapped by my capture script). On 23 Oct checked the recordings' sound tracks with `ffmpeg` and listened back to the creature voice lines.
+- **Expected:** a sound track that matches what the app played, in step with the picture, ready to use in the video.
+- **Actual:** the `.webm` files do carry a sound track (Vorbis 44.1 kHz stereo, #10), but its timestamps are non-monotonic and it has gaps of digital silence in the middle of words. Creature voices stutter and warble. How far the sound lags the picture also varies between recordings (about 0.2 to 1.5 s, #9). We could not try the VVD window's own capture, because the window crashes (#2).
+- **Severity:** Medium. Video is required for the submission, and the recorded sound can't be used in it.
+- **Workaround:** the demo video drops the recorded sound and lays in clean copies of the app's own clips, timed to the picture: creature lines from the relay's Kokoro files (`server/data/voice/<id>/`) and narrator clips from `server/assets/narrator/` (`video/README.md`, "Race sound").
+- **Suggestion:** fix the recorder's audio timestamps and dropouts, or say in the docs that `screenrecord` sound is not reliable. A `vega device record` command (#10) that captures the app's audio output cleanly and in sync would solve both.
+
 ## What worked well
 
 - One-line installer: the SDK and the VVD in about 10 minutes (5.4 GB).
 - The helloWorld template built on Node 26 the first time (`npm install` about 1 minute, `npm run build:release` about 1 minute).
 - `vega run-app` installs and launches in seconds.
-- The headless VVD boots in about 10 s, and because it is an Android emulator underneath, `adb` tools work on it, including full-HD recording with sound.
+- The headless VVD boots in about 10 s, and because it is an Android emulator underneath, `adb` tools work on it, including full-HD recording (its sound track is not clean enough to use, #26).
 - The app reaches the host at `10.0.2.2` over HTTP and WebSocket with no setup. `vega device start-port-forwarding` is there too.
 - D-pad focus needed only stock components (`TVFocusGuideView`, `hasTVPreferredFocus`). Declaring Alexa on-screen voice targets takes one `aria-label` per button plus the `com.amazon.category.kva` category (we could not test voice on the VVD).
 - `useReportFullyDrawn` plus the KPI Visualizer measured cool start in one command: TTFF 408 ms mean on the VVD over 3 runs on 20 Oct (665 ms over 10 runs on a loaded host on 21 Oct), against a 1.5 s target.

@@ -6,7 +6,7 @@ A native Fire TV app built with **React Native for Vega** on the **Vega SDK 0.24
 
 Fire TV track, Amazon "Build, Ship, Shape" hackathon 2026. Built and tested on the **Vega Virtual Device only**: not yet run on Fire TV hardware, not on the Appstore. MIT licence. Made by Harindu, StarFun Games, Sri Lanka.
 
-- Video (under 3 minutes): TBD
+- Video (under 3 minutes): link added on submission day
 - Open-source library from this project: **doodle-cutout**, [github.com/Harindulk/doodle-cutout](https://github.com/Harindulk/doodle-cutout) (MIT, 42 tests; also in [`packages/doodle-cutout`](packages/doodle-cutout))
 - [Friction log](FRICTION_LOG.md) · [Product feedback](docs/PRODUCT_FEEDBACK.md) · [Impact and launch memo](docs/IMPACT.md) · [Fairness simulation](docs/FAIRNESS.md) · [How it came to be](docs/journey/)
 
@@ -46,7 +46,7 @@ scripts/remote.sh select
 scripts/remote.sh shot home.png
 ```
 
-Demo party tries the relay's Hall of Fame for 3 seconds, then uses the bundled samples. Narrator lines are bundled in the app; creature voices need the relay (live mode, below).
+Demo party tries the relay's Hall of Fame for 1.5 seconds, then uses the bundled samples. Narrator lines are bundled in the app; creature voices need the relay (live mode, below).
 
 ## Tech Implementation
 
@@ -82,7 +82,7 @@ Demo party tries the relay's Hall of Fame for 3 seconds, then uses the bundled s
 | App memory | < 400 MiB (foreground) | 124-284 MiB: 124 on Home, 233 peak after three races, 284 after the Hall of Fame and six 6-lane races | `vega exec perf activity-monitor`, 21 Oct |
 | Race loop ticks a second and JS time per frame (one `setTimeout` per tick, not vsync) | 60 (ours) | 54-59, median 59, 0.2-0.3 ms of JS per frame (4 lanes, race audio on, 23 Oct). 6 lanes on a busier host on 22 Oct: 47-59, median 53, the same with and without race audio. 21 Oct, 6 lanes, silent race: 55-62 | in-app overlay |
 | Phone input, received to applied in the race | none set | 6-9 ms (n = 300, 6 lanes) | simulated phones on the same Mac, in-app timing, 21 Oct |
-| Wi-Fi round trip, relay to phone, during a race | none set | TBD | the relay pings each phone every 2 s in a race (WebSocket ping) and logs one line per race |
+| Wi-Fi round trip, relay to phone, during a race | none set | not measured on real phones yet; 0-1 ms on localhost | the relay pings each phone every 2 s in a race (WebSocket ping) and logs one line per race |
 | Race-start freezes | 0 (ours) | 0 in 105 starts since the last fix (70 with race audio); 1 in 209 across every fixed build, on an interim build with a Reveal voice in the countdown | `soak.mjs`, 21-23 Oct |
 | Hall of Fame freezes while screen-recording | 0 (ours) | 0 in 42 visits since the fix (2 in 13 before) | `adb emu screenrecord` running, 22-23 Oct |
 | Time to First Frame, warm start | < 0.5 s | not measurable on the VVD | the KPI Visualizer's prep step opens the Fire TV launcher (`com.amazon.smplighthouse.launcher.main`), but the VVD's launcher is `com.amazon.keplerlauncherapp.main`: 0 of 5 runs completed (FRICTION_LOG #24) |
@@ -107,7 +107,7 @@ The race loop is a timer-driven simulation, not tied to the display, which is wh
 | Upload to all three voice clips ready (the relay's `[scan] … upload->voices` line) | 13.3-13.5 s with 3 scans at once (23 Oct, AI personas on). 6 offline scans at once: each intro ready 2.7-16.3 s after the uploads, all lines 18.4-27.7 s |
 | Voices (Kokoro-82M, three lines, one creature) | 4-7 s after its first frame on an M5 MacBook |
 | Cutout on the phone | under 0.4 s for a 900×675 photo in a desktop browser; not yet timed on a phone |
-| Snap to talking creature on a real phone | TBD |
+| Snap to talking creature on a real phone | not measured on a real phone yet |
 
 The relay logs the server side of the chain for every scan: `[scan] <player> upload->sketchling <ms> ms source=claude|offline` and `[scan] <player> upload->voices <ms> ms`. The TV then fetches the sprite and the clips over HTTP; that last step is not timed separately.
 
@@ -133,16 +133,14 @@ The relay logs the server side of the chain for every scan: `[scan] <player> upl
 - **A look that matches the activity.** Notebook paper, sticker cards that lift, glow and wobble when focused, readable from 10 feet. TV and phone share it. All art is ours.
 - **Changed by the ability simulation:** wings won 37% of one-of-each races against a fair 25%, so on 23 Oct fly lost its extra 3% ground speed (now 30%, and every ability wins 21-30%).
 - **Changed by a small-hands review of the phone screens** (an AI review, 23 Oct; commits `e90f63a`, `36410e7`, `ac84882`): the ability picker moved inside the creature card so it fits on a 360×640 screen, a mis-tapped Retake now offers "Back to my drawing", drawpad colours grew to 48 px, the age and ability buttons got wider gaps, and after 10 s of "Finding your party" the phone suggests checking it is on the same Wi-Fi.
-- **Changed by the cold test:** TBD
-- **Changed by the children:** TBD
 
 ## Potential Impact
 
 - **Who it is for:** households with kids aged about 4 to 10, and the adults on the couch with them. Kids make the content and race older siblings with a visible boost; parents get screen time that starts with crayons.
 - **Why families come back:** the Hall of Fame keeps every creature (the newest 200) with the artist's name, and **Race again** brings a saved creature back into the next race.
 - **Evidence:**
-  - Child playtest: TBD
-  - [Cold test](docs/playtest/cold-test.md) with adults who had never seen the game and got one instruction, "Get two creatures into a race": TBD.
+  - Child playtest: not run yet. A session with 3 or 4 children aged 4 to 10 is planned for 23 Oct ([run sheet](docs/playtest/runsheet.md)); results will be added here. Whether little kids manage the controller, enjoy it and really win is untested.
+  - [Cold test](docs/playtest/cold-test.md) with adults who had never seen the game and got one instruction, "Get two creatures into a race": not run yet (it is planned for 23 Oct, before the children's session; results will be added here).
   - Fairness is simulated, not playtested ([docs/FAIRNESS.md](docs/FAIRNESS.md)): with assumed tap rates and the real race engine, a little kid beats a grown-up who is trying in about 1 race in 4 with the +40% boost, and in fewer than 1 in 100 without it.
 - **What it costs:** about $0.016 of Claude per creature (median over 60 calls, 22 Oct). On the planned cloud relay, a free household (offline personas) costs about 2 cents a month at 10,000 households (estimate). Plan: a $4.99-a-year Family Pass through Amazon In-App Purchasing (not built), behind a parent gate, for up to 200 AI creatures a year. What the Pass adds: Claude reads the drawing itself, so the name and personality are about what was drawn, the googly eyes sit on the drawn eyes and the ability comes from a feature it can see; the free offline persona works from shape and colours. The store passes on $3.49 at 70/30. A Pass used to its cap costs about $3.43 at 10,000 households (break-even) and $4.33 at 1,000, a loss of about $0.84; a light family (120 a year) costs about $2.16. Free households have to be carried too: if 1 household in 10 pays, a fully used Pass loses about $2.19 a year at 10,000 households. The levers are a cheaper model (not yet checked for quality) and a higher price. Estimates at list prices, with a table by paying share: [docs/IMPACT.md](docs/IMPACT.md#unit-economics).
 - **Launch plan:** a cloud relay on AWS Fargate with Claude through Amazon Bedrock, COPPA-minded data rules. Sized for every household making 20 AI creatures a month (more than the Pass allows, to stay conservative): about $0.41 a household a month at 1,000 households and $0.34 at 10,000 (estimate), with Claude three-quarters to over 90% of it. Details: [docs/IMPACT.md](docs/IMPACT.md).
@@ -171,16 +169,16 @@ The relay logs the server side of the chain for every scan: `[scan] <player> upl
 ## Known limits
 
 - **Vega Virtual Device only.** Never run on Fire TV hardware. All timings are VVD engineering observations; Amazon says the VVD is not for performance testing, so hardware performance is not yet verified.
-- **Child playtest:** TBD
+- **Child playtest:** not run yet (a session with children is planned for 23 Oct; results will be added here). Whether little kids manage the controller, enjoy it and really win is untested.
 - **The race loop is paced with `setTimeout`, not vsync.** On the headless VVD `requestAnimationFrame` free-runs at about 7,600 a second (FRICTION_LOG #4), and fewer JS tasks keep the watchdog deadlock away (#1). We'll move to `requestAnimationFrame` once it is tested on hardware.
 - **The deadlock is less likely, not ruled out.** It is a bug inside Vega's native libraries; the app only avoids feeding it.
-- **Race sound is short narrator clips only.** The countdown says "Three! Two! One! Go!" and a ROAR plays "ROAR!": one ~0.6 s clip at a time on the same long-lived source, never per frame. Creature voices play only on Reveal and Results, with a caption for every line. A media-player crash (a new MediaSource per clip) was root-caused and fixed with one long-lived source: 0 crashes over 73 Reveal/Results screens on 21 Oct, and none in 95 more on 23 Oct, on build `d8a8f4e` ([FRICTION_LOG #5](FRICTION_LOG.md#5-audio-work-stalls-or-hangs-the-js-thread-on-the-vvd)). `adb emu screenrecord` records the VVD's sound, so the video uses the app's own audio. "Photo finish!" (two racers within 0.5 s) has not been seen to fire, and nobody has heard any of it on Fire TV hardware.
-- **Reveal voices were fixed late (23 Oct, `258959b`).** Before that, in two VVD recordings each creature's intro started 3.6-6 s after its 6.5 s Reveal card, so most of it played over the next card. Now each intro plays over its own card, and a new card cuts the last line. On the fixed build, intros start 1.1-1.4 s into cards 2-4 on the VVD. Both were read from the recordings' sound timing, with the Mac muted; verified by measurement on the virtual device. The final build with it (`998da27`) ran 20 race starts, 0 frozen.
+- **Race sound is short narrator clips only.** The countdown says "Three! Two! One! Go!" and a ROAR plays "ROAR!": one ~0.6 s clip at a time on the same long-lived source, never per frame. Creature voices play only on Reveal and Results, with a caption for every line. A media-player crash (a new MediaSource per clip) was root-caused and fixed with one long-lived source: 0 crashes over 73 Reveal/Results screens on 21 Oct, and none in 95 more on 23 Oct, on build `d8a8f4e` ([FRICTION_LOG #5](FRICTION_LOG.md#5-audio-work-stalls-or-hangs-the-js-thread-on-the-vvd)). `adb emu screenrecord` records the VVD's sound, but with gaps mid-word, so the video lays in clean copies of the app's own sounds. "Photo finish!" (two racers within 0.5 s) has not been seen to fire, and nobody has heard any of it on Fire TV hardware.
+- **Reveal voices were fixed late (23 Oct, `258959b`).** Before that, in two VVD recordings each creature's intro started 3.6-6 s after its 6.5 s Reveal card, so most of it played over the next card. Now each intro plays over its own card, and a new card cuts the last line. On the fixed build, intros start 1.1-1.4 s into cards 2-4 on the VVD. Both were read from the recordings' sound timing, so the fix is verified by measurement on the virtual device. The final build with it (`998da27`) ran 20 race starts, 0 frozen.
 - **AI personas must be turned on after every launch** (FRICTION_LOG #25). If a grown-up forgets, every creature gets an offline persona, and the Lobby says so.
 - **It needs a relay on the home network today:** a Mac running Bun, Kokoro and ffmpeg, with `HOST = '10.0.2.2:8787'` in `tv/src/config.ts` (the VVD's address for its host). The plan to remove it is in [docs/IMPACT.md](docs/IMPACT.md).
 - **Alexa voice selection is declared, not shown.** Every button has an `aria-label` and the manifest has the `kva` category, as we read the Vega docs, but voice can't be tested on the VVD.
 - **Mic shouting works only over HTTPS** (browsers allow the microphone only on secure pages): run `scripts/tunnel.sh` for a temporary HTTPS link. On the plain-HTTP LAN page the ROAR button, which always works, is the way to ROAR.
-- **The phone app was tested in desktop and headless browsers at phone size** (360×640, 375×812 and 390×844), not yet on a real phone with real Wi-Fi. TBD TBD
+- **The phone app was tested in desktop and headless browsers at phone size** (360×640, 375×812 and 390×844), not yet on a real phone with real Wi-Fi.
 - **Wings are still the strongest ability in simulation** (30% of one-of-each races against a fair 25%, after the 23 Oct change from 37%).
 - **Voices queue on one Mac:** with six scans at once, the intros arrive within about 16 s and the last full voice in about 28 s (offline personas, 23 Oct).
 - **Phones don't send a reconnect key yet,** so a device in the same party that knows another player's id could take over that player.
@@ -216,7 +214,7 @@ bun run start            # listens on 0.0.0.0:8787 and prints the phone join add
 
 **2. Phone app (Vite).** `cd phone && npm install && npm run build`. The relay serves `phone/dist` at `/j/<ROOM>`; phones install nothing.
 
-**3. TV app.** Build and launch as in "Try it in 2 minutes", then choose **Start party**. To use Claude personas, first open **Grown-ups** (press Up on Home), answer the sum and turn AI personas on. On a real Fire TV (not tested), set `HOST` in `tv/src/config.ts` to the Mac's LAN IP and rebuild.
+**3. TV app.** Build and launch as in "Try it in 2 minutes", then choose **Start party**. To use Claude personas, first open **Grown-ups** (press Up on Home), answer the times-table question and turn AI personas on. On a real Fire TV (not tested), set `HOST` in `tv/src/config.ts` to the Mac's LAN IP and rebuild.
 
 **4. Play.** Phones on the same Wi-Fi scan the QR code (or type the 4-letter room code), enter a first name and pick Little kid, Big kid or Grown-up. Draw with a thick marker, tap **Snap my drawing** (or **Draw on screen instead**), check the creature card (change the ability if you like), then race: tap or hold to run, swipe up to jump, press ROAR. No phones to hand? `node tv/scripts/fake-phones.mjs <ROOM> 3` (from the repo root; the room code is on the TV's Lobby) adds simulated players that upload drawings and race. Ctrl-C stops them.
 

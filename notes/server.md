@@ -93,9 +93,8 @@ one test scan before a demo.
   `moduleResolution: bundler`.
 - Structured outputs ignore `minimum`/`maximum`/`maxLength`, so stats use an integer `enum` and lengths are clamped
   server-side.
-- 2026-10-20: port 8787 was held by an earlier network-probe echo server (`bun server.ts` in a temp folder
-  `nettest/` folder, an echo server). The Sketchlings server fails loudly with EADDRINUSE in that case; stop the probe
-  first. `PORT=8788 bun run start` was used for the smoke test (health, placeholder page, TV hello, ping, bad frame: all OK).
+- 2026-10-20: port 8787 was held by an earlier network-probe echo server. The Sketchlings server fails loudly with
+  EADDRINUSE in that case; stop the probe first. `PORT=8788 bun run start` was used for the smoke test (health, placeholder page, TV hello, ping, bad frame: all OK).
 
 ## Measured with the real Claude API (21 Oct 2026, claude-opus-5-5, effort low)
 - Persona latency over 11 real scans: cold first call 7.2 s, then 3.7-5.3 s (median about 4.3 s). Voice clips ready 7-13 s after upload.

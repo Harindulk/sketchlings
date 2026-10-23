@@ -22,31 +22,11 @@ The game itself needs no account and no key: without a Claude key every creature
 
 ## Evidence: a children's session and a cold test
 
-Plan from the evening of 22 Oct: 3 or 4 children aged 4 to 10 play on 23 Oct, about 1 to 3 pm, run by teachers, each with a parent's written OK; the camera films hands, phones, paper and the screen, and a face or voice only where a parent ticked it ([`playtest/runsheet.md`](playtest/runsheet.md), [`playtest/consent.md`](playtest/consent.md)). First the teachers do the adult cold test ([`playtest/cold-test.md`](playtest/cold-test.md)). Only real results may fill a placeholder; never rounded up. If the session doesn't happen, each row says "not run" and the paragraph under the table stays as written.
+Plan from the evening of 22 Oct: 3 or 4 children aged 4 to 10 play on 23 Oct, about 1 to 3 pm, run by teachers, each with a parent's written OK; the camera films hands, phones, paper and the screen, and a face or voice only where a parent ticked it ([`playtest/runsheet.md`](playtest/runsheet.md), [`playtest/consent.md`](playtest/consent.md)). First the teachers do the adult cold test ([`playtest/cold-test.md`](playtest/cold-test.md)).
 
-| Measure | Result |
-|---|---|
-| Children who played (ages; no names) | TBD |
-| Races, and races won by the youngest | TBD |
-| Real taps a second by age band (`[race] inputs` lines) | TBD |
-| Wi-Fi round trip to the phones (`[net] race rtt ms` lines) | TBD |
-| Played without an adult's help (join, snap, race) | TBD |
-| Median time from snapping the photo to the creature on the TV | TBD |
-| Persona source (Claude or offline) and median Claude time | TBD |
-| Googly eyes placed correctly | TBD |
-| Ability matched the drawn feature (wings, wheels, legs, big body) | TBD |
-| Abilities the children changed on the phone | TBD |
-| Re-snaps needed | TBD |
-| A child's exact words | TBD |
-| Cold-test testers (adults who had never seen the game) | TBD |
-| Got two creatures into a race without help | TBD |
-| Median time from the instruction to the first race | TBD |
-| Started a second race on their own | TBD |
-| Most common question | TBD |
-| A tester's exact words | TBD |
-| One design change the cold test caused | TBD |
+No children's playtest or cold test has run yet; results will be added here, and the kit is in [docs/playtest/](playtest/).
 
-TBD The cold test runs on the Vega Virtual Device on a laptop, with the keyboard as the remote, so it says nothing about race smoothness or speed.
+Not tested yet, because no child has played: races won by the youngest, whether a little kid can play without help, and kids' reactions. The cold test runs on the Vega Virtual Device on a laptop, with the keyboard as the remote, so it says nothing about race smoothness or speed.
 
 **Fairness, simulated, not playtested** ([FAIRNESS.md](FAIRNESS.md)): the real race engine with assumed tap rates, 2,000 races per row (rerun 23 Oct). A little kid beats a grown-up who is trying in about 1 race in 4 with the +40% boost (27%), and in fewer than 1 in 100 without it (0.4%). In a family of four the youngest wins 11.7% (a fair share is 25%) and grown-ups still win 61%. The result depends most on how fast little kids really tap; since 23 Oct the relay logs every player's real rate per race, so the first real party measures it. The age boost stays at 1.4 until then.
 
@@ -143,7 +123,7 @@ What that means in detail:
 - [ ] Privacy policy and a children's-privacy review.
 - [x] Parent "Clear Hall of Fame" button behind the parent gate.
 - [ ] TV buttons to remove one child or one creature (the relay supports both); long join tokens for cloud rooms.
-- [ ] A playtest with children aged 4 to 10, counting little kids' real taps a second before tuning the age boost ([FAIRNESS.md](FAIRNESS.md)). TBD
+- [ ] A playtest with children aged 4 to 10, counting little kids' real taps a second before tuning the age boost ([FAIRNESS.md](FAIRNESS.md)).
 - [x] "Hold to run" on the phone controller.
 - [x] Intros first: with several scans at once, every creature's intro is voiced before anyone's other lines (six at once: intros within about 16 s, everything within about 28 s, 23 Oct).
 - [ ] Voices in parallel, so six scans at once take less than 28 s.

@@ -20,7 +20,8 @@ On **Friday 23 October 2026, about 1 to 3 pm**, at ______________, teachers I kn
 **Your child's drawing, the creature made from it, and their first name and age** (for example "Nila, 6"):
 - on the TV during the game;
 - in a **public YouTube video**, a demo of under 3 minutes that stays online after the contest;
-- on the contest entry on **Devpost**, which Amazon's judges and the public can see.
+- on the contest entry on **Devpost**, which Amazon's judges and the public can see;
+- in **Amazon's and Devpost's promotion** of the contest: its rules let them use my entry, including this video, until three years after it ends.
 
 Never a surname, school, address or anything that says where you live.
 
@@ -78,7 +79,7 @@ The written results, on GitHub and on the hackathon entry on Devpost, as "Tester
 
 ### Filming (your choice below)
 
-Hands, phones and the screen only, **never your face**. If you say yes, it may appear in the public demo video (YouTube and Devpost). This covers the children's session too.
+Hands, phones and the screen only, **never your face**. If you say yes, it may appear in the public demo video (YouTube and Devpost). The video is part of my contest entry, and the contest rules let Amazon and Devpost use it to promote the contest until three years after it ends. This covers the children's session too.
 
 ### Phones, drawings and AI
 
@@ -114,7 +115,7 @@ Harindu's contact (to ask a question or withdraw): _____________________________
 - **No** for the name: the child plays as "Artist" (an adult may type it; that is not help). Leave the name and age out of every caption for that child.
 - **No** for voice: mute or cut that child's voice in the edit (the sheet's clock times help find it). **No** for face: no frame where that child's face can be seen; cut it, don't rely on a blur.
 - The written results use "Child A, 6" or "a 6-year-old", never names (`results-sheet.md`).
-- The parents agreed to the game screen, the video, the Devpost entry and the written results. No picture of a child's drawing or creature goes in the repo.
+- The parents agreed to the game screen, the video, the Devpost entry, Amazon's and Devpost's promotional use of the entry (official rules, section 7) and the written results. A form or reply without that promotion line does not cover it: leave that child's face, voice and name out, or ship the no-children backup cut (`video/edl-backup.json`). No picture of a child's drawing or creature goes in the repo.
 - Keep the signed forms and written replies. Never commit a scan, photo or screenshot of one, and never put footage in the repo.
 - Before uploading, watch every frame: faces and voices only where ticked, each child's name and age only where ticked, teachers' hands and voices only where ticked, no adult faces.
 - The 31 December 2026 deletion date is a promise. Put it in your calendar.
