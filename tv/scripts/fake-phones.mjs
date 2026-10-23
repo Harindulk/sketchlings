@@ -54,6 +54,8 @@ function phone({name, ageGroup, art}, i) {
           }
         }, 100);
       }
+    } else if (m.t === 'hit') {
+      console.log(`${name}: hit`); // our racer hit an ink blot (the soak counts these)
     } else if (m.t === 'error') {
       console.log(`${name}: error ${m.code} ${m.message}`);
     }

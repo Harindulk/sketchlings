@@ -11,7 +11,7 @@
 // If the VVD itself died (notes/tv.md F5), it restarts it, reinstalls tv/build/sketchlings_aarch64.vpkg and goes on;
 // those races don't count.
 import {execFileSync, spawn} from 'node:child_process';
-import {existsSync, mkdirSync, readFileSync} from 'node:fs';
+import {existsSync, mkdirSync, openSync, readFileSync} from 'node:fs';
 import {createRequire} from 'node:module';
 import {dirname, join} from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -140,7 +140,7 @@ async function session(s) {
     const code = room || (f && ocr(f).match(/\b([BCDFGHJKMNPRSTVWXZ]{4})\b/)?.[1]);
     if (!code) throw new Error('no room code on screen');
     log(`room ${code}, ${live} fake phones`);
-    phones = spawn('node', [join(HERE, 'fake-phones.mjs'), code, String(live)], {stdio: 'ignore'});
+    phones = spawn('node', [join(HERE, 'fake-phones.mjs'), code, String(live)], {stdio: ['ignore', openSync(join(out, 'phones.log'), 'a'), 'ignore']}); // phones.log: joins, phases, hits
     players = live;
     if (!(await waitFor(new RegExp(`Start the show! \\(${live}\\)`, 'i'), 90, `s${s}-joining`))) throw new Error('phones never got ready');
     await sleep(2);
