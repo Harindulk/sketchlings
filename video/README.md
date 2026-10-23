@@ -183,7 +183,7 @@ timestamp gaps.
   sound at that moment).
 - `audioLag` measured on the countdown (3-2-1-GO digits against their sounds): 0.4 s in `vvd-races` (10 fps), about
   1.1 s in `vvd-reveal-cold` (2 fps). It differs per recording: measure each one.
-- Reveal voices run one card late in both recordings (filmed before `258959b`, which fixed it: intros now start
+- Reveal voices run one card late in both recordings (filmed before `f4c038a`, which fixed it: intros now start
   1.1-1.4 s into their own card): each intro starts 3.6-6 s after its card, plays over the next creature's card,
   and the last is cut by the race. Pick Reveal moments by ear, cut to the card that matches the voice, or
   re-record the Reveal on the current build.
@@ -243,7 +243,7 @@ sound is real and stays.
 
 It runs `adb -s emulator-5554 emu screenrecord start --time-limit N --fps 30 <abs path>` with the adb on PATH (override
 with `ADB=...`, `SERIAL=...`), waits for the file and prints its length. Before filming: keep the Mac's memory free
-(`notes/tv.md` F5, F12: quit other apps) and use a build from 258959b or later.
+(`notes/tv.md` F5, F12: quit other apps) and use a build from f4c038a or later.
 
 What the 21 Oct dress rehearsal showed: the race (about 60 s) is longer than its split (19 s), so the split starts
 mid-race at the same moment in both files; OK on Results is Play again, so OK at the finish skips Results; the
