@@ -2,3 +2,6 @@ node_modules/
 dist/
 *.log
 .DS_Store
+# bun install and examples/cutout-png.ts write these: the package ships package-lock.json
+bun.lock
+sprite.png
